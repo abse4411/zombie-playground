@@ -61,6 +61,20 @@ const ZOMBIE_TYPES = {
     attackRange: 1.7, attackRate: 0.9,
     desc: '游乐园人偶服里长出的东西。之字形乱窜还间歇性狂奔，枪法不好的猎人最怕它。',
   },
+  hound: {
+    id: 'hound', name: '地狱犬', role: '犬群突击单位',
+    hp: 55, speed: 5.6, damage: 8, reward: 30, cost: 1.5, minWave: 3, weight: 4,
+    scale: 0.9, skin: 0x2a2320, cloth: 0x3a2a1a, pants: 0x2a2320, quadruped: true, lunge: true,
+    attackRange: 1.5, attackRate: 0.85, lungeRange: 9, lungeSpeed: 10.5,
+    desc: '赤潮侵染的军犬，成群结队地狩猎——比奔跑者更快，但非常脆弱。听到嚎叫立刻找好射击角度。',
+  },
+  phantom: {
+    id: 'phantom', name: '幽影', role: '半隐形刺杀单位',
+    hp: 120, speed: 2.7, damage: 18, reward: 62, cost: 3.0, minWave: 9, weight: 1.5,
+    scale: 1.0, skin: 0x3a3f52, cloth: 0x2a2e3e, pants: 0x22242e, cloak: true,
+    attackRange: 1.7, attackRate: 1.0,
+    desc: '组织呈半透明状，远距离几乎不可见，接近时才显出轮廓——但猩红双眼始终可见。听着耳语声判断它的位置。',
+  },
   brute: {
     id: 'brute', name: '暴君 · 坦克', role: '精英重型单位',
     hp: 1500, speed: 1.3, damage: 38, reward: 240, cost: 10, minWave: 8, weight: 1.2,

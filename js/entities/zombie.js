@@ -103,6 +103,49 @@ function buildZombieModel(cfg, outlines) {
   return { group: g, skin, cloth, head, arms, legs, tilt: cfg.crawl ? 1.0 : 0 };
 }
 
+/* ---------- 四足模型（地狱犬） ---------- */
+function buildQuadrupedModel(cfg, outlines) {
+  const g = new THREE.Group();
+  g.rotation.order = 'YXZ';
+  const skin = ART.toon(cfg.skin);
+  const bloodMat = ART.mat(0x5a1010);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.36, 0.92), skin);
+  body.position.y = 0.62; g.add(body);
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.28, 0.34), skin);
+  head.position.set(0, 0.78, 0.52); g.add(head);
+  const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.06, 0.2), bloodMat);
+  jaw.position.set(0, 0.7, 0.62); g.add(jaw);
+  const eyeC = 0xff7020;
+  const eyeMat = new THREE.MeshBasicMaterial({ color: eyeC });
+  for (const side of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.03), eyeMat);
+    eye.position.set(side * 0.09, 0.84, 0.66);
+    g.add(eye);
+    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.14, 5), skin);
+    ear.position.set(side * 0.1, 0.97, 0.45);
+    g.add(ear);
+  }
+  // 背部火焰纹（发光斑块）
+  for (let i = 0; i < 3; i++) {
+    const flame = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, 0.14), ART.mat(0x903010, 0xb04000));
+    flame.position.set(rand(-0.08, 0.08), 0.82, 0.25 - i * 0.28);
+    g.add(flame);
+  }
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.34), skin);
+  tail.position.set(0, 0.72, -0.58); tail.rotation.x = -0.5; g.add(tail);
+  const legs = [];
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(sx * 0.14, 0.48, sz * 0.3);
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.48, 0.11), skin);
+    leg.position.y = -0.24;
+    pivot.add(leg); g.add(pivot); legs.push(pivot);
+  }
+  if (outlines) { ART.outline(body, 1.14); ART.outline(head, 1.14); }
+  g.scale.setScalar(cfg.scale);
+  return { group: g, skin, cloth: skin, head, arms: [], legs, tilt: 0, quadruped: true };
+}
+
 class Zombie {
   constructor(typeId, x, z, mults, opts = {}) {
     const cfg = ZOMBIE_TYPES[typeId];
@@ -145,7 +188,7 @@ class Zombie {
       const wantOutline = ENGINE.quality.outlines && !this.dummy;
       this.group.traverse(o => { if (o.userData.isOutline) o.visible = wantOutline; });
     } else {
-      const model = buildZombieModel(cfg, ENGINE.quality.outlines && !this.dummy);
+      const model = cfg.quadruped ? buildQuadrupedModel(cfg, ENGINE.quality.outlines && !this.dummy) : buildZombieModel(cfg, ENGINE.quality.outlines && !this.dummy);
       this.model = model;
       this.group = model.group;
       this.group.userData.model = model;   // 供对象池复用
@@ -153,6 +196,14 @@ class Zombie {
     this.group.position.set(x, -2.05 * cfg.scale, z);
     this.pos = this.group.position;
     ENGINE.scene.add(this.group);
+
+    // 幽影：半透明材质（接近时显形）
+    this.cloakMats = null;
+    if (cfg.cloak) {
+      this.cloakMats = [this.model.skin];
+      if (this.model.cloth !== this.model.skin) this.cloakMats.push(this.model.cloth);
+      for (const m of this.cloakMats) { m.transparent = true; m.opacity = 0.28; }
+    }
 
     this.shadow = new THREE.Mesh(_shadowGeo, _shadowMat);
     this.shadow.rotation.x = -Math.PI / 2;
@@ -259,6 +310,14 @@ class Zombie {
       }
     }
 
+    // 幽影：耳语声预警 + 距离显形
+    if (cfg.cloak && this.cloakMats) {
+      const target = dist < 10 ? lerp(0.85, 0.28, clamp((dist - 2) / 8, 0, 1)) : 0.28;
+      for (const m of this.cloakMats) if (m.opacity !== target) m.opacity = target;
+      this.whisperT = (this.whisperT || 3) - dt;
+      if (this.whisperT <= 0) { this.whisperT = rand(3.5, 6.5); AUDIO.whisper(dist); }
+    }
+
     // 硬直
     if (this.stagger > 0) { this.stagger -= dt; mvx = 0; mvz = 0; spd = 0; }
 
@@ -302,15 +361,29 @@ class Zombie {
   _animate() {
     const m = this.model, cfg = this.type;
     const sw = Math.sin(this.walkPhase);
+    // 四足（地狱犬）：对角步态
+    if (m.quadruped) {
+      m.legs[0].rotation.x = sw * 0.7;
+      m.legs[3].rotation.x = sw * 0.7;
+      m.legs[1].rotation.x = -sw * 0.7;
+      m.legs[2].rotation.x = -sw * 0.7;
+      m.head.rotation.x = Math.sin(ENGINE.time * 2.2 + this.walkPhase) * 0.06;
+      const atQ = this.windup >= 0 ? 1 - this.windup / GAMECONFIG.combat.attackWindup : -1;
+      if (atQ >= 0) m.head.position.z = 0.52 + atQ * 0.2;
+      else m.head.position.z = 0.52;
+      return;
+    }
     m.legs[0].rotation.x = sw * 0.55;
     m.legs[1].rotation.x = -sw * 0.55;
     const base = cfg.crawl ? -0.5 : -1.15;
     const attackT = this.windup >= 0 ? 1 - this.windup / GAMECONFIG.combat.attackWindup : -1;
-    m.arms[0].rotation.x = base + sw * 0.22;
-    m.arms[1].rotation.x = base - sw * 0.22;
-    if (attackT >= 0) {
-      m.arms[0].rotation.x = base - 0.4 + attackT * 0.9;
-      m.arms[1].rotation.x = base - 0.4 + attackT * 0.9;
+    if (m.arms.length) {
+      m.arms[0].rotation.x = base + sw * 0.22;
+      m.arms[1].rotation.x = base - sw * 0.22;
+      if (attackT >= 0) {
+        m.arms[0].rotation.x = base - 0.4 + attackT * 0.9;
+        m.arms[1].rotation.x = base - 0.4 + attackT * 0.9;
+      }
     }
     m.head.rotation.z = Math.sin(ENGINE.time * 1.7 + this.walkPhase) * 0.09;
   }

@@ -134,6 +134,26 @@ const AUDIO = {
     this.tone(147, 1.0, 'square', 0.12, 98, 0.15);
     this._noiseHit(300, 1.2, 0.2);
   },
+  // 地狱犬嚎叫（狼群来袭预警）
+  howl(dist = 0) {
+    const v = this._dist(dist) * 0.5;
+    this.tone(420, 0.9, 'sawtooth', v, 690);
+    this.tone(660, 0.7, 'sine', v * 0.7, 290, 0.25);
+    this._noiseHit(500, 0.8, 0.12 * this._dist(dist));
+  },
+  // 幽影耳语（隐形敌预警）
+  whisper(dist = 0) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime, v = this._dist(dist) * 0.3;
+    const n = this.ctx.createBufferSource(); n.buffer = this.noise; n.loop = true;
+    const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2400; f.Q.value = 2;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.001, t); g.gain.linearRampToValueAtTime(v, t + 0.3);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+    n.connect(f); f.connect(g); g.connect(this.master);
+    n.start(t); n.stop(t + 1.3);
+    this.tone(1950, 0.9, 'sine', v * 0.4, 2300);
+  },
 
   /* ---------- 火焰环境声（火场期间循环） ---------- */
   _fire: null,

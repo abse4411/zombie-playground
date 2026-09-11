@@ -103,6 +103,10 @@ class SpawnSystem {
     const zb = new Zombie(typeId, sx, sz, this.mults);
     this.game.zombies.push(zb);
     PARTICLES.dust(sx, 0.4, sz, 7);
+    // 地狱犬登场嚎叫（COD Zombies 式预警）
+    if (zb.type.quadruped && Math.random() < 0.45) {
+      AUDIO.howl(dist2d(sx, sz, this.game.player.pos.x, this.game.player.pos.z));
+    }
   }
 
   spawnExtra(typeId) { this.spawnOne(typeId); }

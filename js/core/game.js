@@ -1,0 +1,388 @@
+/* ============================================================
+ * 游戏主循环 / 状态机
+ * 状态：menu → playing ⇄ paused → over / victory
+ * 打击感：顿帧(hitstop) + 波次慢镜(slowmo) 时间缩放
+ * ============================================================ */
+class Game {
+  constructor(canvas) {
+    ENGINE.init(canvas);
+    INPUT.init(canvas);
+    PARTICLES.init(ENGINE.scene);
+
+    this.state = 'menu';
+    this.player = null;
+    this.weapons = null;
+    this.spawner = null;
+    this.mode = null;
+    this.zombies = [];
+    this.projectiles = [];
+    this.fireZones = [];
+    this.acidPools = [];
+    this.stats = { shots: 0, hits: 0 };
+    this.interactText = null;
+    this._last = performance.now();
+    this._growlT = 2;
+    this._beatT = 0;
+    this._lastStart = null;
+    this.hitstopT = 0;
+    this.slowmoT = 0;
+    this.killStreak = 0;
+    this.streakT = 0;
+    this._fireCount = 0;
+    this._fragWindowT = 0;
+
+    // 点击画面重新锁定鼠标（触屏设备不需要）
+    canvas.addEventListener('click', () => {
+      if (!INPUT.touch && this.state === 'playing' && !INPUT.locked && !SHOPUI.isOpen && !STORY.active) {
+        INPUT.requestLock();
+      }
+    });
+
+    this._loop = this._loop.bind(this);
+  }
+
+  start() { requestAnimationFrame(this._loop); }
+
+  /* ================= 开局 ================= */
+  startHunt(mapId, diffKey) {
+    this._lastStart = { type: 'hunt', mapId, diffKey };
+    this._begin(mapId, () => new HuntMode(this, mapId, diffKey));
+  }
+
+  startMission(idx, skipIntro) {
+    this._lastStart = { type: 'mission', idx };
+    const m = MISSIONS[idx];
+    this._begin(m.map, () => new EncounterMode(this, idx, skipIntro));
+  }
+
+  startTutorial() {
+    this._lastStart = { type: 'tutorial' };
+    this._begin('park', () => new TutorialMode(this));
+  }
+
+  _begin(mapId, makeMode) {
+    AUDIO.init(); AUDIO.resume();
+    // 清空残留输入（防止重开局时鼠标/按键仍被视为按住）
+    INPUT.keys = {}; INPUT.lmb = false; INPUT.rmb = false;
+    INPUT.lmbEdge = false; INPUT.dx = 0; INPUT.dy = 0; INPUT.wheel = 0;
+    this._cleanupWorld();
+    const mapDef = MAPS[mapId];
+    ENGINE.buildMap(mapDef);
+    ENGINE.scene.add(ENGINE.camera);
+    this.player = new Player();
+    this.player.spawnAt(mapDef);
+    this.weapons = new WeaponSystem(this.player);
+    this.spawner = new SpawnSystem(this);
+    this.mode = makeMode();
+    this.stats = { shots: 0, hits: 0 };
+    this._growlT = 2; this._beatT = 0;
+    this.hitstopT = 0; this.slowmoT = 0;
+    this.killStreak = 0; this.streakT = 0;
+    this._fireCount = 0; this._fragWindowT = 0;
+    this.state = 'playing';
+    MENU.hideAll();
+    HUD.show();
+    this.mode.start();
+    AUDIO.startAmbient();
+    AUDIO.stopFireLoop();
+    if (!STORY.active) this.requestLock();
+  }
+
+  onStoryDone() {
+    if (this.state === 'playing') this.requestLock();
+  }
+
+  requestLock() { if (!INPUT.touch) INPUT.requestLock(); }
+
+  onPointerLockChange(locked) {
+    if (!locked && this.state === 'playing' && !SHOPUI.isOpen && !STORY.active) {
+      this.pause();
+    }
+  }
+
+  /* ================= 打击感 ================= */
+  hitstop(d) { this.hitstopT = Math.max(this.hitstopT, d); }
+  slowmo(d) { this.slowmoT = Math.max(this.slowmoT, d); }
+
+  // 触屏 / 低配模式的刷怪上限乘区
+  get capMult() {
+    return ENGINE.quality.capMult * (INPUT.touch ? 0.72 : 1);
+  }
+
+  onPlayerDamaged() {
+    this.killStreak = 0;
+    this.streakT = 0;
+  }
+
+  /* ================= 主循环 ================= */
+  _loop(t) {
+    requestAnimationFrame(this._loop);
+    const rawDt = (t - this._last) / 1000;
+    this._last = t;
+    ENGINE.tickFps(rawDt);
+
+    const dt = clamp(rawDt, 0, 0.05);
+    let ts = 1;
+    if (this.hitstopT > 0) { this.hitstopT -= rawDt; ts = 0.02; }
+    else if (this.slowmoT > 0) { this.slowmoT -= rawDt; ts = GAMECONFIG.feel.slowmoScale; }
+    const sdt = dt * ts;
+
+    ENGINE.update(sdt);
+    STORY.update(dt);
+
+    if (this.state === 'playing' && !STORY.active && !SHOPUI.isOpen) {
+      this._update(sdt);
+    }
+    ENGINE.render();
+    if (typeof TOUCH !== 'undefined') TOUCH.sync();
+    INPUT.endFrame();
+  }
+
+  _update(dt) {
+    const p = this.player;
+
+    // 玩家 & 武器
+    if (p.alive) {
+      p.update(dt, this);
+      this.weapons.update(dt, this);
+    }
+
+    // 相机跟随 + 镜头抖动
+    const cam = ENGINE.camera;
+    cam.position.set(p.pos.x, p.pos.y + GAMECONFIG.player.eyeHeight, p.pos.z);
+    cam.rotation.set(p.pitch, p.yaw, 0);
+    if (ENGINE.shakeAmt > 0) {
+      cam.position.x += rand(-1, 1) * ENGINE.shakeAmt * 0.25;
+      cam.position.y += rand(-1, 1) * ENGINE.shakeAmt * 0.25;
+      cam.rotation.z = rand(-1, 1) * ENGINE.shakeAmt * 0.05;
+    } else {
+      cam.rotation.z = 0;
+    }
+
+    // 丧尸更新
+    for (const z of this.zombies) z.update(dt, this);
+    // 丧尸间分离
+    const zs = this.zombies;
+    for (let i = 0; i < zs.length; i++) {
+      const a = zs[i];
+      if (a.dead || a.state === 'rise') continue;
+      for (let j = i + 1; j < zs.length; j++) {
+        const b = zs[j];
+        if (b.dead || b.state === 'rise') continue;
+        let dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z;
+        const d2 = dx * dx + dz * dz;
+        const min = 0.72 * (a.type.scale + b.type.scale);
+        if (d2 < min * min && d2 > 0.0001) {
+          const d = Math.sqrt(d2);
+          const push = (min - d) / d * 0.5;
+          dx *= push; dz *= push;
+          a.pos.x -= dx; a.pos.z -= dz;
+          b.pos.x += dx; b.pos.z += dz;
+        }
+      }
+    }
+    // 清理尸体
+    for (let i = zs.length - 1; i >= 0; i--) {
+      if (zs[i].remove) { zs[i].dispose(); zs.splice(i, 1); }
+    }
+
+    // 投掷物与区域
+    for (const pr of this.projectiles) pr.update(dt, this);
+    this.projectiles = this.projectiles.filter(pr => !pr.dead);
+    for (const f of this.fireZones) f.update(dt, this);
+    this.fireZones = this.fireZones.filter(f => !f.dead);
+    for (const a of this.acidPools) a.update(dt, this);
+    this.acidPools = this.acidPools.filter(a => !a.dead);
+
+    // 火焰环境声
+    const fc = this.fireZones.length;
+    if (fc > 0 && this._fireCount === 0) AUDIO.startFireLoop();
+    if (fc === 0 && this._fireCount > 0) AUDIO.stopFireLoop();
+    this._fireCount = fc;
+
+    // 模式逻辑
+    this.mode.update(dt);
+
+    // 连杀计时
+    if (this.streakT > 0) {
+      this.streakT -= dt;
+      if (this.streakT <= 0) this.killStreak = 0;
+    }
+    // 手雷击杀归因窗口
+    if (this._fragWindowT > 0) this._fragWindowT -= dt;
+
+    // 紧张度分层
+    AUDIO.setTension(clamp(this.aliveZombies() / 16, 0, 1));
+
+    // 环境音：丧尸低吼
+    this._growlT -= dt;
+    if (this._growlT <= 0) {
+      this._growlT = rand(1.2, 3.4);
+      const alive = zs.filter(z => !z.dead && z.state !== 'rise' && !z.dummy);
+      if (alive.length) {
+        const z = choice(alive);
+        AUDIO.growl(dist2d(z.pos.x, z.pos.z, p.pos.x, p.pos.z), z.growlPitch);
+      }
+    }
+    // 低血量心跳
+    if (p.alive && p.hp < 30) {
+      this._beatT -= dt;
+      if (this._beatT <= 0) { this._beatT = 1.05; AUDIO.heartbeat(); }
+    }
+
+    // 补给区交互
+    this.interactText = null;
+    const bz = ENGINE.mapDef.buyZone;
+    const inZone = dist2d(p.pos.x, p.pos.z, bz.x, bz.z) < bz.r;
+    if (p.alive && inZone) this.interactText = (INPUT.touch ? '点击补给站按钮' : '[E] 打开补给站');
+    const shopAnywhere = (this.mode instanceof HuntMode && this.mode.state === 'intermission')
+      || (this.mode instanceof TutorialMode && this.mode.shopStep);
+    if (p.alive && INPUT.justPressed('KeyE') && inZone) SHOPUI.open(this);
+    else if (p.alive && INPUT.justPressed('KeyB') && (inZone || shopAnywhere)) SHOPUI.open(this);
+
+    // 鼠标锁定提示
+    HUD.el.lockHint.classList.toggle('hidden', INPUT.locked || INPUT.touch);
+
+    DMGNUM.update(dt);
+    PARTICLES.update(dt);
+    HUD.update(this);
+  }
+
+  /* ================= 击杀 / 死亡 / 胜利 ================= */
+  onZombieKilled(z, headshot) {
+    const p = this.player;
+    p.kills++;
+    if (headshot) p.headshots++;
+    const total = z.reward + (headshot ? GAMECONFIG.economy.headshotBonus : 0);
+    p.addMoney(total);
+    SAVE.data.totalKills++;
+    if (p.kills % 25 === 0) SAVE.commit();
+
+    // 连杀
+    this.streakT = GAMECONFIG.streak.window;
+    this.killStreak++;
+    if (this.killStreak >= 3) HUD.streak(this.killStreak);
+    if (this.killStreak % GAMECONFIG.streak.bonusEvery === 0) {
+      p.addMoney(GAMECONFIG.streak.bonusAmount);
+      HUD.toast(`🔥 ${this.killStreak} 连杀！奖金 +$${GAMECONFIG.streak.bonusAmount}`);
+      AUDIO.streak();
+    }
+
+    // 顿帧（爆头击杀更狠）
+    this.hitstop(headshot ? GAMECONFIG.feel.hitstopHeadKill : GAMECONFIG.feel.hitstopKill);
+
+    // 近距离血溅屏幕
+    const d = dist2d(z.pos.x, z.pos.z, p.pos.x, p.pos.z);
+    if (d < 4.5) HUD.bloodSplat();
+
+    HUD.killfeed(`${headshot ? '☠ 爆头击杀' : '击杀'} ${z.type.name} +$${total}`, headshot ? 'head' : '');
+  }
+
+  playerDied() {
+    if (this.state !== 'playing') return;
+    this.state = 'over';
+    AUDIO.defeat();
+    AUDIO.stopAmbient();
+    AUDIO.stopFireLoop();
+    INPUT.releaseLock();
+    const mode = this.mode;
+    const isMission = mode instanceof EncounterMode;
+    setTimeout(() => {
+      if (this.state !== 'over') return;
+      document.getElementById('over-title').textContent = isMission ? '任务失败' : '你被尸潮吞没了';
+      document.getElementById('over-sub').textContent = isMission
+        ? MISSIONS[mode.idx].name + ' · 黎明会会记住你的牺牲'
+        : '黎明会会记住你的牺牲';
+      document.getElementById('over-stats').innerHTML =
+        mode.resultStats().map(([k, v, cls]) =>
+          `<div class="stat-cell"><div class="st-label">${k}</div><div class="st-val ${cls}">${v}</div></div>`).join('');
+      HUD.hide();
+      HUD.setScope(false);
+      MENU.show('screen-over');
+      MENU.refreshStats();
+      SAVE.commit();
+    }, 1300);
+  }
+
+  showVictory(idx) {
+    if (this.state !== 'playing' && this.state !== 'paused') return;
+    this.state = 'victory';
+    AUDIO.victory();
+    AUDIO.stopAmbient();
+    AUDIO.stopFireLoop();
+    INPUT.releaseLock();
+    const mode = this.mode;
+    document.getElementById('victory-story').textContent =
+      MISSIONS[idx].outro.map(l => `${l.s}：「${l.t}」`).join('\n\n');
+    document.getElementById('victory-stats').innerHTML =
+      mode.resultStats().map(([k, v, cls]) =>
+        `<div class="stat-cell"><div class="st-label">${k}</div><div class="st-val ${cls}">${v}</div></div>`).join('');
+    document.getElementById('btn-vic-next').classList.toggle('hidden', idx + 1 >= MISSIONS.length);
+    HUD.hide();
+    HUD.setScope(false);
+    MENU.show('screen-victory');
+    MENU.refreshStats();
+    SAVE.commit();
+  }
+
+  /* ================= 暂停 / 重开 / 退出 ================= */
+  pause() {
+    if (this.state !== 'playing') return;
+    this.state = 'paused';
+    INPUT.releaseLock();
+    AUDIO.stopAmbient();
+    MENU.showPause();
+  }
+
+  resume() {
+    if (this.state !== 'paused') return;
+    this.state = 'playing';
+    MENU.hideAll();
+    AUDIO.startAmbient();
+    this.requestLock();
+  }
+
+  restart() {
+    if (!this._lastStart) return this.quitToMenu();
+    this.state = 'playing';
+    if (this._lastStart.type === 'hunt') {
+      this.startHunt(this._lastStart.mapId, this._lastStart.diffKey);
+    } else if (this._lastStart.type === 'tutorial') {
+      this.startTutorial();
+    } else {
+      this.startMission(this._lastStart.idx, true);
+    }
+  }
+
+  quitToMenu() {
+    this.state = 'menu';
+    this._cleanupWorld();
+    ENGINE.clearMap();
+    HUD.hide();
+    HUD.setScope(false);
+    AUDIO.stopAmbient();
+    AUDIO.stopFireLoop();
+    INPUT.releaseLock();
+    MENU.show('screen-menu');
+    MENU.refreshStats();
+  }
+
+  _cleanupWorld() {
+    for (const z of this.zombies) z.dispose();
+    this.zombies = [];
+    for (const pr of this.projectiles) pr._finish(this);
+    this.projectiles = [];
+    for (const f of this.fireZones) ENGINE.scene.remove(f.mesh);
+    for (const a of this.acidPools) ENGINE.scene.remove(a.mesh);
+    this.fireZones = []; this.acidPools = [];
+    if (this.weapons) this.weapons._disposeViewmodel();
+    this.player = null; this.weapons = null; this.mode = null;
+    this.interactText = null;
+  }
+
+  aliveZombies() {
+    let n = 0;
+    for (const z of this.zombies) if (!z.dead) n++;
+    return n;
+  }
+}

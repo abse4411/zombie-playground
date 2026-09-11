@@ -1,0 +1,138 @@
+/* ============================================================
+ * 商城系统 —— 库存构建与购买逻辑
+ * ============================================================ */
+const SHOP = {
+  tabs: [
+    { id: 'primary', name: '🔫 主武器' },
+    { id: 'secondary', name: '🔫 副武器' },
+    { id: 'melee', name: '🔪 近战' },
+    { id: 'throw', name: '💣 投掷物' },
+    { id: 'perk', name: '💉 强化' },
+    { id: 'supply', name: '🩹 补给' },
+  ],
+
+  stock(game, tabId) {
+    const p = game.player;
+    const items = [];
+
+    if (tabId === 'primary' || tabId === 'secondary' || tabId === 'melee') {
+      for (const id in WEAPONS) {
+        const w = WEAPONS[id];
+        if (w.slot !== tabId) continue;
+        const owned = p.weapons[tabId] && p.weapons[tabId].def.id === id;
+        const needAmmo = owned && (p.weapons[tabId].mag < w.mag
+          || p.weapons[tabId].reserve < Math.floor(w.reserve * p.reserveMult));
+        items.push({
+          kind: 'weapon', id, def: w,
+          name: w.name,
+          desc: w.desc,
+          price: owned ? GAMECONFIG.economy.ammoPrice : w.price,
+          owned, state: owned ? (needAmmo ? 'ammo' : 'owned') : 'buy',
+          stats: w.melee
+            ? [['伤害', w.damage], ['攻速', Math.round(w.rpm / 10) + ''], ['范围', w.range.toFixed(1) + 'm']]
+            : [['伤害', w.damage * (w.pellets || 1)], ['射速', w.rpm], ['弹匣', w.mag]],
+        });
+      }
+    } else if (tabId === 'throw') {
+      for (const id in THROWABLES) {
+        const t = THROWABLES[id];
+        const cur = p.throwables[id];
+        items.push({
+          kind: 'throw', id,
+          name: `${t.name} ×${t.pack}`,
+          desc: t.desc,
+          price: t.price,
+          state: cur.count >= t.max ? 'maxed' : 'buy',
+          stats: t.damage
+            ? [['爆炸', t.damage], ['半径', t.radius + 'm'], ['持有', `${cur.count}/${t.max}`]]
+            : [['灼烧', t.dps + '/s'], ['时长', t.duration + 's'], ['持有', `${cur.count}/${t.max}`]],
+        });
+      }
+    } else if (tabId === 'perk') {
+      for (const id in PERKS) {
+        const k = PERKS[id];
+        const tier = p.perks[id];
+        if (tier >= k.tiers.length) {
+          items.push({ kind: 'perk', id, name: `${k.icon} ${k.name} MAX`, desc: k.desc, price: 0, state: 'maxed', stats: [['等级', 'MAX']] });
+        } else {
+          const t = k.tiers[tier];
+          items.push({
+            kind: 'perk', id,
+            name: `${k.icon} ${k.name} Lv.${tier + 1}`,
+            desc: k.desc, price: t.price, state: 'buy',
+            stats: [['效果', k.valName(t.val)], ['等级', `${tier + 1}/${k.tiers.length}`]],
+          });
+        }
+      }
+    } else if (tabId === 'supply') {
+      const E = GAMECONFIG.economy;
+      items.push({
+        kind: 'heal', id: 'heal', name: '🩹 战地急救', desc: '立即恢复全部生命值。',
+        price: E.healPrice, state: p.hp >= p.maxHp ? 'maxed' : 'buy',
+        stats: [['生命', `${Math.ceil(p.hp)}/${p.maxHp}`]],
+      });
+      items.push({
+        kind: 'ammoAll', id: 'ammoAll', name: '📦 全弹药补给', desc: '补满主武器与副武器的全部备弹。',
+        price: Math.round(E.ammoPrice * 0.8), state: 'buy',
+        stats: [['覆盖', '主武器 + 副武器']],
+      });
+      items.push({
+        kind: 'armorFix', id: 'armorFix', name: '🛡 护甲修复', desc: '修复护甲至上限。需先购买“装甲板甲”强化。',
+        price: E.armorPrice,
+        state: p.maxArmor <= 0 ? 'locked' : (p.armor >= p.maxArmor ? 'maxed' : 'buy'),
+        stats: [['护甲', `${Math.round(p.armor)}/${p.maxArmor}`]],
+      });
+    }
+    return items;
+  },
+
+  buy(game, item) {
+    const p = game.player;
+    if (item.state === 'maxed' || item.state === 'locked' || item.state === 'owned') {
+      if (item.state !== 'owned') AUDIO.denied();
+      return false;
+    }
+    if (p.money < item.price) { AUDIO.denied(); HUD.toast('资金不足！'); return false; }
+
+    switch (item.kind) {
+      case 'weapon': {
+        const slot = item.def.slot;
+        if (item.owned) {
+          const inst = p.weapons[slot];
+          inst.reserve = Math.floor(inst.def.reserve * p.reserveMult);
+          inst.mag = inst.def.mag;
+        } else {
+          const inst = new WeaponInstance(item.def);
+          inst.reserve = Math.floor(item.def.reserve * p.reserveMult);
+          p.weapons[slot] = inst;
+          if (game.weapons) game.weapons._buildViewmodel();
+        }
+        break;
+      }
+      case 'throw': {
+        const t = THROWABLES[item.id];
+        p.throwables[item.id].count = Math.min(t.max, p.throwables[item.id].count + t.pack);
+        break;
+      }
+      case 'perk': {
+        const oldMax = p.maxHp;
+        p.perks[item.id]++;
+        p.recomputePerks();
+        if (item.id === 'hp') p.hp += p.maxHp - oldMax;
+        if (item.id === 'armor') p.armor = p.maxArmor;
+        break;
+      }
+      case 'heal': p.hp = p.maxHp; break;
+      case 'ammoAll':
+        for (const s of ['primary', 'secondary']) {
+          const w = p.weapons[s];
+          if (w) { w.reserve = Math.floor(w.def.reserve * p.reserveMult); w.mag = w.def.mag; }
+        }
+        break;
+      case 'armorFix': p.armor = p.maxArmor; break;
+    }
+    p.money -= item.price;
+    AUDIO.purchase();
+    return true;
+  },
+};

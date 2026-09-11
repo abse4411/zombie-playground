@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>丧尸游乐场 · Zombie Playground</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧟</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="game-canvas"></canvas>
+
+<!-- ==================== HUD ==================== -->
+<div id="hud" class="hidden">
+  <div id="dmg-layer"></div>
+  <div id="blood-layer"></div>
+
+  <!-- 准星 -->
+  <div id="crosshair">
+    <span class="ch ch-t"></span><span class="ch ch-b"></span>
+    <span class="ch ch-l"></span><span class="ch ch-r"></span>
+    <span class="ch-dot"></span>
+  </div>
+  <div id="hitmarker">✕</div>
+  <div id="scope-overlay" class="hidden"></div>
+  <div id="dmg-dir"></div>
+
+  <!-- 受击/低血量效果 -->
+  <div id="vignette"></div>
+  <div id="low-hp"></div>
+
+  <!-- 顶部信息 -->
+  <div id="hud-top">
+    <div id="wave-label">准备迎敌</div>
+    <div id="objective-label">剩余丧尸 0</div>
+  </div>
+
+  <!-- FPS -->
+  <div id="fps-counter">60 FPS</div>
+
+  <!-- 教学目标面板 -->
+  <div id="objective-panel" class="hidden">
+    <div class="op-head">🎓 新兵训练营</div>
+    <div id="objective-text"></div>
+    <div id="objective-hint"></div>
+    <div id="objective-progress"></div>
+    <button id="btn-tut-skip">跳过教学 ✖</button>
+  </div>
+
+  <!-- 连杀播报 -->
+  <div id="streak-banner" class="hidden"></div>
+
+  <!-- 雷达 + 击杀信息 -->
+  <div id="radar-box"><canvas id="radar" width="150" height="150"></canvas></div>
+  <div id="killfeed"></div>
+
+  <!-- 左下：生命/护甲/资金 -->
+  <div id="hud-bl">
+    <div class="bar hp-bar"><div id="hp-fill"></div><span id="hp-text">100</span></div>
+    <div class="bar armor-bar"><div id="armor-fill"></div><span id="armor-text">0</span></div>
+    <div id="money-row">
+      <span class="money-tag">$</span><span id="money-val">0</span>
+      <span id="kills-val">击杀 0</span>
+      <span id="headshot-val">爆头 0</span>
+    </div>
+  </div>
+
+  <!-- 右下：武器/弹药/投掷物 -->
+  <div id="hud-br">
+    <div id="throwables-row">
+      <span id="throw-frag">💣 ×0 <i>[G]</i></span>
+      <span id="throw-molo">🔥 ×0 <i>[T]</i></span>
+    </div>
+    <div id="weapon-name">P92 手枪</div>
+    <div id="ammo-row"><span id="ammo-mag">12</span><span id="ammo-reserve">/ 72</span></div>
+    <div id="slots-row">
+      <span class="slot" data-slot="primary"><b>1</b> 主 —</span>
+      <span class="slot" data-slot="secondary"><b>2</b> 副 P92</span>
+      <span class="slot" data-slot="melee"><b>3</b> 刀 军刀</span>
+    </div>
+  </div>
+
+  <!-- 交互提示 / 换弹提示 / 横幅 -->
+  <div id="interact-prompt" class="hidden"></div>
+  <div id="reload-hint" class="hidden">按 <b>R</b> 装填！</div>
+  <div id="banner" class="hidden"><div id="banner-main"></div><div id="banner-sub"></div></div>
+  <div id="lock-hint" class="hidden">点击画面锁定鼠标</div>
+</div>
+
+<!-- ==================== 触屏控制层 ==================== -->
+<div id="touch-ui" class="hidden">
+  <div id="touch-look"></div>
+  <div id="touch-stick"></div>
+  <div id="stick-base"><div id="stick-knob"></div></div>
+  <div class="tb" id="tb-pause">⏸</div>
+  <div class="tb tb-fire" id="tb-fire">🔥</div>
+  <div class="tb" id="tb-ads">🎯</div>
+  <div class="tb" id="tb-reload">↻</div>
+  <div class="tb" id="tb-jump">⤒</div>
+  <div class="tb" id="tb-dash">⚡</div>
+  <div class="tb" id="tb-kick">👟</div>
+  <div class="tb" id="tb-frag">💣</div>
+  <div class="tb" id="tb-molo">🔥🧪</div>
+  <div class="tb tb-w" id="tb-w1">1</div>
+  <div class="tb tb-w" id="tb-w2">2</div>
+  <div class="tb tb-w" id="tb-w3">3</div>
+  <div class="tb" id="tb-shop">🛒</div>
+</div>
+
+<!-- ==================== 剧情对话 ==================== -->
+<div id="story-overlay" class="hidden">
+  <div id="dialog-box">
+    <div id="dialog-speaker">？？</div>
+    <div id="dialog-text"></div>
+    <div id="dialog-hint">点击 或 [空格] 继续 ▸</div>
+  </div>
+</div>
+
+<!-- ==================== 商店 ==================== -->
+<div id="shop" class="hidden">
+  <div id="shop-panel">
+    <div id="shop-header">
+      <span class="shop-title">🛒 补给站</span>
+      <span id="shop-money">$ 0</span>
+      <button id="shop-close">关闭 [B]</button>
+    </div>
+    <div id="shop-tabs"></div>
+    <div id="shop-items"></div>
+    <div id="shop-tip">提示：波次间隙（狩猎模式）与任意地点（补给站区域内）均可购物</div>
+  </div>
+</div>
+
+<!-- ==================== 主菜单 ==================== -->
+<div id="screen-menu" class="screen">
+  <div class="menu-inner">
+    <h1 class="game-title">丧尸游乐场</h1>
+    <div class="game-subtitle">— ZOMBIE PLAYGROUND —</div>
+    <div class="menu-buttons">
+      <button id="btn-encounter">📻 遭遇战 · 剧情模式</button>
+      <button id="btn-hunt">🎯 狩猎模式 · 无尽求生</button>
+      <button id="btn-tutorial">🎓 新手教学 · 训练营</button>
+      <button id="btn-codex">📖 图鉴手册</button>
+      <button id="btn-help">🎮 操作说明</button>
+      <button id="btn-settings">⚙ 设置</button>
+    </div>
+    <div id="menu-stats"></div>
+    <div class="menu-footer">黎明会机密档案 · 赤潮事件记录 v2.0</div>
+  </div>
+</div>
+
+<!-- ==================== 任务选择 ==================== -->
+<div id="screen-missions" class="screen hidden">
+  <div class="screen-inner">
+    <h2 class="screen-title">遭遇战 · 任务简报</h2>
+    <div class="screen-sub">完成章节自动解锁下一章 · 进度自动保存</div>
+    <div id="mission-list" class="card-list"></div>
+    <button class="btn-back" data-back="menu">◂ 返回主菜单</button>
+  </div>
+</div>
+
+<!-- ==================== 地图选择 ==================== -->
+<div id="screen-maps" class="screen hidden">
+  <div class="screen-inner">
+    <h2 class="screen-title" id="maps-title">选择地图</h2>
+    <div id="difficulty-row" class="hidden">
+      <span class="diff-label">难度：</span>
+      <button class="diff-btn" data-diff="normal">普通</button>
+      <button class="diff-btn" data-diff="hard">困难</button>
+      <button class="diff-btn" data-diff="nightmare">噩梦</button>
+    </div>
+    <div id="map-list" class="card-list"></div>
+    <button class="btn-back" data-back="menu">◂ 返回主菜单</button>
+  </div>
+</div>
+
+<!-- ==================== 图鉴 ==================== -->
+<div id="screen-codex" class="screen hidden">
+  <div class="screen-inner">
+    <h2 class="screen-title">图鉴手册</h2>
+    <div id="codex-tabs">
+      <button class="codex-tab active" data-tab="zombies">🧟 感染体图鉴</button>
+      <button class="codex-tab" data-tab="weapons">🔫 军火图鉴</button>
+      <button class="codex-tab" data-tab="perks">💉 强化针剂</button>
+    </div>
+    <div id="codex-content"></div>
+    <button class="btn-back" data-back="menu">◂ 返回主菜单</button>
+  </div>
+</div>
+
+<!-- ==================== 操作说明 ==================== -->
+<div id="screen-help" class="screen hidden">
+  <div class="screen-inner help-inner">
+    <h2 class="screen-title">操作说明</h2>
+    <div class="help-grid">
+      <div class="help-item"><b>W A S D</b><span>移动</span></div>
+      <div class="help-item"><b>鼠标</b><span>视角 / 左键射击 / 右键瞄准</span></div>
+      <div class="help-item"><b>Shift</b><span>疾跑</span></div>
+      <div class="help-item"><b>空格</b><span>跳跃</span></div>
+      <div class="help-item"><b>C / Ctrl</b><span>闪避冲刺（短暂无敌）</span></div>
+      <div class="help-item"><b>F</b><span>战术脚踢（大硬直+击退）</span></div>
+      <div class="help-item"><b>R</b><span>装填弹药</span></div>
+      <div class="help-item"><b>1 / 2 / 3</b><span>主武器 / 副武器 / 近战</span></div>
+      <div class="help-item"><b>滚轮</b><span>快速切换武器</span></div>
+      <div class="help-item"><b>G</b><span>投掷破片手雷</span></div>
+      <div class="help-item"><b>T</b><span>投掷燃烧瓶</span></div>
+      <div class="help-item"><b>B / E</b><span>打开补给站（波间或站在补给区内）</span></div>
+      <div class="help-item"><b>Esc</b><span>暂停</span></div>
+      <div class="help-item"><b>空格/点击</b><span>推进剧情对话</span></div>
+      <div class="help-item"><b>📱 触屏</b><span>左侧摇杆移动 · 右侧滑动视角 · 实体按键</span></div>
+    </div>
+    <div class="help-tips">
+      <p>💡 爆头有额外资金加成，近战与爆炸同样给钱——敢于近身搏杀的猎人才富得起来。</p>
+      <p>💡 尖啸者的嚎叫会召唤尸潮，吐酸者会远程吐酸，膨胀者死亡会自爆——学会排优先级。</p>
+      <p>💡 装甲暴兵正面有重甲，绕后攻击或使用高穿透武器。被包围时 F 脚踢 + C 闪避可以脱身。</p>
+      <p>💡 连续快速击杀会触发连杀奖金；狩猎模式中留意"尸潮突袭"与"空投补给"事件。</p>
+    </div>
+    <button class="btn-back" data-back="menu">◂ 返回主菜单</button>
+  </div>
+</div>
+
+<!-- ==================== 设置 ==================== -->
+<div id="screen-settings" class="screen hidden">
+  <div class="screen-inner settings-inner">
+    <h2 class="screen-title">设置</h2>
+    <div class="setting-row">
+      <label>鼠标灵敏度 <span id="sens-val">1.00</span></label>
+      <input type="range" id="sens-slider" min="0.2" max="3" step="0.05" value="1">
+    </div>
+    <div class="setting-row">
+      <label>音量 <span id="vol-val">80%</span></label>
+      <input type="range" id="vol-slider" min="0" max="1" step="0.05" value="0.8">
+    </div>
+    <div class="setting-row">
+      <label>画质（自动模式按帧率动态调整）</label>
+      <div id="quality-btns">
+        <button class="diff-btn q-btn" data-q="auto">自动</button>
+        <button class="diff-btn q-btn" data-q="high">高（描边+高分屏）</button>
+        <button class="diff-btn q-btn" data-q="medium">中</button>
+        <button class="diff-btn q-btn" data-q="low">低（流畅优先）</button>
+      </div>
+    </div>
+    <button class="btn-back" id="settings-back">◂ 返回</button>
+  </div>
+</div>
+
+<!-- ==================== 暂停 ==================== -->
+<div id="screen-pause" class="screen hidden">
+  <div class="pause-inner">
+    <h2>已暂停</h2>
+    <div class="menu-buttons">
+      <button id="btn-resume">▶ 继续作战</button>
+      <button id="btn-restart">↻ 重新开始</button>
+      <button id="btn-pause-settings">⚙ 设置</button>
+      <button id="btn-quit">✖ 放弃任务</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 结算 ==================== -->
+<div id="screen-over" class="screen hidden">
+  <div class="pause-inner">
+    <h2 id="over-title">任务失败</h2>
+    <div id="over-sub" class="screen-sub">黎明会会记住你的牺牲</div>
+    <div id="over-stats" class="stats-grid"></div>
+    <div class="menu-buttons">
+      <button id="btn-retry">↻ 再来一次</button>
+      <button id="btn-over-quit">回到主菜单</button>
+    </div>
+  </div>
+</div>
+
+<div id="screen-victory" class="screen hidden">
+  <div class="pause-inner">
+    <h2 class="victory-title">✔ 任务完成</h2>
+    <div id="victory-story"></div>
+    <div id="victory-stats" class="stats-grid"></div>
+    <div class="menu-buttons">
+      <button id="btn-vic-next">下一章 ▸</button>
+      <button id="btn-vic-quit">回到主菜单</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="hidden"></div>
+
+<!-- ==================== 脚本（按依赖顺序加载） ==================== -->
+<script src="js/lib/three.min.js?v=2.0"></script>
+<!-- 配置层 -->
+<script src="js/config/gameConfig.js?v=2.0"></script>
+<script src="js/config/weapons.js?v=2.0"></script>
+<script src="js/config/zombies.js?v=2.0"></script>
+<script src="js/config/perks.js?v=2.0"></script>
+<script src="js/config/maps.js?v=2.0"></script>
+<script src="js/config/story.js?v=2.0"></script>
+<!-- 核心层 -->
+<script src="js/core/utils.js?v=2.0"></script>
+<script src="js/core/artkit.js?v=2.0"></script>
+<script src="js/core/audio.js?v=2.0"></script>
+<script src="js/core/input.js?v=2.0"></script>
+<script src="js/core/touch.js?v=2.0"></script>
+<script src="js/core/particles.js?v=2.0"></script>
+<script src="js/core/collision.js?v=2.0"></script>
+<script src="js/core/engine.js?v=2.0"></script>
+<!-- 实体层 -->
+<script src="js/entities/player.js?v=2.0"></script>
+<script src="js/entities/zombie.js?v=2.0"></script>
+<script src="js/entities/projectile.js?v=2.0"></script>
+<!-- 系统层 -->
+<script src="js/systems/weaponSystem.js?v=2.0"></script>
+<script src="js/systems/spawnSystem.js?v=2.0"></script>
+<script src="js/systems/shopSystem.js?v=2.0"></script>
+<script src="js/systems/saveSystem.js?v=2.0"></script>
+<!-- UI层 -->
+<script src="js/ui/hud.js?v=2.0"></script>
+<script src="js/ui/damageNumbers.js?v=2.0"></script>
+<script src="js/ui/shopUI.js?v=2.0"></script>
+<script src="js/ui/storyUI.js?v=2.0"></script>
+<script src="js/ui/menu.js?v=2.0"></script>
+<!-- 模式层 -->
+<script src="js/modes/huntMode.js?v=2.0"></script>
+<script src="js/modes/encounterMode.js?v=2.0"></script>
+<script src="js/modes/tutorialMode.js?v=2.0"></script>
+<!-- 主循环 -->
+<script src="js/core/game.js?v=2.0"></script>
+<script src="js/main.js?v=2.0"></script>
+</body>
+</html>

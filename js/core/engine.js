@@ -141,29 +141,41 @@ const ENGINE = {
       g.add(pl);
     }
 
-    // 普通物件
+    // ---- 静态几何合并（GPU加速核心）：同材质道具合并为单个网格，大幅减少 draw call ----
+    const buckets = new Map();   // matKey -> {mat, geos: []}
+    const bakeGeo = (geo, p) => {
+      const m = new THREE.Matrix4().makeRotationY(p.ry || 0);
+      m.setPosition(p.x, (p.y || 0) + p.h / 2, p.z);
+      geo.applyMatrix4(m);
+      return geo;
+    };
     for (const p of def.props) {
-      let mesh;
-      if (p.t === 'b') {
-        // 高层建筑 → 窗格纹理
-        const useWin = !p.e && p.h >= 10;
-        const material = useWin
-          ? (() => {
-              const t = this.trackTex(ART.windows(p.c).clone()); t.needsUpdate = true;
-              t.repeat.set(Math.max(1, Math.round(p.w / 6)), Math.max(1, Math.round(p.h / 5)));
-              const m = new THREE.MeshLambertMaterial({ map: t });
-              return m;
-            })()
-          : ART.mat(p.c, { e: p.e, toon: !p.e });
-        mesh = new THREE.Mesh(new THREE.BoxGeometry(p.w, p.h, p.d), material);
+      const useWin = !p.e && p.h >= 10;   // 窗格建筑保持独立（每栋独立UV重复度）
+      if (useWin) {
+        const t = this.trackTex(ART.windows(p.c).clone()); t.needsUpdate = true;
+        t.repeat.set(Math.max(1, Math.round(p.w / 6)), Math.max(1, Math.round(p.h / 5)));
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(p.w, p.h, p.d), new THREE.MeshLambertMaterial({ map: t }));
         put(mesh, p.x, (p.y || 0) + p.h / 2, p.z, p.ry);
-        if (!p.nc && p.h > 0.3) colBox(p.x, p.z, p.w, p.d, p.h, p.y || 0);
-      } else {
-        mesh = new THREE.Mesh(new THREE.CylinderGeometry(p.r, p.r, p.h, 14), ART.mat(p.c, { e: p.e, toon: !p.e }));
-        put(mesh, p.x, (p.y || 0) + p.h / 2, p.z, 0);
-        if (!p.nc && p.h > 0.3) colCyl(p.x, p.z, p.r, p.h, p.y || 0);
+        g.add(mesh);
+        continue;
       }
+      const mat = ART.mat(p.c, { e: p.e, toon: !p.e });
+      const key = mat.uuid;
+      if (!buckets.has(key)) buckets.set(key, { mat, geos: [] });
+      const geo = p.t === 'b'
+        ? new THREE.BoxGeometry(p.w, p.h, p.d)
+        : new THREE.CylinderGeometry(p.r, p.r, p.h, 14);
+      buckets.get(key).geos.push(bakeGeo(geo, p));
+      if (!p.nc && p.h > 0.3) {
+        if (p.t === 'b') colBox(p.x, p.z, p.w, p.d, p.h, p.y || 0);
+        else colCyl(p.x, p.z, p.r, p.h, p.y || 0);
+      }
+    }
+    for (const { mat, geos } of buckets.values()) {
+      const merged = mergeGeometries(geos);
+      const mesh = new THREE.Mesh(merged, mat);
       g.add(mesh);
+      if (this.quality.outlines) ART.outline(mesh, 1 + Math.min(0.05, 0.04 / Math.max(1, merged.boundingSphere.radius)));
     }
 
     // 特殊建筑
@@ -171,17 +183,23 @@ const ENGINE = {
       if (STRUCTS[s.type]) STRUCTS[s.type](g, s, def);
     }
 
-    // 边界墙
+    // 边界墙（合并为单一网格）
     const S = def.size;
     const wallMat = ART.mat(0x1a1d22);
-    const mkWall = (x, z, w, d) => {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(w, 7, d), wallMat);
-      wall.position.set(x, 3.5, z);
-      wall.userData.noOutline = true;
-      g.add(wall);
-    };
-    mkWall(0, -S - 1, S * 2 + 4, 2); mkWall(0, S + 1, S * 2 + 4, 2);
-    mkWall(-S - 1, 0, 2, S * 2 + 4); mkWall(S + 1, 0, 2, S * 2 + 4);
+    {
+      const geos = [];
+      const add = (x, z, w, d) => {
+        const geo = new THREE.BoxGeometry(w, 7, d);
+        const m = new THREE.Matrix4().setPosition(x, 3.5, z);
+        geo.applyMatrix4(m);
+        geos.push(geo);
+      };
+      add(0, -S - 1, S * 2 + 4, 2); add(0, S + 1, S * 2 + 4, 2);
+      add(-S - 1, 0, 2, S * 2 + 4); add(S + 1, 0, 2, S * 2 + 4);
+      const wallMesh = new THREE.Mesh(mergeGeometries(geos), wallMat);
+      wallMesh.userData.noOutline = true;
+      g.add(wallMesh);
+    }
     colBox(0, -S - 1, S * 2 + 4, 2, 7); colBox(0, S + 1, S * 2 + 4, 2, 7);
     colBox(-S - 1, 0, 2, S * 2 + 4, 7); colBox(S + 1, 0, 2, S * 2 + 4, 7);
 
@@ -223,3 +241,27 @@ const ENGINE = {
 
   render() { this.renderer.render(this.scene, this.camera); },
 };
+
+/* ---------- 几何合并（手动拼接，兼容 r128 无 BufferGeometryUtils） ---------- */
+function mergeGeometries(geos) {
+  const list = geos.map(g => (g.index ? g.toNonIndexed() : g));
+  let total = 0;
+  for (const geo of list) total += geo.attributes.position.count;
+  const pos = new Float32Array(total * 3);
+  const norm = new Float32Array(total * 3);
+  const uv = new Float32Array(total * 2);
+  let off = 0;
+  for (const geo of list) {
+    pos.set(geo.attributes.position.array, off * 3);
+    norm.set(geo.attributes.normal.array, off * 3);
+    if (geo.attributes.uv) uv.set(geo.attributes.uv.array, off * 2);
+    off += geo.attributes.position.count;
+    geo.dispose();
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(norm, 3));
+  out.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  out.computeBoundingSphere();
+  return out;
+}

@@ -80,6 +80,7 @@ class Game {
     this.killStreak = 0; this.streakT = 0;
     this._fireCount = 0; this._fragWindowT = 0;
     this.weather = { kind: 'clear', t: rand(35, 60) };
+    this.runStats = { damageTaken: 0, fragKills: 0 };
     this.state = 'playing';
     MENU.hideAll();
     HUD.show();
@@ -152,6 +153,7 @@ class Game {
   onPlayerDamaged() {
     this.killStreak = 0;
     this.streakT = 0;
+    if (this.runStats) this.runStats.damageTaken++;
   }
 
   /* ================= 主循环 ================= */
@@ -320,6 +322,9 @@ class Game {
       HUD.toast(`🔥 ${this.killStreak} 连杀！奖金 +$${GAMECONFIG.streak.bonusAmount}`);
       AUDIO.streak();
     }
+
+    // 手雷击杀统计（挑战任务用）
+    if (this._fragWindowT > 0 && this.runStats) this.runStats.fragKills++;
 
     // 顿帧（爆头击杀更狠）
     this.hitstop(headshot ? GAMECONFIG.feel.hitstopHeadKill : GAMECONFIG.feel.hitstopKill);

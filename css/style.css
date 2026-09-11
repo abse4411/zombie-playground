@@ -478,6 +478,18 @@ button { font-family: var(--font); cursor: pointer; }
 }
 @keyframes bloodFade { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
 
+/* ---------- 章节评级徽章 ---------- */
+.card .card-rating {
+  position: absolute; top: 6px; right: 10px;
+  width: 30px; height: 30px; line-height: 30px; text-align: center;
+  border-radius: 50%; font-weight: 900; font-size: 16px;
+  border: 2px solid var(--gold); color: var(--gold);
+  background: rgba(255,200,87,.12); box-shadow: 0 0 10px rgba(255,200,87,.4);
+}
+.card .card-rating.rating-S { border-color: #c07dff; color: #c07dff; background: rgba(160,80,255,.15); box-shadow: 0 0 12px rgba(160,80,255,.6); }
+.card .card-done { right: 50px; }
+.card .card-rating + .card-done { display: none; }
+
 /* ---------- 触屏控制层 ---------- */
 #touch-ui { position: fixed; inset: 0; z-index: 35; pointer-events: none; }
 #touch-ui.hidden { display: none !important; }

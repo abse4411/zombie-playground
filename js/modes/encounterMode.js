@@ -14,6 +14,22 @@ class EncounterMode {
     this.midPlayed = false;
     this.ended = false;
     this.earlyWin = false;
+    this.rating = '';
+    this.killsAtStart = game.player ? game.player.kills : 0;
+    // ---- 挑战任务（每局随机3条） ----
+    const T = Math.round(missionIdx * 1.5);
+    const pool = [
+      { id: 'hs', text: `爆头击杀 ${8 + T} 只`, check: g => g.player.headshots >= 8 + T, bonus: 300 },
+      { id: 'dmg', text: `累计受击不超过 ${5} 次`, check: g => (g.mode.elapsed || 0) > 60 && g.runStats.damageTaken <= 5, bonus: 350 },
+      { id: 'kills', text: `击杀 ${30 + T * 8} 只感染体`, check: g => g.player.kills - this.killsAtStart >= 30 + T * 8, bonus: 300 },
+      { id: 'frag', text: `手雷击杀 ${4} 只`, check: g => g.runStats.fragKills >= 4, bonus: 250 },
+      { id: 'streak', text: `打出一次 6 连杀`, check: g => g.killStreak >= 6, bonus: 300 },
+    ];
+    this.challenges = [];
+    const cp = [...pool];
+    while (this.challenges.length < 3 && cp.length) {
+      this.challenges.push({ ...cp.splice(Math.floor(Math.random() * cp.length), 1)[0], done: false });
+    }
   }
 
   start() {
@@ -68,6 +84,16 @@ class EncounterMode {
 
     g.spawner.update(dt);
 
+    // 挑战任务检测
+    for (const c of this.challenges) {
+      if (!c.done && c.check(g)) {
+        c.done = true;
+        g.player.addMoney(c.bonus);
+        HUD.toast(`🏅 挑战完成：${c.text} +$${c.bonus}`);
+        AUDIO.streak();
+      }
+    }
+
     // ---- 胜利判定 ----
     if (this.elapsed >= m.duration) { this.win(false); return; }
     const allSpawned = this.wavePtr >= m.waves.length
@@ -82,9 +108,21 @@ class EncounterMode {
     this.ended = true;
     this.earlyWin = early;
     SAVE.completeMission(this.idx);
+    // ---- 章节评级（命中率40% + 击杀效率30% + 承伤30%）----
+    const g = this.game, p = g.player;
+    const acc = g.stats.shots ? g.stats.hits / g.stats.shots : 0.5;
+    const kpm = p.kills / (this.m.duration / 60);
+    const dmgK = Math.max(0, 1 - g.runStats.damageTaken / 12);
+    const score = Math.min(100, Math.round(acc * 40 + Math.min(1, kpm / 12) * 30 + dmgK * 30));
+    this.rating = score >= 80 ? 'S' : score >= 65 ? 'A' : score >= 45 ? 'B' : 'C';
+    const best = SAVE.data.bestRating || (SAVE.data.bestRating = {});
+    if (!best[this.idx] || 'SABC'.indexOf(this.rating) < 'SABC'.indexOf(best[this.idx])) {
+      best[this.idx] = this.rating;
+    }
+    SAVE.commit();
     AUDIO.victory();
     const finish = early ? '（提前清空全场！）' : '';
-    STORY.play([{ s: '任务完成', t: `坚守目标达成${finish}` }, ...this.m.outro],
+    STORY.play([{ s: '任务完成', t: `坚守目标达成${finish} · 评级 ${this.rating}` }, ...this.m.outro],
       () => GAME.showVictory(this.idx));
   }
 
@@ -100,13 +138,17 @@ class EncounterMode {
     const g = this.game, p = g.player;
     const outcome = !p.alive ? '任务失败'
       : (this.earlyWin ? '提前肃清' : '坚守成功');
-    return [
+    const rows = [
       ['任务结果', outcome, outcome === '任务失败' ? 'red' : 'gold'],
+      ['任务评级', this.rating || '—', this.rating === 'S' ? 'gold' : ''],
+      ['挑战完成', `${this.challenges.filter(c => c.done).length}/3`, ''],
+    ];
+    return rows.concat([
       ['总击杀', `${p.kills}`, 'red'],
       ['爆头击杀', `${p.headshots}`, ''],
       ['命中率', g.stats.shots ? Math.round(g.stats.hits / g.stats.shots * 100) + '%' : '—', ''],
       ['剩余时间', fmtTime(this.m.duration - this.elapsed), ''],
       ['赚取资金', fmtMoney(p.moneyEarned), 'gold'],
-    ];
+    ]);
   }
 }

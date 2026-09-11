@@ -108,9 +108,11 @@ const MENU = {
     MISSIONS.forEach((m, i) => {
       const locked = i > SAVE.data.missionsDone;
       const done = i < SAVE.data.missionsDone;
+      const rating = (SAVE.data.bestRating || {})[i];
       const card = document.createElement('div');
       card.className = 'card' + (locked ? ' locked' : '');
       card.innerHTML = `
+        ${rating ? `<span class="card-rating rating-${rating}">${rating}</span>` : ''}
         ${done ? '<span class="card-done">✔ 已完成</span>' : locked ? '<span class="card-lock">🔒</span>' : ''}
         <h3>${m.name}</h3>
         <div class="card-map">📍 ${MAPS[m.map].name} · ⏱ ${fmtTime(m.duration)}</div>

@@ -31,6 +31,7 @@ class Player {
     this.moveMult = 1;
     this.dashCd = 0; this.dashT = 0; this.iframesT = 0; this._dashDir = { x: 0, z: 1 };
     this.recoilAccum = 0;   // 未回复的后坐力（自动回正）
+    this.fovPunch = 0;      // 终结镜头 FOV 冲击
     this.recomputePerks();
     this.armor = 0;
   }

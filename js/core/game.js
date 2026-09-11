@@ -86,6 +86,7 @@ class Game {
     HUD.show();
     this.mode.start();
     AUDIO.startAmbient();
+    AUDIO.startMusic();
     AUDIO.stopFireLoop();
     AUDIO.stopRainLoop();
     if (!STORY.active) this.requestLock();
@@ -257,8 +258,13 @@ class Game {
     // 手雷击杀归因窗口
     if (this._fragWindowT > 0) this._fragWindowT -= dt;
 
-    // 紧张度分层
-    AUDIO.setTension(clamp(this.aliveZombies() / 16, 0, 1));
+    // 紧张度分层 + 动态音乐
+    const tension = clamp(this.aliveZombies() / 16, 0, 1);
+    AUDIO.setTension(tension);
+    AUDIO.musicTick(tension);
+
+    // 终结镜头 FOV 冲击衰减
+    if (this.player.fovPunch > 0) this.player.fovPunch = Math.max(0, this.player.fovPunch - dt * 2.2);
 
     // 环境音：丧尸低吼
     this._growlT -= dt;
@@ -309,6 +315,7 @@ class Game {
       this.boss = null;
       HUD.hideBossBar();
       this.slowmo(1.0);
+      p.fovPunch = 1;
       HUD.toast(`☠ ${z.displayName} 已被击倒！ 赏金 +$${total}`);
       AUDIO.victory();
     }
@@ -341,6 +348,7 @@ class Game {
     this.state = 'over';
     AUDIO.defeat();
     AUDIO.stopAmbient();
+    AUDIO.stopMusic();
     AUDIO.stopFireLoop();
     INPUT.releaseLock();
     const mode = this.mode;
@@ -389,6 +397,7 @@ class Game {
     this.state = 'paused';
     INPUT.releaseLock();
     AUDIO.stopAmbient();
+    AUDIO.stopMusic();
     MENU.showPause();
   }
 
@@ -419,6 +428,7 @@ class Game {
     HUD.hide();
     HUD.setScope(false);
     AUDIO.stopAmbient();
+    AUDIO.stopMusic();
     AUDIO.stopFireLoop();
     AUDIO.stopRainLoop();
     INPUT.releaseLock();

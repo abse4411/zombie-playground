@@ -175,6 +175,55 @@ const AUDIO = {
     this._fire = null;
   },
 
+  /* ---------- 动态音乐层（按紧张度调度的低音琶音） ---------- */
+  _music: null,
+  startMusic() {
+    if (!this.ctx || this._music) return;
+    this._music = { nextT: this.ctx.currentTime + 0.1, step: 0 };
+  },
+  stopMusic() { this._music = null; },
+  // 每帧调用：前瞻式音符调度，紧张度决定密度与音高
+  musicTick(tension) {
+    if (!this._music || !this.ctx) return;
+    const m = this._music;
+    // 暂停恢复后追赶保护
+    if (m.nextT < this.ctx.currentTime - 0.3) m.nextT = this.ctx.currentTime + 0.05;
+    const bassLine = [55, 55, 65.4, 55, 49, 49, 58.3, 55];        // A1/G1 系低音
+    const arpLine = [220, 261.6, 329.6, 392, 329.6, 261.6];       // 小调琶音
+    const bpm = 92 + tension * 36;
+    const interval = 60 / bpm / 2;   // 八分音符
+    while (m.nextT < this.ctx.currentTime + 0.15) {
+      const t = m.nextT, s = m.step;
+      // 低音：每拍
+      if (s % 2 === 0) {
+        const f = bassLine[(s / 2) % bassLine.length];
+        this._note(f, t, 0.22, 'triangle', 0.10 + tension * 0.08);
+      }
+      // 琶音：紧张度高时加密
+      if (tension > 0.25 && s % (tension > 0.6 ? 1 : 2) === 0) {
+        const f = arpLine[(s * 3) % arpLine.length] * (tension > 0.6 ? 2 : 1);
+        this._note(f, t, 0.12, 'square', 0.02 + tension * 0.045);
+      }
+      // 底鼓：紧张度高时
+      if (tension > 0.4 && s % 4 === 0) {
+        this._note(48, t, 0.1, 'sine', 0.14 + tension * 0.1, 30);
+      }
+      m.nextT += interval;
+      m.step = (s + 1) % 64;
+    }
+  },
+  _note(freq, t, dur, type, vol, slideTo) {
+    const o = this.ctx.createOscillator(); o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.001, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(this.master);
+    o.start(t); o.stop(t + dur + 0.03);
+  },
+
   /* ---------- 雨声循环 ---------- */
   _rain: null,
   startRainLoop() {

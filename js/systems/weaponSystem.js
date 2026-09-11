@@ -159,8 +159,9 @@ class WeaponSystem {
     const wantAds = INPUT.rmb && this.reloadT <= 0 && !def.melee;
     this.adsT = clamp(this.adsT + (wantAds ? 1 : -1) * dt * 9, 0, 1);
     p.ads = this.adsT > 0.5;
-    const targetFov = def.scope ? lerp(75, 26, this.adsT) : lerp(75, 62, this.adsT);
-    if (Math.abs(ENGINE.camera.fov - targetFov) > 0.05) {
+    const targetFov = (def.scope ? lerp(75, 26, this.adsT) : lerp(75, 62, this.adsT))
+      + (this.p.fovPunch || 0) * 14;   // 终结镜头 FOV 冲击
+    if (Math.abs(ENGINE.camera.fov - targetFov) > 0.05 || (this.p.fovPunch || 0) > 0.02) {
       ENGINE.camera.fov = targetFov;
       ENGINE.camera.updateProjectionMatrix();
     }

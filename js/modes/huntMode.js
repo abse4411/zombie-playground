@@ -83,6 +83,7 @@ class HuntMode {
         HUD.toast(`第 ${this.wave} 波已清除，休整片刻 —— [B] 打开补给站`);
         AUDIO.waveClear();
         g.slowmo(GAMECONFIG.feel.slowmoWave);   // 清场慢镜
+        g.player.fovPunch = 0.7;                // 终结镜头
         this.state = 'intermission';
         this.timer = GAMECONFIG.hunt.intermission;
         // 波间小回复

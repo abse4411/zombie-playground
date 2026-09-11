@@ -175,6 +175,23 @@ const AUDIO = {
     this._fire = null;
   },
 
+  /* ---------- 雨声循环 ---------- */
+  _rain: null,
+  startRainLoop() {
+    if (!this.ctx || this._rain) return;
+    const n = this.ctx.createBufferSource(); n.buffer = this.noise; n.loop = true;
+    const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1400;
+    const g = this.ctx.createGain(); g.gain.value = 0.07;
+    n.connect(f); f.connect(g); g.connect(this.master);
+    n.start();
+    this._rain = { n, g };
+  },
+  stopRainLoop() {
+    if (!this._rain) return;
+    try { this._rain.n.stop(); } catch (e) { }
+    this._rain = null;
+  },
+
   /* ---------- 紧张度分层（随场上丧尸数量增强） ---------- */
   _tension: null,
   startTension() {

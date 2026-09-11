@@ -107,6 +107,13 @@ class SpawnSystem {
       opts.affix = choice(GAMECONFIG.elites.list);
     }
     const zb = new Zombie(typeId, sx, sz, this.mults, opts);
+    // 血月强化
+    const wm = this.game.weatherMult;
+    if (wm) {
+      zb.maxHp = Math.round(zb.maxHp * wm.hp); zb.hp = zb.maxHp;
+      zb.speed *= wm.speed;
+      zb.reward = Math.round(zb.reward * wm.reward);
+    }
     this.game.zombies.push(zb);
     PARTICLES.dust(sx, 0.4, sz, 7);
     // 地狱犬登场嚎叫（COD Zombies 式预警）

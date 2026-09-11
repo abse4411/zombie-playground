@@ -79,12 +79,14 @@ class Game {
     this.hitstopT = 0; this.slowmoT = 0;
     this.killStreak = 0; this.streakT = 0;
     this._fireCount = 0; this._fragWindowT = 0;
+    this.weather = { kind: 'clear', t: rand(35, 60) };
     this.state = 'playing';
     MENU.hideAll();
     HUD.show();
     this.mode.start();
     AUDIO.startAmbient();
     AUDIO.stopFireLoop();
+    AUDIO.stopRainLoop();
     if (!STORY.active) this.requestLock();
   }
 
@@ -107,6 +109,38 @@ class Game {
   // 触屏 / 低配模式的刷怪上限乘区
   get capMult() {
     return ENGINE.quality.capMult * (INPUT.touch ? 0.72 : 1);
+  }
+
+  // 血月等天气的丧尸强化
+  get weatherMult() {
+    return this.weather && this.weather.kind === 'blood'
+      ? { hp: 1.3, speed: 1.1, reward: 1.5 } : null;
+  }
+
+  _weatherTick(dt) {
+    const w = this.weather;
+    if (!w) return;
+    w.t -= dt;
+    if (w.kind === 'rain') {
+      PARTICLES.rainStep(this.player.pos.x, this.player.pos.z, Math.round(16 * ENGINE.quality.particleMult));
+    }
+    if (w.t > 0) return;
+    const roll = Math.random();
+    let next = 'clear';
+    if (roll < 0.16) next = 'fog';
+    else if (roll < 0.36) next = 'rain';
+    else if (roll < 0.54 && this.mode instanceof HuntMode && (this.mode.wave || 0) >= 3) next = 'blood';
+    this._setWeather(next);
+  }
+
+  _setWeather(kind) {
+    this.weather.kind = kind;
+    this.weather.t = kind === 'blood' ? 42 : rand(30, 55);
+    ENGINE.applyWeather(kind);
+    if (kind === 'rain') { AUDIO.startRainLoop(); HUD.toast('🌧 暴雨来临'); }
+    else AUDIO.stopRainLoop();
+    if (kind === 'fog') HUD.toast('🌫 浓雾弥漫，小心视野盲区');
+    if (kind === 'blood') { HUD.banner('🌕 血月升起', '感染体狂化：更强，但赏金 +50%'); AUDIO.hordeHorn(); }
   }
 
   onBossSpawned(z) {
@@ -209,6 +243,9 @@ class Game {
     // 模式信息 + Boss 血条
     if (this.mode) this.mode.update(dt);
     if (this.boss && !this.boss.dead) HUD.updateBossBar(this.boss);
+
+    // 天气系统
+    this._weatherTick(dt);
 
     // 连杀计时
     if (this.streakT > 0) {
@@ -378,6 +415,7 @@ class Game {
     HUD.setScope(false);
     AUDIO.stopAmbient();
     AUDIO.stopFireLoop();
+    AUDIO.stopRainLoop();
     INPUT.releaseLock();
     MENU.show('screen-menu');
     MENU.refreshStats();

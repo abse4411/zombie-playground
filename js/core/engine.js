@@ -128,7 +128,8 @@ const ENGINE = {
     g.add(grid);
 
     // 全局光（提亮让 Toon 分档与夜景保持可读）
-    g.add(new THREE.HemisphereLight(def.hemi.sky, def.hemi.ground, def.hemi.i * 1.3));
+    this._hemi = new THREE.HemisphereLight(def.hemi.sky, def.hemi.ground, def.hemi.i * 1.3);
+    g.add(this._hemi);
     const dir = new THREE.DirectionalLight(def.dir.c, def.dir.i * 1.4);
     dir.position.set(def.dir.x, def.dir.y, def.dir.z);
     g.add(dir);
@@ -227,6 +228,25 @@ const ENGINE = {
         const r = o.geometry.boundingSphere ? o.geometry.boundingSphere.radius : 0;
         if (r >= 0.9) ART.outline(o, 1 + Math.min(0.075, 0.05 / Math.max(0.5, r)));
       });
+    }
+  },
+
+  // 天气视觉切换（v2.6）：雾密度/雾色/半球光色
+  applyWeather(kind) {
+    const d = this.mapDef;
+    if (!d || !this.scene.fog || !this._hemi) return;
+    if (kind === 'clear') {
+      this.scene.fog.color.setHex(d.fogColor);
+      this.scene.fog.density = d.fogDensity;
+      this._hemi.color.setHex(d.hemi.sky);
+    } else if (kind === 'fog') {
+      this.scene.fog.density = d.fogDensity * 1.9;
+    } else if (kind === 'rain') {
+      this.scene.fog.density = d.fogDensity * 1.4;
+    } else if (kind === 'blood') {
+      this.scene.fog.color.setHex(0x30080c);
+      this.scene.fog.density = d.fogDensity * 1.25;
+      this._hemi.color.setHex(0x8a2e2e);
     }
   },
 

@@ -10,6 +10,19 @@ const PARTICLES = {
     this._makePool('blood', 600, 0.14, 9.5);
     this._makePool('spark', 400, 0.1, 7);
     this._makePool('smoke', 300, 0.4, -1.4);  // 负重力 = 上飘
+    this._makePool('rain', 900, 0.055, 30);   // 雨滴（细长下坠）
+  },
+
+  // 天气雨幕：以玩家为中心的随机落雨
+  rainStep(px, pz, n) {
+    const p = this.pools.rain;
+    if (!p) return;
+    for (let i = 0; i < n; i++) {
+      this.spawn('rain', px + rand(-16, 16), rand(6, 10), pz + rand(-16, 16), 1, {
+        speed: 0.6, vy: -6, life: 0.75,
+        color: [0.5, 0.62, 0.78], color2: [0.35, 0.45, 0.6],
+      });
+    }
   },
 
   _makePool(name, max, size, gravity) {

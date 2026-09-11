@@ -298,7 +298,7 @@ class WeaponSystem {
       const d = Math.hypot(dx, dz);
       if (d > def.range + 0.35 * z.group.scale.x) continue;
       if ((dx * fx + dz * fz) / (d || 1) < Math.cos(def.arc + 0.55)) continue;
-      const dmg = def.damage * p.dmgMult;
+      const dmg = def.damage * this.w.dmgMult * p.dmgMult;   // 近战也吃强化等级
       z.takeDamage(dmg, true, { x: z.pos.x, y: 1.25 * z.group.scale.x, z: z.pos.z }, game,
         { x: fx * GAMECONFIG.feel.kbMelee, z: fz * GAMECONFIG.feel.kbMelee });
       DMGNUM.spawn(z.pos.x, 1.5 * z.group.scale.x, z.pos.z, Math.round(dmg), false);

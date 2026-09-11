@@ -17,12 +17,15 @@ const GAMECONFIG = {
   // 经济系统
   economy: {
     startMoney: 800,     // 初始资金
-    headshotBonus: 10,   // 爆头额外奖励
+    headshotBonus: 15,   // 爆头额外奖励
+    rewardGlobalMult: 1.6, // 全局赏金倍率（提高爆率）
     waveBonusBase: 150,  // 波次清空基础奖励
     waveBonusPerWave: 50,
     healPrice: 400,      // 全体治疗
     ammoPrice: 500,      // 全弹药补给
     armorPrice: 300,     // 护甲修复
+    chapterBonusBase: 1500,      // 过关大量金钱奖励
+    chapterBonusPerChapter: 500,
   },
 
   // 狩猎模式刷怪参数

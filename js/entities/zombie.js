@@ -160,6 +160,7 @@ class Zombie {
     this.speed = cfg.speed * mults.speed * rand(0.9, 1.12) * (affix ? affix.speed : 1);
     this.damage = cfg.damage * mults.dmg * (affix ? affix.dmg : 1);
     this.reward = Math.round(cfg.reward * mults.reward
+      * (GAMECONFIG.economy.rewardGlobalMult || 1)
       * (affix ? GAMECONFIG.elites.rewardMult : 1)
       * (this.boss ? GAMECONFIG.boss.rewardMult : 1));
     if (affix && affix.explode) this.type = Object.assign({}, cfg, { explode: affix.explode, attackRange: cfg.attackRange });

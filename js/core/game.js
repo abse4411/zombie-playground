@@ -52,7 +52,36 @@ class Game {
   startMission(idx, skipIntro) {
     this._lastStart = { type: 'mission', idx };
     const m = MISSIONS[idx];
+    // 战役继承：仅当从上一章胜利接续时生效
+    this._pendingCarry = (SAVE.data.carry && SAVE.data.carry.nextIdx === idx) ? SAVE.data.carry : null;
     this._begin(m.map, () => new EncounterMode(this, idx, skipIntro));
+  }
+
+  // 应用上一章继承：武器/装备/金钱 + 全补给（v3.1）
+  _applyCarry(c) {
+    const p = this.player;
+    p.money = c.money;
+    p.perks = Object.assign({ hp: 0, armor: 0, speed: 0, ammo: 0, reload: 0, ap: 0, regen: 0 }, c.perks);
+    p.recomputePerks();
+    p.armor = p.maxArmor;
+    p.hp = p.maxHp;
+    for (const slot of ['primary', 'secondary', 'melee']) {
+      const w = c.weapons[slot];
+      if (w && WEAPONS[w.id]) {
+        const inst = new WeaponInstance(WEAPONS[w.id]);
+        inst.lvl = w.lvl || 0;
+        inst.mag = inst.magSize;   // 弹匣自动补满
+        inst.reserve = Math.floor(inst.def.reserve * p.reserveMult);  // 备弹自动补满
+        p.weapons[slot] = inst;
+      }
+    }
+    if (c.throwables !== undefined || c.frag !== undefined) {
+      p.throwables.frag.count = c.frag;
+      p.throwables.molotov.count = c.molo;
+    }
+    p.current = c.current || 'secondary';
+    this.weapons._buildViewmodel();
+    HUD.toast('📦 战役继承：装备 / 弹药 / 生命 已全部补满');
   }
 
   startTutorial() {
@@ -81,6 +110,8 @@ class Game {
     this._fireCount = 0; this._fragWindowT = 0;
     this.weather = { kind: 'clear', t: rand(35, 60) };
     this.runStats = { damageTaken: 0, fragKills: 0 };
+    // 战役继承（在剧情对话前应用）
+    if (this._pendingCarry) { this._applyCarry(this._pendingCarry); this._pendingCarry = null; }
     this.state = 'playing';
     MENU.hideAll();
     HUD.show();

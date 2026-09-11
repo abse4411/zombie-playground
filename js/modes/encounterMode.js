@@ -120,6 +120,23 @@ class EncounterMode {
     if (!best[this.idx] || 'SABC'.indexOf(this.rating) < 'SABC'.indexOf(best[this.idx])) {
       best[this.idx] = this.rating;
     }
+    // ---- 战役继承快照：武器/装备/金钱 + 过关奖励 + 全补给（v3.1）----
+    const E = GAMECONFIG.economy;
+    this.chapterBonus = E.chapterBonusBase + E.chapterBonusPerChapter * this.idx;
+    const weapons = {};
+    for (const slot of ['primary', 'secondary', 'melee']) {
+      const inst = p.weapons[slot];
+      weapons[slot] = inst ? { id: inst.def.id, lvl: inst.lvl } : null;
+    }
+    weapons.current = p.current;
+    SAVE.data.carry = {
+      nextIdx: this.idx + 1,
+      money: p.money + this.chapterBonus,
+      perks: { ...p.perks },
+      frag: THROWABLES.frag.max,
+      molo: THROWABLES.molotov.max,
+      weapons,
+    };
     SAVE.commit();
     AUDIO.victory();
     const finish = early ? '（提前清空全场！）' : '';
@@ -143,6 +160,7 @@ class EncounterMode {
       ['任务结果', outcome, outcome === '任务失败' ? 'red' : 'gold'],
       ['任务评级', this.rating || '—', this.rating === 'S' ? 'gold' : ''],
       ['挑战完成', `${this.challenges.filter(c => c.done).length}/3`, ''],
+      ['过关奖励', this.chapterBonus !== undefined ? fmtMoney(this.chapterBonus) : '—', 'gold'],
     ];
     return rows.concat([
       ['总击杀', `${p.kills}`, 'red'],

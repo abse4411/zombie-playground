@@ -386,6 +386,14 @@ button { font-family: var(--font); cursor: pointer; }
 .menu-buttons button:hover { transform: translateX(4px) rotate(-.5deg); box-shadow: 5px 5px 0 rgba(0,0,0,.55), 0 0 16px var(--red-glow); }
 .si-btn { border-width: 2px; box-shadow: 2px 2px 0 rgba(0,0,0,.5); }
 
+/* ---------- 武器品质色（Borderlands 式） ---------- */
+#weapon-name.wpn-lv1 { color: #7dd87d; }
+#weapon-name.wpn-lv2 { color: #55b8ff; }
+#weapon-name.wpn-lv3 { color: #c07dff; text-shadow: 0 0 10px rgba(160,80,255,.7), 0 1px 3px #000; }
+.shop-item .si-lv1 { border-left: 3px solid #7dd87d; }
+.shop-item .si-lv2 { border-left: 3px solid #55b8ff; }
+.shop-item .si-lv3 { border-left: 3px solid #c07dff; }
+
 /* ---------- Boss 血条 ---------- */
 #boss-bar {
   position: absolute; left: 50%; top: 76px; transform: translateX(-50%);

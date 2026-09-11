@@ -20,18 +20,31 @@ const SHOP = {
         const w = WEAPONS[id];
         if (w.slot !== tabId) continue;
         const owned = p.weapons[tabId] && p.weapons[tabId].def.id === id;
-        const needAmmo = owned && (p.weapons[tabId].mag < w.mag
-          || p.weapons[tabId].reserve < Math.floor(w.reserve * p.reserveMult));
+        const inst = p.weapons[tabId];
+        const needAmmo = owned && (inst.mag < inst.magSize
+          || inst.reserve < Math.floor(w.reserve * p.reserveMult));
         items.push({
           kind: 'weapon', id, def: w,
           name: w.name,
           desc: w.desc,
           price: owned ? GAMECONFIG.economy.ammoPrice : w.price,
           owned, state: owned ? (needAmmo ? 'ammo' : 'owned') : 'buy',
+          lvl: owned ? inst.lvl : 0,
           stats: w.melee
-            ? [['伤害', w.damage], ['攻速', Math.round(w.rpm / 10) + ''], ['范围', w.range.toFixed(1) + 'm']]
-            : [['伤害', w.damage * (w.pellets || 1)], ['射速', w.rpm], ['弹匣', w.mag]],
+            ? [['伤害', Math.round(w.damage * (owned ? inst.dmgMult : 1))], ['攻速', Math.round(w.rpm / 10) + ''], ['范围', w.range.toFixed(1) + 'm']]
+            : [['伤害', Math.round(w.damage * (owned ? inst.dmgMult : 1)) * (w.pellets || 1)], ['射速', w.rpm], ['弹匣', owned ? inst.magSize : w.mag]],
         });
+        // 武器强化（已持有且未满级）
+        if (owned && inst.lvl < 3) {
+          const upPrice = Math.round((w.price > 0 ? w.price * 0.5 : 500) * (inst.lvl + 1));
+          items.push({
+            kind: 'weaponUp', id: id + '_up', def: w,
+            name: `⚙ ${w.name} 强化 Lv.${inst.lvl + 1}`,
+            desc: '伤害 +15%、弹匣 +20%。品质提升：白 → 绿 → 蓝 → 紫。',
+            price: upPrice, state: 'buy',
+            stats: [['伤害', `+15%`], ['弹匣', `+20%`], ['品质', ['白', '绿', '蓝', '紫'][inst.lvl + 1]]],
+          });
+        }
       }
     } else if (tabId === 'throw') {
       for (const id in THROWABLES) {
@@ -100,13 +113,18 @@ const SHOP = {
         if (item.owned) {
           const inst = p.weapons[slot];
           inst.reserve = Math.floor(inst.def.reserve * p.reserveMult);
-          inst.mag = inst.def.mag;
+          inst.mag = inst.magSize;
         } else {
           const inst = new WeaponInstance(item.def);
           inst.reserve = Math.floor(item.def.reserve * p.reserveMult);
           p.weapons[slot] = inst;
           if (game.weapons) game.weapons._buildViewmodel();
         }
+        break;
+      }
+      case 'weaponUp': {
+        const inst = p.weapons[item.def.slot];
+        if (inst && inst.lvl < 3) inst.lvl++;
         break;
       }
       case 'throw': {

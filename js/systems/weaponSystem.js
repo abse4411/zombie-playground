@@ -6,7 +6,10 @@ class WeaponInstance {
     this.def = def;
     this.mag = def.mag;
     this.reserve = def.reserve;
+    this.lvl = 0;   // 强化等级 0-3（Borderlands 式品质：白/绿/蓝/紫）
   }
+  get magSize() { return Math.round(this.def.mag * (1 + 0.2 * this.lvl)); }
+  get dmgMult() { return 1 + 0.15 * this.lvl; }
 }
 
 let _muzzleTex = null;
@@ -268,7 +271,7 @@ class WeaponSystem {
 
     if (hitZ) {
       const hx = origin.x + dir.x * bestT, hy = origin.y + dir.y * bestT, hz = origin.z + dir.z * bestT;
-      let dmg = def.damage * this.p.dmgMult * (isHead ? def.headMult : 1);
+      let dmg = def.damage * this.w.dmgMult * this.p.dmgMult * (isHead ? def.headMult : 1);
       if (def.falloff) {
         const f = def.falloff;
         if (bestT > f.end) dmg *= f.min;
@@ -341,7 +344,7 @@ class WeaponSystem {
   _startReload() {
     const w = this.w;
     if (!w || w.def.melee) return;
-    if (this.reloadT > 0 || w.mag >= w.def.mag || w.reserve <= 0 || this.switchT > 0) return;
+    if (this.reloadT > 0 || w.mag >= w.magSize || w.reserve <= 0 || this.switchT > 0) return;
     this.reloadT = w.def.reloadTime * this.p.reloadMult;
     AUDIO.reloadStart();
   }
@@ -349,7 +352,7 @@ class WeaponSystem {
   _finishReload() {
     const w = this.w;
     if (!w) return;
-    const take = Math.min(w.def.mag - w.mag, w.reserve);
+    const take = Math.min(w.magSize - w.mag, w.reserve);
     w.mag += take; w.reserve -= take;
     AUDIO.reloadEnd();
   }

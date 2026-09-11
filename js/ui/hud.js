@@ -164,7 +164,8 @@ const HUD = {
     // 武器
     const w = game.weapons.w;
     if (w) {
-      this.el.weaponName.textContent = w.def.name;
+      this.el.weaponName.textContent = w.def.name + (w.lvl ? ` Lv.${w.lvl}` : '');
+      this.el.weaponName.className = w.lvl ? ('wpn-lv' + w.lvl) : '';
       if (w.def.melee) {
         this.el.ammoMag.textContent = '∞';
         this.el.ammoMag.className = '';

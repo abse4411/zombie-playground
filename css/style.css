@@ -394,6 +394,16 @@ button { font-family: var(--font); cursor: pointer; }
 .shop-item .si-lv2 { border-left: 3px solid #55b8ff; }
 .shop-item .si-lv3 { border-left: 3px solid #c07dff; }
 
+/* ---------- 存档迁移 ---------- */
+#save-io {
+  width: 100%; height: 64px; margin-bottom: 8px;
+  background: rgba(0,0,0,.5); border: 1px solid var(--line); color: var(--text);
+  font-size: 11px; padding: 8px; resize: none; user-select: text;
+}
+.save-io-btns { display: flex; gap: 10px; justify-content: center; }
+
+/* ---------- 存档迁移 end ---------- */
+
 /* ---------- Boss 血条 ---------- */
 #boss-bar {
   position: absolute; left: 50%; top: 76px; transform: translateX(-50%);

@@ -7,7 +7,7 @@ const SAVE = {
 
   defaults() {
     return {
-      settings: { sens: 1, volume: 0.8, quality: 'auto' },
+      settings: { sens: 1, volume: 0.8, quality: 'auto', touchSens: 1, fpsCap: 0 },
       missionsDone: 0,
       totalKills: 0,
       totalRuns: 0,
@@ -44,5 +44,19 @@ const SAVE = {
       this.data.missionsDone = idx + 1;
       this.commit();
     }
+  },
+
+  /* ---------- 存档迁移（v2.9） ---------- */
+  export() {
+    return btoa(unescape(encodeURIComponent(JSON.stringify(this.data))));
+  },
+
+  import(code) {
+    const json = decodeURIComponent(escape(atob(code.trim())));
+    const obj = JSON.parse(json);
+    if (typeof obj !== 'object' || obj.settings === undefined) throw new Error('格式无效');
+    this.data = Object.assign(this.defaults(), obj);
+    this.commit();
+    return true;
   },
 };

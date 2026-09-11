@@ -247,6 +247,26 @@
         <button class="diff-btn q-btn" data-q="low">低（流畅优先）</button>
       </div>
     </div>
+    <div class="setting-row">
+      <label>触屏灵敏度 <span id="tsens-val">1.00</span></label>
+      <input type="range" id="tsens-slider" min="0.4" max="2.5" step="0.05" value="1">
+    </div>
+    <div class="setting-row">
+      <label>帧率上限（移动端省电）</label>
+      <div id="fpscap-btns">
+        <button class="diff-btn fcap-btn" data-fc="0">自动（60）</button>
+        <button class="diff-btn fcap-btn" data-fc="60">60</button>
+        <button class="diff-btn fcap-btn" data-fc="30">30（省电）</button>
+      </div>
+    </div>
+    <div class="setting-row">
+      <label>存档迁移（导出到其他设备）</label>
+      <textarea id="save-io" placeholder="导出的存档码会显示在这里；导入时粘贴存档码后点击导入"></textarea>
+      <div class="save-io-btns">
+        <button class="diff-btn" id="btn-save-export">📤 导出存档码</button>
+        <button class="diff-btn" id="btn-save-import">📥 导入存档码</button>
+      </div>
+    </div>
     <button class="btn-back" id="settings-back">◂ 返回</button>
   </div>
 </div>
@@ -292,44 +312,44 @@
 <div id="toast" class="hidden"></div>
 
 <!-- ==================== 脚本（按依赖顺序加载） ==================== -->
-<script src="js/lib/three.min.js?v=2.8"></script>
+<script src="js/lib/three.min.js?v=2.9c"></script>
 <!-- 配置层 -->
-<script src="js/config/gameConfig.js?v=2.8"></script>
-<script src="js/config/weapons.js?v=2.8"></script>
-<script src="js/config/zombies.js?v=2.8"></script>
-<script src="js/config/perks.js?v=2.8"></script>
-<script src="js/config/maps.js?v=2.8"></script>
-<script src="js/config/story.js?v=2.8"></script>
+<script src="js/config/gameConfig.js?v=2.9c"></script>
+<script src="js/config/weapons.js?v=2.9c"></script>
+<script src="js/config/zombies.js?v=2.9c"></script>
+<script src="js/config/perks.js?v=2.9c"></script>
+<script src="js/config/maps.js?v=2.9c"></script>
+<script src="js/config/story.js?v=2.9c"></script>
 <!-- 核心层 -->
-<script src="js/core/utils.js?v=2.8"></script>
-<script src="js/core/artkit.js?v=2.8"></script>
-<script src="js/core/audio.js?v=2.8"></script>
-<script src="js/core/input.js?v=2.8"></script>
-<script src="js/core/touch.js?v=2.8"></script>
-<script src="js/core/particles.js?v=2.8"></script>
-<script src="js/core/collision.js?v=2.8"></script>
-<script src="js/core/engine.js?v=2.8"></script>
+<script src="js/core/utils.js?v=2.9c"></script>
+<script src="js/core/artkit.js?v=2.9c"></script>
+<script src="js/core/audio.js?v=2.9c"></script>
+<script src="js/core/input.js?v=2.9c"></script>
+<script src="js/core/touch.js?v=2.9c"></script>
+<script src="js/core/particles.js?v=2.9c"></script>
+<script src="js/core/collision.js?v=2.9c"></script>
+<script src="js/core/engine.js?v=2.9c"></script>
 <!-- 实体层 -->
-<script src="js/entities/player.js?v=2.8"></script>
-<script src="js/entities/zombie.js?v=2.8"></script>
-<script src="js/entities/projectile.js?v=2.8"></script>
+<script src="js/entities/player.js?v=2.9c"></script>
+<script src="js/entities/zombie.js?v=2.9c"></script>
+<script src="js/entities/projectile.js?v=2.9c"></script>
 <!-- 系统层 -->
-<script src="js/systems/weaponSystem.js?v=2.8"></script>
-<script src="js/systems/spawnSystem.js?v=2.8"></script>
-<script src="js/systems/shopSystem.js?v=2.8"></script>
-<script src="js/systems/saveSystem.js?v=2.8"></script>
+<script src="js/systems/weaponSystem.js?v=2.9c"></script>
+<script src="js/systems/spawnSystem.js?v=2.9c"></script>
+<script src="js/systems/shopSystem.js?v=2.9c"></script>
+<script src="js/systems/saveSystem.js?v=2.9c"></script>
 <!-- UI层 -->
-<script src="js/ui/hud.js?v=2.8"></script>
-<script src="js/ui/damageNumbers.js?v=2.8"></script>
-<script src="js/ui/shopUI.js?v=2.8"></script>
-<script src="js/ui/storyUI.js?v=2.8"></script>
-<script src="js/ui/menu.js?v=2.8"></script>
+<script src="js/ui/hud.js?v=2.9c"></script>
+<script src="js/ui/damageNumbers.js?v=2.9c"></script>
+<script src="js/ui/shopUI.js?v=2.9c"></script>
+<script src="js/ui/storyUI.js?v=2.9c"></script>
+<script src="js/ui/menu.js?v=2.9c"></script>
 <!-- 模式层 -->
-<script src="js/modes/huntMode.js?v=2.8"></script>
-<script src="js/modes/encounterMode.js?v=2.8"></script>
-<script src="js/modes/tutorialMode.js?v=2.8"></script>
+<script src="js/modes/huntMode.js?v=2.9c"></script>
+<script src="js/modes/encounterMode.js?v=2.9c"></script>
+<script src="js/modes/tutorialMode.js?v=2.9c"></script>
 <!-- 主循环 -->
-<script src="js/core/game.js?v=2.8"></script>
-<script src="js/main.js?v=2.8"></script>
+<script src="js/core/game.js?v=2.9c"></script>
+<script src="js/main.js?v=2.9c"></script>
 </body>
 </html>

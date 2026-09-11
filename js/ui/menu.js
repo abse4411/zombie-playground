@@ -73,6 +73,48 @@ const MENU = {
       this.show(this.settingsFrom === 'pause' ? 'screen-pause' : 'screen-menu');
     });
 
+    // 触屏灵敏度
+    const tsens = $('tsens-slider');
+    if (tsens) {
+      tsens.value = SAVE.data.settings.touchSens || 1;
+      $('tsens-val').textContent = Number(SAVE.data.settings.touchSens || 1).toFixed(2);
+      tsens.addEventListener('input', () => {
+        SAVE.data.settings.touchSens = parseFloat(tsens.value);
+        $('tsens-val').textContent = parseFloat(tsens.value).toFixed(2);
+        SAVE.commit();
+      });
+    }
+    // 帧率上限
+    const fBtns = document.querySelectorAll('.fcap-btn');
+    const setFcapActive = () => fBtns.forEach(b => b.classList.toggle('active', +b.dataset.fc === (SAVE.data.settings.fpsCap || 0)));
+    setFcapActive();
+    fBtns.forEach(b => b.addEventListener('click', () => {
+      SAVE.data.settings.fpsCap = +b.dataset.fc;
+      SAVE.commit();
+      setFcapActive();
+      AUDIO.uiClick();
+    }));
+    // 存档导出 / 导入
+    const io = $('save-io');
+    $('btn-save-export').addEventListener('click', () => {
+      io.value = SAVE.export();
+      io.select();
+      HUD.toast('存档码已生成，复制文本框内容保存');
+      AUDIO.uiClick();
+    });
+    $('btn-save-import').addEventListener('click', () => {
+      try {
+        SAVE.import(io.value);
+        HUD.toast('✔ 存档导入成功');
+        AUDIO.purchase();
+        this.refreshStats();
+        this.show('screen-menu');
+      } catch (e) {
+        HUD.toast('✖ 存档码无效');
+        AUDIO.denied();
+      }
+    });
+
     // 暂停
     $('btn-resume').addEventListener('click', () => { AUDIO.uiClick(); GAME.resume(); });
     $('btn-restart').addEventListener('click', () => { AUDIO.uiClick(); this.hideAll(); GAME.restart(); });

@@ -36,6 +36,11 @@ const ENGINE = {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.quality.pixelRatio));
     ART.setOutlines(this.quality.outlines);
     PARTICLES.mult = this.quality.particleMult;
+    // 低画质缩短视距（雾掩盖远处裁剪）
+    if (this.camera) {
+      this.camera.far = this.qualityKey === 'low' ? 220 : 400;
+      this.camera.updateProjectionMatrix();
+    }
     if (typeof SAVE !== 'undefined' && SAVE.data && SAVE.data.settings.quality !== key) {
       SAVE.data.settings.quality = key;
       SAVE.commit();

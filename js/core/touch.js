@@ -77,8 +77,9 @@ const TOUCH = {
     const lookMove = e => {
       for (const t of e.changedTouches) {
         if (t.identifier !== this._lookId) continue;
-        INPUT.dx += (t.clientX - this._lookLast.x) * 1.35;
-        INPUT.dy += (t.clientY - this._lookLast.y) * 1.35;
+        const ts = (typeof SAVE !== 'undefined' && SAVE.data.settings.touchSens) || 1;
+        INPUT.dx += (t.clientX - this._lookLast.x) * 1.35 * ts;
+        INPUT.dy += (t.clientY - this._lookLast.y) * 1.35 * ts;
         this._lookLast = { x: t.clientX, y: t.clientY };
       }
       e.preventDefault();

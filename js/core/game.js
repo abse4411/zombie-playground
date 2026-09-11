@@ -160,8 +160,12 @@ class Game {
   /* ================= 主循环 ================= */
   _loop(t) {
     requestAnimationFrame(this._loop);
+    // 帧率上限（移动端省电）：按渲染时间戳节流
+    const cap = SAVE.data.settings.fpsCap;
+    if (cap > 0 && t - (this._lastRender || 0) < 1000 / cap - 2) return;
     const rawDt = (t - this._last) / 1000;
     this._last = t;
+    if (cap > 0) this._lastRender = t;
     ENGINE.tickFps(rawDt);
 
     const dt = clamp(rawDt, 0, 0.05);

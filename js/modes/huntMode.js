@@ -62,7 +62,14 @@ class HuntMode {
         this.wave++;
         g.spawner.setHuntWave(this.wave, this.diff);
         this.state = 'combat';
-        HUD.banner(`第 ${this.wave} 波`, '它们来了');
+        // Boss 波：每5波暴君Ω登场
+        if (this.wave % GAMECONFIG.boss.everyWaves === 0) {
+          HUD.banner(`第 ${this.wave} 波 · BOSS`, '暴君 Ω 挡在你们面前');
+          const b = g.spawner.spawnOne('brute', undefined, undefined, { boss: true });
+          if (b && g.onBossSpawned) g.onBossSpawned(b);
+        } else {
+          HUD.banner(`第 ${this.wave} 波`, '它们来了');
+        }
         AUDIO.waveHorn();
         SAVE.recordHunt(this.mapId, this.wave, g.player.kills);
       }

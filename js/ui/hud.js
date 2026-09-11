@@ -25,6 +25,7 @@ const HUD = {
       objHint: $('objective-hint'), objProg: $('objective-progress'),
       streak: $('streak-banner'), dmgDir: $('dmg-dir'),
       bloodLayer: $('blood-layer'), fps: $('fps-counter'),
+      bossBar: $('boss-bar'), bossName: $('boss-name'), bossFill: $('boss-fill'),
     };
     this.radarCtx = this.el.radar.getContext('2d');
     $('btn-tut-skip').addEventListener('click', () => {
@@ -34,6 +35,17 @@ const HUD = {
 
   show() { this.el.hud.classList.remove('hidden'); },
   hide() { this.el.hud.classList.add('hidden'); this.hideObjective(); },
+
+  /* ---------- Boss 血条 ---------- */
+  showBossBar(name) {
+    this.el.bossBar.classList.remove('hidden');
+    this.el.bossName.textContent = name;
+    this.el.bossFill.style.width = '100%';
+  },
+  updateBossBar(z) {
+    this.el.bossFill.style.width = clamp(z.hp / z.maxHp * 100, 0, 100) + '%';
+  },
+  hideBossBar() { this.el.bossBar.classList.add('hidden'); },
 
   /* ---------- 教学目标面板 ---------- */
   showObjective(lines) {

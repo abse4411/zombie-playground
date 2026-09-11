@@ -90,7 +90,7 @@ class SpawnSystem {
     this.timer = this.interval * rand(0.6, 1.4);
   }
 
-  spawnOne(typeId, x, z) {
+  spawnOne(typeId, x, z, opts = {}) {
     let sx = x, sz = z;
     if (sx === undefined) {
       const pts = ENGINE.mapDef.spawns;
@@ -100,13 +100,20 @@ class SpawnSystem {
       sx = use.x + rand(-2.5, 2.5);
       sz = use.z + rand(-2.5, 2.5);
     }
-    const zb = new Zombie(typeId, sx, sz, this.mults);
+    // 精英词缀判定（Diablo 式：波次足够且非Boss）
+    const wv = this.game.mode.wave !== undefined ? this.game.mode.wave : (this.game.mode.wavePtr || 0);
+    if (!opts.boss && !opts.dummy && ZOMBIE_TYPES[typeId].cost < 10
+      && wv >= 6 && Math.random() < GAMECONFIG.elites.chance) {
+      opts.affix = choice(GAMECONFIG.elites.list);
+    }
+    const zb = new Zombie(typeId, sx, sz, this.mults, opts);
     this.game.zombies.push(zb);
     PARTICLES.dust(sx, 0.4, sz, 7);
     // 地狱犬登场嚎叫（COD Zombies 式预警）
     if (zb.type.quadruped && Math.random() < 0.45) {
       AUDIO.howl(dist2d(sx, sz, this.game.player.pos.x, this.game.player.pos.z));
     }
+    return zb;
   }
 
   spawnExtra(typeId) { this.spawnOne(typeId); }

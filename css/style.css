@@ -386,6 +386,26 @@ button { font-family: var(--font); cursor: pointer; }
 .menu-buttons button:hover { transform: translateX(4px) rotate(-.5deg); box-shadow: 5px 5px 0 rgba(0,0,0,.55), 0 0 16px var(--red-glow); }
 .si-btn { border-width: 2px; box-shadow: 2px 2px 0 rgba(0,0,0,.5); }
 
+/* ---------- Boss 血条 ---------- */
+#boss-bar {
+  position: absolute; left: 50%; top: 76px; transform: translateX(-50%);
+  width: min(420px, 60vw); text-align: center; z-index: 5;
+}
+#boss-name {
+  display: block; color: #ff5544; font-weight: 900; letter-spacing: 4px;
+  font-size: 15px; text-shadow: 0 0 10px rgba(255,60,40,.8), 1px 1px 0 #000;
+  margin-bottom: 4px;
+}
+.bb-track {
+  height: 12px; background: rgba(0,0,0,.65);
+  border: 2px solid #ff5544; box-shadow: 3px 3px 0 rgba(0,0,0,.55);
+}
+#boss-fill {
+  height: 100%; width: 100%;
+  background: linear-gradient(90deg, #8a0f0f, #ff4433);
+  transition: width .1s;
+}
+
 /* ---------- FPS ---------- */
 #fps-counter {
   position: absolute; left: 16px; top: 14px; font-size: 11px;

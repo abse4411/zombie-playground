@@ -87,6 +87,27 @@ const GAMECONFIG = {
     eliteTypes: ['screamer', 'bloater', 'armored'],
   },
 
+  /* ---------- 精英词缀（Diablo 式，第6波起随机出现） ---------- */
+  elites: {
+    chance: 0.16,          // 词缀出现概率（cost<10 的普通单位）
+    rewardMult: 2.5,
+    scaleMult: 1.15,
+    list: [
+      { id: 'frenzy',  name: '狂怒', color: 0xcc2222, hp: 1.2, speed: 1.4, dmg: 1.1 },
+      { id: 'tough',   name: '坚甲', color: 0x888899, hp: 2.4, speed: 0.9, dmg: 1.0 },
+      { id: 'mighty',  name: '巨力', color: 0xcc8822, hp: 1.5, speed: 1.0, dmg: 1.8, kb: 4 },
+      { id: 'volatile',name: '易爆', color: 0x22aa44, hp: 1.0, speed: 1.1, dmg: 1.0, explode: { dmg: 70, radius: 4.5 } },
+    ],
+  },
+
+  /* ---------- Boss 波（狩猎模式每5波） ---------- */
+  boss: {
+    everyWaves: 5,
+    hpMult: 3.2,
+    scale: 1.85,
+    rewardMult: 4,
+  },
+
   radar: { range: 55 },
   sensBase: 0.0021,       // 灵敏度基数 rad/px
   touchSensBase: 0.0042,  // 触屏灵敏度基数

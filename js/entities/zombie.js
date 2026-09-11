@@ -152,11 +152,17 @@ class Zombie {
     this.uid = ++ZOMBIE_SEQ;
     this.type = cfg; this.typeId = typeId;
     this.dummy = !!opts.dummy;              // 教学假人：不动手、不反击
-    this.maxHp = Math.round(cfg.hp * mults.hp);
+    this.boss = !!opts.boss;                // Boss：血条 + 超大
+    this.affix = opts.affix || null;        // 精英词缀
+    const affix = this.affix;
+    this.maxHp = Math.round(cfg.hp * mults.hp * (affix ? affix.hp : 1) * (this.boss ? GAMECONFIG.boss.hpMult : 1));
     this.hp = this.maxHp;
-    this.speed = cfg.speed * mults.speed * rand(0.9, 1.12);
-    this.damage = cfg.damage * mults.dmg;
-    this.reward = Math.round(cfg.reward * mults.reward);
+    this.speed = cfg.speed * mults.speed * rand(0.9, 1.12) * (affix ? affix.speed : 1);
+    this.damage = cfg.damage * mults.dmg * (affix ? affix.dmg : 1);
+    this.reward = Math.round(cfg.reward * mults.reward
+      * (affix ? GAMECONFIG.elites.rewardMult : 1)
+      * (this.boss ? GAMECONFIG.boss.rewardMult : 1));
+    if (affix && affix.explode) this.type = Object.assign({}, cfg, { explode: affix.explode, attackRange: cfg.attackRange });
 
     this.state = 'rise'; this.riseT = 0.9;
     this.dead = false; this.deadT = 0; this.remove = false;
@@ -197,6 +203,15 @@ class Zombie {
     this.pos = this.group.position;
     ENGINE.scene.add(this.group);
 
+    // 精英词缀辉光 / Boss 巨型化
+    this.auraColor = 0x000000;
+    if (affix) {
+      this.auraColor = affix.color;
+      this.model.skin.emissive.setHex(affix.color);
+      this.group.scale.multiplyScalar(GAMECONFIG.elites.scaleMult);
+    }
+    if (this.boss) this.group.scale.multiplyScalar(GAMECONFIG.boss.scale / cfg.scale);
+
     // 幽影：半透明材质（接近时显形）
     this.cloakMats = null;
     if (cfg.cloak) {
@@ -221,7 +236,7 @@ class Zombie {
 
     if (this.flashT > 0) {
       this.flashT -= dt;
-      if (this.flashT <= 0) { this.model.skin.emissive.setHex(0x000000); this.model.cloth.emissive.setHex(0x000000); }
+      if (this.flashT <= 0) { this.model.skin.emissive.setHex(this.auraColor); this.model.cloth.emissive.setHex(this.auraColor); }
     }
     this.shadow.position.set(this.pos.x, 0.03, this.pos.z);
     this.shadow.scale.setScalar(this.group.scale.x);
@@ -386,6 +401,11 @@ class Zombie {
       }
     }
     m.head.rotation.z = Math.sin(ENGINE.time * 1.7 + this.walkPhase) * 0.09;
+  }
+
+  get displayName() {
+    if (this.boss) return '暴君 Ω';
+    return (this.affix ? this.affix.name + '·' : '') + this.type.name;
   }
 
   _flash() {

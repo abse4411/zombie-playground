@@ -109,6 +109,12 @@ class Game {
     return ENGINE.quality.capMult * (INPUT.touch ? 0.72 : 1);
   }
 
+  onBossSpawned(z) {
+    this.boss = z;
+    HUD.showBossBar(z.displayName);
+    ENGINE.shake(0.3);
+  }
+
   onPlayerDamaged() {
     this.killStreak = 0;
     this.streakT = 0;
@@ -200,8 +206,9 @@ class Game {
     if (fc === 0 && this._fireCount > 0) AUDIO.stopFireLoop();
     this._fireCount = fc;
 
-    // 模式逻辑
-    this.mode.update(dt);
+    // 模式信息 + Boss 血条
+    if (this.mode) this.mode.update(dt);
+    if (this.boss && !this.boss.dead) HUD.updateBossBar(this.boss);
 
     // 连杀计时
     if (this.streakT > 0) {
@@ -258,6 +265,15 @@ class Game {
     SAVE.data.totalKills++;
     if (p.kills % 25 === 0) SAVE.commit();
 
+    // Boss 击杀
+    if (z === this.boss) {
+      this.boss = null;
+      HUD.hideBossBar();
+      this.slowmo(1.0);
+      HUD.toast(`☠ ${z.displayName} 已被击倒！ 赏金 +$${total}`);
+      AUDIO.victory();
+    }
+
     // 连杀
     this.streakT = GAMECONFIG.streak.window;
     this.killStreak++;
@@ -275,7 +291,7 @@ class Game {
     const d = dist2d(z.pos.x, z.pos.z, p.pos.x, p.pos.z);
     if (d < 4.5) HUD.bloodSplat();
 
-    HUD.killfeed(`${headshot ? '☠ 爆头击杀' : '击杀'} ${z.type.name} +$${total}`, headshot ? 'head' : '');
+    HUD.killfeed(`${headshot ? '☠ 爆头击杀' : '击杀'} ${z.displayName} +$${total}`, headshot ? 'head' : '');
   }
 
   playerDied() {

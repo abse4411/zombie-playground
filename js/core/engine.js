@@ -7,6 +7,7 @@ const ENGINE = {
   time: 0, shakeAmt: 0, buyZoneMesh: null,
   qualityKey: 'high', quality: GAMECONFIG.quality.high,
   _fpsEma: 60, _qTimer: 0,
+  _trackedTex: new Set(),   // 本场地绘一届的纹理克隆（clearMap 时释放）
 
   init(canvas) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -62,15 +63,33 @@ const ENGINE = {
 
   clearMap() {
     if (this.mapGroup) {
+      // 深度释放：几何体 + 非缓存材质 + 材质上的纹理（GPU 资源不会被 GC 回收）
       this.mapGroup.traverse(o => {
         if (o.geometry) o.geometry.dispose();
-        // 缓存材质不销毁
+        const mats = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+        for (const m of mats) {
+          if (m.map && m.map.__tracked) { this._trackedTex.delete(m.map); m.map.dispose(); }
+          if (!m.__cached) m.dispose();
+        }
       });
       this.scene.remove(this.mapGroup);
     }
+    // 释放本场地所有跟踪纹理克隆
+    for (const t of this._trackedTex) t.dispose();
+    this._trackedTex.clear();
     this.mapGroup = null; this.mapDef = null;
     this.colliders = []; this.anims = []; this.buyZoneMesh = null;
     ART.resetOutlines();
+  },
+
+  // 纹理克隆登记（场地专属资源，换图即释放）
+  trackTex(t) { if (t) { t.__tracked = true; this._trackedTex.add(t); } return t; },
+
+  // GPU 资源统计（draw call / 几何体 / 纹理数量）
+  gpuStats() {
+    const i = this.renderer ? this.renderer.info : null;
+    if (!i) return { calls: 0, geos: 0, texs: 0 };
+    return { calls: i.render.calls, geos: i.memory.geometries, texs: i.memory.textures };
   },
 
   buildMap(def) {
@@ -92,7 +111,7 @@ const ENGINE = {
     g.add(skyDome);
 
     // 地面（程序化沥青纹理）
-    const gTex = ART.ground(def.groundColor).clone();
+    const gTex = this.trackTex(ART.ground(def.groundColor).clone());
     gTex.needsUpdate = true;
     const rep = Math.max(10, Math.round((def.size * 2 + 80) / 9));
     gTex.repeat.set(rep, rep);
@@ -130,7 +149,7 @@ const ENGINE = {
         const useWin = !p.e && p.h >= 10;
         const material = useWin
           ? (() => {
-              const t = ART.windows(p.c).clone(); t.needsUpdate = true;
+              const t = this.trackTex(ART.windows(p.c).clone()); t.needsUpdate = true;
               t.repeat.set(Math.max(1, Math.round(p.w / 6)), Math.max(1, Math.round(p.h / 5)));
               const m = new THREE.MeshLambertMaterial({ map: t });
               return m;

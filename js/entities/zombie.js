@@ -2,7 +2,9 @@
  * 丧尸实体 —— 程序化美漫模型 + 9 种行为 AI
  * ============================================================ */
 let _shadowMat = null;
+let _shadowGeo = null;   // 全体丧尸共享的接地阴影几何体
 let ZOMBIE_SEQ = 0;
+const ZOMBIE_POOL = {};  // 模型对象池：typeId(+dummy) -> [group,...]
 
 function buildZombieModel(cfg, outlines) {
   const g = new THREE.Group();
@@ -125,15 +127,34 @@ class Zombie {
     this.kvx = 0; this.kvz = 0;             // 击退冲量
     this.growlPitch = rand(0.85, 1.25);
 
-    const model = buildZombieModel(cfg, ENGINE.quality.outlines && !this.dummy);
-    this.model = model;
-    this.group = model.group;
+    if (!_shadowMat) _shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32 });
+    if (!_shadowGeo) _shadowGeo = new THREE.CircleGeometry(0.5, 14);
+
+    // ---- 模型对象池：优先回收复用，避免反复构建/销毁 ----
+    const poolKey = typeId + (this.dummy ? ':d' : '');
+    const pooled = (ZOMBIE_POOL[poolKey] || []).pop();
+    if (pooled) {
+      this.model = pooled.userData.model;
+      this.group = pooled;
+      // 复位外观状态
+      this.group.visible = true;
+      this.group.rotation.set(cfg.crawl ? 1.0 : 0, 0, 0);
+      this.group.scale.setScalar(cfg.scale);
+      this.model.skin.emissive.setHex(0x000000);
+      this.model.cloth.emissive.setHex(0x000000);
+      const wantOutline = ENGINE.quality.outlines && !this.dummy;
+      this.group.traverse(o => { if (o.userData.isOutline) o.visible = wantOutline; });
+    } else {
+      const model = buildZombieModel(cfg, ENGINE.quality.outlines && !this.dummy);
+      this.model = model;
+      this.group = model.group;
+      this.group.userData.model = model;   // 供对象池复用
+    }
     this.group.position.set(x, -2.05 * cfg.scale, z);
     this.pos = this.group.position;
     ENGINE.scene.add(this.group);
 
-    if (!_shadowMat) _shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32 });
-    this.shadow = new THREE.Mesh(new THREE.CircleGeometry(0.5, 14), _shadowMat);
+    this.shadow = new THREE.Mesh(_shadowGeo, _shadowMat);
     this.shadow.rotation.x = -Math.PI / 2;
     this.shadow.position.set(x, 0.03, z);
     ENGINE.scene.add(this.shadow);
@@ -355,7 +376,21 @@ class Zombie {
   dispose() {
     ENGINE.scene.remove(this.group);
     ENGINE.scene.remove(this.shadow);
-    this.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material !== _shadowMat && !o.material.__cached) o.material.dispose(); });
-    this.shadow.geometry.dispose();
+    // 回收到对象池（上限10个/类，超出才真正销毁GPU资源）
+    const poolKey = this.typeId + (this.dummy ? ':d' : '');
+    const pool = ZOMBIE_POOL[poolKey] || (ZOMBIE_POOL[poolKey] = []);
+    if (pool.length < 10) {
+      this.group.rotation.set(this.type.crawl ? 1.0 : 0, 0, 0);
+      this.group.scale.setScalar(this.type.scale);
+      this.model.skin.emissive.setHex(0x000000);
+      this.model.cloth.emissive.setHex(0x000000);
+      this.group.visible = true;
+      pool.push(this.group);
+    } else {
+      this.group.traverse(o => {
+        if (o.geometry && o.geometry !== _shadowGeo) o.geometry.dispose();
+      });
+    }
+    // 阴影几何体为共享资源，仅移除网格
   }
 }

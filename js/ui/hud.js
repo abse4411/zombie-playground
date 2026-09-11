@@ -195,8 +195,9 @@ const HUD = {
       this.el.interact.classList.remove('hidden');
     } else this.el.interact.classList.add('hidden');
 
-    // FPS
-    this.el.fps.textContent = `${Math.round(ENGINE._fpsEma)} FPS`;
+    // FPS + GPU draw call 统计
+    const gs = ENGINE.gpuStats();
+    this.el.fps.textContent = `${Math.round(ENGINE._fpsEma)} FPS · ${gs.calls}dc`;
 
     // 准星随ADS收拢
     const ch = document.getElementById('crosshair');

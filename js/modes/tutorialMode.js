@@ -194,6 +194,7 @@ class TutorialMode {
     this.done = true;
     SAVE.data.tutorialDone = true;
     SAVE.commit();
+    if (typeof ACHV !== 'undefined') ACHV.event('tutorial', this.game);
     HUD.setObjective('✔ 教学完成！', '', 0, 0);
     HUD.banner('训练营毕业！', '去主菜单开始你的狩猎吧');
     AUDIO.victory();

@@ -337,6 +337,12 @@ class Game {
     // 手雷击杀统计（挑战任务用）
     if (this._fragWindowT > 0 && this.runStats) this.runStats.fragKills++;
 
+    // 成就检测
+    if (typeof ACHV !== 'undefined') {
+      ACHV.event('kill', this, p.current === 'melee' ? 'melee' : null);
+      if (z === this.boss) ACHV.event('boss', this);
+    }
+
     // 顿帧（爆头击杀更狠）
     this.hitstop(headshot ? GAMECONFIG.feel.hitstopHeadKill : GAMECONFIG.feel.hitstopKill);
 

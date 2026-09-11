@@ -108,6 +108,7 @@ class EncounterMode {
     this.ended = true;
     this.earlyWin = early;
     SAVE.completeMission(this.idx);
+    if (typeof ACHV !== 'undefined') ACHV.event('chapter', this.game);
     // ---- 章节评级（命中率40% + 击杀效率30% + 承伤30%）----
     const g = this.game, p = g.player;
     const acc = g.stats.shots ? g.stats.hits / g.stats.shots : 0.5;

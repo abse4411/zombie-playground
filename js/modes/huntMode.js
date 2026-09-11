@@ -71,7 +71,10 @@ class HuntMode {
           HUD.banner(`第 ${this.wave} 波`, '它们来了');
         }
         AUDIO.waveHorn();
+        // 波次无伤检测标记（完美防御成就）
+        this._waveDmgMark = g.runStats ? g.runStats.damageTaken : 0;
         SAVE.recordHunt(this.mapId, this.wave, g.player.kills);
+        if (typeof ACHV !== 'undefined') ACHV.event('wave', g, this.wave);
       }
     } else {
       this._directorTick(dt);
@@ -88,6 +91,7 @@ class HuntMode {
         this.timer = GAMECONFIG.hunt.intermission;
         // 波间小回复
         g.player.hp = Math.min(g.player.maxHp, g.player.hp + 15);
+        if (typeof ACHV !== 'undefined' && g.runStats.damageTaken === this._waveDmgMark) ACHV.event('flawless', g);
         SAVE.recordHunt(this.mapId, this.wave, g.player.kills);
       }
     }

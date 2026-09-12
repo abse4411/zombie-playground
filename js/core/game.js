@@ -138,6 +138,7 @@ class Game {
     this.mode.start();
     AUDIO.startAmbient();
     AUDIO.startMusic();
+    AUDIO.startWind(ENGINE.mapDef.id === 'base' ? 1.6 : 1);   // 极地基地风声更强
     AUDIO.stopFireLoop();
     AUDIO.stopRainLoop();
     if (!STORY.active) this.requestLock();
@@ -447,6 +448,7 @@ class Game {
     AUDIO.stopMusic();
     AUDIO.stopFireLoop();
     AUDIO.stopRainLoop();
+    AUDIO.stopWind();
     INPUT.releaseLock();
     if (typeof NET !== 'undefined') NET.reportDead();
     const mode = this.mode;
@@ -496,6 +498,7 @@ class Game {
     INPUT.releaseLock();
     AUDIO.stopAmbient();
     AUDIO.stopMusic();
+    AUDIO.stopWind();
     MENU.showPause();
   }
 
@@ -529,6 +532,7 @@ class Game {
     AUDIO.stopMusic();
     AUDIO.stopFireLoop();
     AUDIO.stopRainLoop();
+    AUDIO.stopWind();
     INPUT.releaseLock();
     if (typeof NET !== 'undefined' && NET.role !== 'off') { NET.inGame = false; MENU.refreshNetUI(); }
     MENU.show('screen-menu');

@@ -27,9 +27,7 @@ class SupplyCrate {
     );
     beam.position.y = 2.2;
     this.group.add(box, lid, beam);
-    const pl = new THREE.PointLight(color, 0.5, 5);
-    pl.position.y = 1.2;
-    this.group.add(pl);
+    // 自发光+光柱引导（不用PointLight，控制全场景动态光数量）
     this.box = box; this.lid = lid; this.beam = beam;
     ENGINE.scene.add(this.group);
     colBox(x, z, 1.1, 0.8, 0.85);
@@ -46,7 +44,7 @@ class SupplyCrate {
     this.lid.position.y = 0.95;
     this.lid.position.z = -0.35;
     this.beam.visible = false;
-    AUDIO.waveClear();
+    if (typeof AUDIO !== 'undefined') AUDIO.crateOpen();
     // 掉落2-3件战利品（精英箱更豪华）
     const n = this.tier === 'elite' ? 3 : 2;
     for (let i = 0; i < n; i++) {

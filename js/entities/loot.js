@@ -44,9 +44,7 @@ class LootDrop {
     this.group.position.set(x, 0, z);
     this.box = box; this.beam = beam; this.rarity = rarity;
     ENGINE.scene.add(this.group);
-    const pl = new THREE.PointLight(color, 0.55, 4);
-    pl.position.y = 0.6;
-    this.group.add(pl);
+    // 自发光替代点光源（避免动态光照导致的材质重编译与填充率爆炸）
   }
 
   update(dt, game) {

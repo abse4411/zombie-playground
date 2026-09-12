@@ -155,6 +155,37 @@ const AUDIO = {
     this.tone(1950, 0.9, 'sine', v * 0.4, 2300);
   },
 
+  /* ---------- 探索音效（v3.7/3.9） ---------- */
+  crateOpen() {
+    this._noiseHit(900, 0.14, 0.35);            // 撬盖
+    this.tone(660, 0.1, 'sine', 0.15);
+    this.tone(880, 0.12, 'sine', 0.15, 0, 0.1); // 发现音
+    this.tone(1170, 0.16, 'sine', 0.14, 0, 0.2);
+  },
+  crateNear() { this.tone(520, 0.08, 'sine', 0.1); },
+  woodBreak() { this._noiseHit(650, 0.25, 0.5); this.tone(120, 0.18, 'triangle', 0.2, 55); },
+  barrelTick() { this.tone(1400, 0.05, 'square', 0.12); },
+
+  /* ---------- 环境风声循环（v3.9） ---------- */
+  _wind: null,
+  startWind(intensity = 1) {
+    if (!this.ctx || this._wind) return;
+    const n = this.ctx.createBufferSource(); n.buffer = this.noise; n.loop = true;
+    const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 300; f.Q.value = 0.5;
+    const g = this.ctx.createGain(); g.gain.value = 0.035 * intensity;
+    const lfo = this.ctx.createOscillator(); lfo.frequency.value = 0.23;
+    const lg = this.ctx.createGain(); lg.gain.value = 0.02 * intensity;
+    lfo.connect(lg); lg.connect(g.gain);
+    n.connect(f); f.connect(g); g.connect(this.master);
+    n.start(); lfo.start();
+    this._wind = { n, lfo, g };
+  },
+  stopWind() {
+    if (!this._wind) return;
+    try { this._wind.n.stop(); this._wind.lfo.stop(); } catch (e) { }
+    this._wind = null;
+  },
+
   /* ---------- 火焰环境声（火场期间循环） ---------- */
   _fire: null,
   startFireLoop() {

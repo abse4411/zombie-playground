@@ -16,9 +16,13 @@ class Destructible {
     this.group.add(this.mesh);
     if (ENGINE.quality.outlines && cfg.outline) ART.outline(this.mesh, 1.1);
     if (cfg.light) {
-      const pl = new THREE.PointLight(0xff5522, 0.5, 3);
-      pl.position.y = cfg.h + 0.2;
-      this.group.add(pl);
+      // 警示灯：自发光（不用PointLight，控制动态光数量）
+      const lamp = new THREE.Mesh(
+        new THREE.BoxGeometry(0.18, 0.06, 0.18),
+        new THREE.MeshBasicMaterial({ color: 0xff6633 })
+      );
+      lamp.position.y = cfg.h + 0.05;
+      this.group.add(lamp);
     }
     ENGINE.scene.add(this.group);
     // 碰撞体（破坏后移除）
@@ -60,7 +64,7 @@ class Destructible {
       }
     } else {
       // 木箱/掩体碎裂
-      AUDIO.melee(true);
+      if (typeof AUDIO !== 'undefined') AUDIO.woodBreak();
       PARTICLES.spawn('smoke', this.x, this.cfg.h / 2, this.z, 10,
         { speed: 3.5, life: 0.8, color: [0.45, 0.34, 0.22], color2: [0.25, 0.18, 0.12] });
       // 木箱掉落奖励（30%）

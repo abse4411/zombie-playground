@@ -15,3 +15,4 @@
 | v7.8-campaign-chapters.md | 战役章节设计（Act3 三章+番外 设计案） | v7.8 |
 | v7.9-new-weapons-batch2.md | 新武器批次2（火焰喷射器DoT/十字弩穿透/双持射速） | v7.9 |
 | v8.0-boss-design.md | 终局Boss设计（三阶段/前摇/惩罚窗/火焰弱点） | v8.0 |
+| (v8.1 无新调研——全量回归版) | 回归总账 | v8.1 |

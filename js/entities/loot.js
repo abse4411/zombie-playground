@@ -120,10 +120,10 @@ class LootDrop {
 }
 
 // 掷掉落表（击杀时调用；精英/Boss提高大奖权重）
-function rollLoot(z) {
+function rollLoot(z, game) {
   let table = LOOT_TABLE;
   // 搜刮者 Perk：压缩空掉落权重
-  const sc = game.player ? (game.player.perks.scavenger || 0) : 0;
+  const sc = game && game.player ? (game.player.perks.scavenger || 0) : 0;
   if (sc > 0) {
     const cut = PERKS.scavenger.tiers[sc - 1].val;
     table = table.map(l => ({ ...l, weight: l.id === 'none' ? l.weight * (1 - cut) : l.weight }));
@@ -140,7 +140,7 @@ function rollLoot(z) {
 
 // 在丧尸位置生成掉落物
 function spawnLoot(game, z) {
-  const roll = rollLoot(z);
+  const roll = rollLoot(z, game);
   if (!roll) return;
   const a = rand(0, TAU), r = rand(0.4, 1.1);
   const x = clamp(z.pos.x + Math.cos(a) * r, -ENGINE.mapDef.size + 1, ENGINE.mapDef.size - 1);

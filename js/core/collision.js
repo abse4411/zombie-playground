@@ -9,22 +9,28 @@ function resolveCircleAABBs(pos, radius, height, footY, stepHeight) {
   const cols = ENGINE.colliders;
   for (let i = 0; i < cols.length; i++) {
     const c = cols[i];
-    if (c.maxY < footY + stepHeight || c.minY > footY + height) continue;
+    // 台阶以下不阻挡（可踏步）；胸口(0.9m)以上的顶板只擦头、不侧向推挤
+    if (c.maxY < footY + stepHeight || c.minY > footY + 0.9) continue;
     const cx = clamp(pos.x, c.minX, c.maxX);
     const cz = clamp(pos.z, c.minZ, c.maxZ);
     const dx = pos.x - cx, dz = pos.z - cz;
     const d2 = dx * dx + dz * dz;
     if (d2 > radius * radius) continue;
-    if (d2 < 1e-9) {
-      const pl = pos.x - c.minX, pr = c.maxX - pos.x;
-      const pn = pos.z - c.minZ, pf = c.maxZ - pos.z;
-      const m = Math.min(pl, pr, pn, pf);
-      if (m === pl) pos.x = c.minX - radius;
-      else if (m === pr) pos.x = c.maxX + radius;
-      else if (m === pn) pos.z = c.minZ - radius;
-      else pos.z = c.maxZ + radius;
+    if (d2 < 1e-9 || c.minY > footY + 0.2) {
+      // 中心已在体内：仅当障碍真正到达腰部以下才从最薄面弹出（头顶擦碰直接忽略）
+      if (d2 < 1e-9) {
+        const pl = pos.x - c.minX, pr = c.maxX - pos.x;
+        const pn = pos.z - c.minZ, pf = c.maxZ - pos.z;
+        const m = Math.min(pl, pr, pn, pf);
+        if (m === pl) pos.x = c.minX - radius;
+        else if (m === pr) pos.x = c.maxX + radius;
+        else if (m === pn) pos.z = c.minZ - radius;
+        else pos.z = c.maxZ + radius;
+      }
     } else {
-      const d = Math.sqrt(d2), push = (radius - d) / d;
+      const d = Math.sqrt(d2);
+      // 推挤上限0.5m：防止贴面瞬间(d→0)产生的巨大位移把角色弹飞/穿墙
+      const push = Math.min(0.5, (radius - d) / d);
       pos.x += dx * push;
       pos.z += dz * push;
     }

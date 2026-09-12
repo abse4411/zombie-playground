@@ -314,6 +314,9 @@ class Game {
         dx *= push; dz *= push;
         p.pos.x += dx * 0.3; p.pos.z += dz * 0.3;
         z.pos.x -= dx * 0.7; z.pos.z -= dz * 0.7;
+        // 每次推挤后立即墙体约束：绝不allow玩家中心进入墙体（否则"弹出最近面"会把人弹到墙外侧）
+        resolveCircleAABBs(p.pos, GAMECONFIG.player.radius, 1.7, p.pos.y, 0.55);
+        resolveCircleAABBs(z.pos, 0.42 * z.type.scale, 1.8 * z.type.scale, z.pos.y || 0, 0.6);
       }
     }
     // 清理尸体（上限12具，超过加速移除最老尸体降低draw call）

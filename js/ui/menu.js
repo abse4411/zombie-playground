@@ -129,8 +129,9 @@ const MENU = {
     $('btn-vic-next').addEventListener('click', () => {
       AUDIO.uiClick();
       const next = (GAME.mode && GAME.mode.idx !== undefined) ? GAME.mode.idx + 1 : 0;
+      const nextM = MISSIONS[next];
       this.hideAll();
-      if (next < MISSIONS.length) GAME.startMission(next);
+      if (next < MISSIONS.length && nextM && !nextM.spinoff) GAME.startMission(next);
       else GAME.quitToMenu();
     });
 
@@ -198,32 +199,45 @@ const MENU = {
     document.getElementById('net-wait').classList.toggle('hidden', isHost);
   },
 
-  /* ---------- 任务卡片 ---------- */
+  /* ---------- 任务卡片（v5.1 三幕+番外分组） ---------- */
   buildMissionCards() {
     const list = document.getElementById('mission-list');
     list.innerHTML = '';
-    MISSIONS.forEach((m, i) => {
-      const locked = i > SAVE.data.missionsDone;
-      const done = i < SAVE.data.missionsDone;
-      const rating = (SAVE.data.bestRating || {})[i];
-      const card = document.createElement('div');
-      card.className = 'card' + (locked ? ' locked' : '');
-      card.innerHTML = `
-        ${rating ? `<span class="card-rating rating-${rating}">${rating}</span>` : ''}
-        ${done ? '<span class="card-done">✔ 已完成</span>' : locked ? '<span class="card-lock">🔒</span>' : ''}
-        <h3>${m.name}</h3>
-        <div class="card-map">📍 ${MAPS[m.map].name} · ⏱ ${fmtTime(m.duration)}</div>
-        <p>${m.brief}</p>
-      `;
-      if (!locked) card.addEventListener('click', () => { AUDIO.uiClick(); GAME.startMission(i); });
-      list.appendChild(card);
-    });
-    // 战役背景
+    const ACTS = { 1: '🎬 第一幕 · 滨港（初代）', 2: '🎬 第二幕 · 极夜回声（二代）', 0: '📞 番外篇 · 他们也曾是普通人' };
+    const groups = { 1: [], 2: [], 0: [] };
+    MISSIONS.forEach((m, i) => groups[m.act === undefined ? 1 : m.act].push({ m, i }));
+    for (const actKey of [1, 2, 0]) {
+      const items = groups[actKey];
+      if (!items.length) continue;
+      const head = document.createElement('div');
+      head.className = 'act-header';
+      head.style.gridColumn = '1 / -1';
+      head.innerHTML = `<h3 style="color:var(--red);letter-spacing:4px;text-align:left;margin:8px 0 2px">${ACTS[actKey]}</h3>`;
+      list.appendChild(head);
+      for (const { m, i } of items) {
+        const isSpin = !!m.spinoff;
+        const locked = isSpin ? SAVE.data.missionsDone < m.reqDone : i > SAVE.data.missionsDone;
+        const done = isSpin ? SAVE.data.spinoffsDone?.[m.id] : i < SAVE.data.missionsDone;
+        const rating = (SAVE.data.bestRating || {})[i];
+        const card = document.createElement('div');
+        card.className = 'card' + (locked ? ' locked' : '');
+        card.innerHTML = `
+          ${rating ? `<span class="card-rating rating-${rating}">${rating}</span>` : ''}
+          ${done ? '<span class="card-done">✔ 已完成</span>' : locked ? '<span class="card-lock">🔒</span>' : ''}
+          <h3>${m.name}</h3>
+          <div class="card-map">📍 ${MAPS[m.map].name} · ⏱ ${fmtTime(m.duration)}${isSpin ? ' · 番外剧情' : ''}</div>
+          <p>${locked && isSpin ? `🔒 完成主战役第 ${m.reqDone} 章后解锁` : m.brief}</p>
+        `;
+        if (!locked) card.addEventListener('click', () => { AUDIO.uiClick(); GAME.startMission(i); });
+        list.appendChild(card);
+      }
+    }
+    // 世界观背景
     const bg = document.createElement('div');
     bg.className = 'card';
     bg.style.gridColumn = '1 / -1';
     bg.innerHTML = `<h3>战役背景 · 赤潮事件</h3>
-      <p>2026年10月，军方代号“游乐园”的生物实验设施发生泄漏，“赤潮病毒”一夜之间席卷滨港市。雇佣兵“渡鸦”受幸存者组织“黎明会”委托，深入疫区执行五段任务：修复通讯、营救科学家、夺取病毒样本、建立撤离点，最终摧毁病毒源头、带回解药。</p>`;
+      <p>2026年10月，军方代号“游乐园”的生物实验设施发生泄漏，“赤潮病毒”一夜之间席卷滨港市。雇佣兵“渡鸦”受幸存者组织“黎明会”委托，深入疫区执行任务——而泄漏的真相，远比表面更深。完整设定见 WORLD.md。</p>`;
     list.appendChild(bg);
   },
 

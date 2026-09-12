@@ -107,8 +107,15 @@ class EncounterMode {
     if (this.ended) return;
     this.ended = true;
     this.earlyWin = early;
-    SAVE.completeMission(this.idx);
-    if (typeof ACHV !== 'undefined') ACHV.event('chapter', this.game);
+    // 番外篇：独立完成标记，不影响主战役解锁链
+    if (m.spinoff) {
+      SAVE.data.spinoffsDone = SAVE.data.spinoffsDone || {};
+      SAVE.data.spinoffsDone[m.id] = true;
+      SAVE.commit();
+    } else {
+      SAVE.completeMission(this.idx);
+      if (typeof ACHV !== 'undefined') ACHV.event('chapter', this.game);
+    }
     // ---- 章节评级（命中率40% + 击杀效率30% + 承伤30%）----
     const g = this.game, p = g.player;
     const acc = g.stats.shots ? g.stats.hits / g.stats.shots : 0.5;
@@ -120,22 +127,26 @@ class EncounterMode {
     if (!best[this.idx] || 'SABC'.indexOf(this.rating) < 'SABC'.indexOf(best[this.idx])) {
       best[this.idx] = this.rating;
     }
-    // ---- 战役继承快照：武器架/装备/金钱 + 过关奖励 + 全补给（v3.1/v4.5）----
+    // ---- 战役继承快照：仅主战役章节（番外独立结算）----
     const E = GAMECONFIG.economy;
-    this.chapterBonus = E.chapterBonusBase + E.chapterBonusPerChapter * this.idx;
-    const weapons = {};
-    for (const slot of ['primary', 'secondary', 'melee']) {
-      weapons[slot] = p.rack[slot].map(inst => ({ id: inst.def.id, lvl: inst.lvl }));
+    if (!m.spinoff) {
+      this.chapterBonus = E.chapterBonusBase + E.chapterBonusPerChapter * this.idx;
+      const weapons = {};
+      for (const slot of ['primary', 'secondary', 'melee']) {
+        weapons[slot] = p.rack[slot].map(inst => ({ id: inst.def.id, lvl: inst.lvl }));
+      }
+      weapons.current = p.current;
+      SAVE.data.carry = {
+        nextIdx: this.idx + 1,
+        money: p.money + this.chapterBonus,
+        perks: { ...p.perks },
+        frag: THROWABLES.frag.max,
+        molo: THROWABLES.molotov.max,
+        weapons,
+      };
+    } else {
+      this.chapterBonus = Math.round(E.chapterBonusBase * 0.6);
     }
-    weapons.current = p.current;
-    SAVE.data.carry = {
-      nextIdx: this.idx + 1,
-      money: p.money + this.chapterBonus,
-      perks: { ...p.perks },
-      frag: THROWABLES.frag.max,
-      molo: THROWABLES.molotov.max,
-      weapons,
-    };
     SAVE.commit();
     AUDIO.victory();
     const finish = early ? '（提前清空全场！）' : '';

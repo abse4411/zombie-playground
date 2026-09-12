@@ -55,7 +55,8 @@ const ACHV = {
         this.unlock('tutorial');
         break;
       case 'chapter':
-        if (d.missionsDone >= MISSIONS.length) this.unlock('chapter5');
+        const mainTotal = MISSIONS.filter(m => !m.spinoff).length;
+        if (d.missionsDone >= mainTotal) this.unlock('chapter5');
         break;
       case 'flawless':
         this.unlock('flawless');

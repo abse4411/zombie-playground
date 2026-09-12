@@ -121,6 +121,7 @@ const TOUCH = {
     press($('tb-w2'), () => tap('Digit2'));
     press($('tb-w3'), () => tap('Digit3'));
     press($('tb-shop'), () => { tap('KeyE'); tap('KeyB'); });
+    press($('tb-bp'), () => { if (typeof BACKPACK !== 'undefined' && GAME && GAME.state === 'playing') BACKPACK.toggle(GAME); });
     press($('tb-pause'), () => { if (typeof GAME !== 'undefined' && GAME) { if (GAME.state === 'playing') GAME.pause(); } });
 
     // 阻止页面滚动/双击缩放

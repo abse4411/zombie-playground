@@ -107,6 +107,7 @@ class EncounterMode {
     if (this.ended) return;
     this.ended = true;
     this.earlyWin = early;
+    const m = this.m;   // 番外判定/评级都要用（此前漏定义导致 win 崩溃）
     // 番外篇：独立完成标记，不影响主战役解锁链
     if (m.spinoff) {
       SAVE.data.spinoffsDone = SAVE.data.spinoffsDone || {};

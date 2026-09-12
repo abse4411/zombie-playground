@@ -48,24 +48,28 @@ function buildZombieModel(cfg, outlines) {
   jaw.position.set(0, head.position.y - 0.16 * headS, 0.14 * headS);
   g.add(jaw);
 
+  const headBits = [head, jaw];   // 头部集群：爆头解体时一起崩飞
   const eyeC = (cfg.big || cfg.armorPlate) ? 0xff3838 : 0xffd23f;
   const eyeMat = new THREE.MeshBasicMaterial({ color: eyeC });
   for (const side of [-1, 1]) {
     const eye = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.05, 0.03), eyeMat);
     eye.position.set(side * 0.08 * headS, head.position.y + 0.04, 0.17 * headS);
     g.add(eye);
+    headBits.push(eye);
   }
 
   // 类型专属配件
   if (cfg.armorPlate) { // 头盔 + 面罩
     const helm = new THREE.Mesh(new THREE.BoxGeometry(0.4 * headS, 0.14, 0.4 * headS), ART.mat(0x2a3230));
     helm.position.set(0, head.position.y + 0.18 * headS, 0); g.add(helm);
+    headBits.push(helm);
   }
   if (cfg.typeId === 'jester' || cfg.zigzag) { // 小丑帽
     for (const side of [-1, 1]) {
       const horn = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.3, 6), ART.mat(side < 0 ? 0xc04868 : 0x48a0b8));
       horn.position.set(side * 0.12, head.position.y + 0.24, 0);
       horn.rotation.z = side * 0.5; g.add(horn);
+      headBits.push(horn);
     }
   }
   if (cfg.big) { // 暴君肩甲与巨臂
@@ -100,7 +104,7 @@ function buildZombieModel(cfg, outlines) {
   g.scale.setScalar(cfg.scale);
   if (cfg.crawl) g.rotation.x = 1.0;
 
-  return { group: g, skin, cloth, head, arms, legs, tilt: cfg.crawl ? 1.0 : 0 };
+  return { group: g, skin, cloth, head, arms, legs, headBits, tilt: cfg.crawl ? 1.0 : 0 };
 }
 
 /* ---------- 四足模型（地狱犬） ---------- */
@@ -143,7 +147,7 @@ function buildQuadrupedModel(cfg, outlines) {
   }
   if (outlines) { ART.outline(body, 1.14); ART.outline(head, 1.14); }
   g.scale.setScalar(cfg.scale);
-  return { group: g, skin, cloth: skin, head, arms: [], legs, tilt: 0, quadruped: true };
+  return { group: g, skin, cloth: skin, head, arms: [], legs, headBits: [head, jaw], tilt: 0, quadruped: true };
 }
 
 class Zombie {
@@ -189,14 +193,15 @@ class Zombie {
     if (pooled) {
       this.model = pooled.userData.model;
       this.group = pooled;
-      // 复位外观状态
+      // 复位外观状态（含肢解断肢的恢复）
       this.group.visible = true;
       this.group.rotation.set(cfg.crawl ? 1.0 : 0, 0, 0);
       this.group.scale.setScalar(cfg.scale);
       this.model.skin.emissive.setHex(0x000000);
       this.model.cloth.emissive.setHex(0x000000);
+      this._ga1 = this._ga2 = this._gl1 = this._gq1 = false;
       const wantOutline = ENGINE.quality.outlines && !this.dummy;
-      this.group.traverse(o => { if (o.userData.isOutline) o.visible = wantOutline; });
+      this.group.traverse(o => { if (o.userData.isOutline) o.visible = wantOutline; else o.visible = true; });
     } else {
       const model = cfg.quadruped ? buildQuadrupedModel(cfg, ENGINE.quality.outlines && !this.dummy) : buildZombieModel(cfg, ENGINE.quality.outlines && !this.dummy);
       this.model = model;
@@ -529,6 +534,59 @@ class Zombie {
     this.model.cloth.emissive.setHex(0x571010);
   }
 
+  /* ---------- 肢解系统（v6.8） ---------- */
+  // 单块肢体崩飞：隐藏原mesh → 生成带物理的尸块 + 血浆
+  _gibPiece(mesh, power) {
+    if (!mesh || mesh.visible === false) return;
+    const wp = new THREE.Vector3();
+    mesh.getWorldPosition(wp);
+    const s = this.group.scale.x;
+    const prm = mesh.geometry.parameters;
+    if (!prm || prm.width === undefined) return;   // 锥形配件等非盒几何跳过
+    mesh.visible = false;
+    if (typeof GIBS !== 'undefined') {
+      GIBS.spawn(wp.x, wp.y, wp.z, prm.width * s, prm.height * s, prm.depth * s, mesh.material,
+        { dx: wp.x - this.pos.x, dz: wp.z - this.pos.z }, power || 1);
+    }
+    PARTICLES.blood(wp.x, wp.y, wp.z, 6);
+  }
+
+  // 血量阶段断肢：60% 断一臂 / 35% 断另一臂 / 18% 断一腿（四足 40% 断前腿）
+  _updateDismember() {
+    const m = this.model;
+    if (m.quadruped) {
+      if (!this._gq1 && this.hp < this.maxHp * 0.4) { this._gq1 = true; this._gibPiece(m.legs[0].children[0]); }
+      return;
+    }
+    if (!this._ga1 && this.hp < this.maxHp * 0.6 && m.arms.length) { this._ga1 = true; this._gibPiece(m.arms[0].children[0]); }
+    if (!this._ga2 && this.hp < this.maxHp * 0.35 && m.arms.length > 1) { this._ga2 = true; this._gibPiece(m.arms[1].children[0]); }
+    if (!this._gl1 && this.hp < this.maxHp * 0.18 && m.legs.length) { this._gl1 = true; this._gibPiece(m.legs[1].children[0]); }
+  }
+
+  // 击杀解体：爆头→头颅集群崩飞；过量击杀→全身碎块；普通击杀→概率崩残肢
+  _gibDeath(headshot, overkill) {
+    const m = this.model;
+    const s = this.group.scale.x;
+    if (headshot || overkill) {
+      for (const b of (m.headBits || [])) this._gibPiece(b, 1.6);
+    }
+    if (overkill) {
+      for (const piv of [...m.arms, ...m.legs]) {
+        if (piv.children[0]) this._gibPiece(piv.children[0], 1.3);
+      }
+      if (!m.quadruped) {
+        GIBS.spawn(this.pos.x, 1.1 * s, this.pos.z, 0.3 * s, 0.3 * s, 0.32 * s, m.cloth, { dx: 0, dz: 0 }, 1.5);
+        GIBS.spawn(this.pos.x, 0.8 * s, this.pos.z, 0.26 * s, 0.2 * s, 0.3 * s, m.skin, { dx: 0.4, dz: 0.2 }, 1.2);
+      }
+      PARTICLES.blood(this.pos.x, 1.1 * s, this.pos.z, 24, true);
+    } else if (!headshot && m.quadruped) {
+      for (const piv of m.legs) if (piv.children[0]) this._gibPiece(piv.children[0], 1.2);
+    } else if (!headshot && Math.random() < 0.45) {
+      const piv = choice([...m.arms, ...m.legs]);
+      if (piv && piv.children[0]) this._gibPiece(piv.children[0]);
+    }
+  }
+
   _scream(game, dist) {
     AUDIO.scream(dist);
     const S = this.type.scream;
@@ -560,6 +618,8 @@ class Zombie {
     this._flash();
     // 头顶血条（首次受伤时懒创建）
     if (typeof HPBARS !== 'undefined' && !this.dummy && this.hp < this.maxHp && !this.hpbar) HPBARS.create(this);
+    // 血量阶段断肢（v6.8）
+    this._updateDismember();
     if (kb) this.addKnockback(kb.x, kb.z);
     if (hitPoint) PARTICLES.blood(hitPoint.x, hitPoint.y, hitPoint.z, isHead ? 10 : 6, isHead);
     if (this.hp <= 0) this.die(game, isHead);
@@ -567,10 +627,12 @@ class Zombie {
 
   die(game, headshot) {
     this.dead = true; this.deadT = 0;
+    const overkill = this.hp <= -this.maxHp * 0.25;
     if (this.dummy) {
       // 假人：短促倒地，快速移除，不计赏金
       AUDIO.zombieDie(0, this.growlPitch);
       PARTICLES.blood(this.pos.x, 1.1 * this.group.scale.x, this.pos.z, 10);
+      this._gibDeath(headshot, overkill);
       this.deadT = 1.4;
       if (game.mode && game.mode.onDummyKilled) {
         game.mode.onDummyKilled(this, headshot, game.player ? game.player.current : 'secondary', game._fragWindowT > 0);
@@ -580,6 +642,7 @@ class Zombie {
     const d = game.player ? dist2d(this.pos.x, this.pos.z, game.player.pos.x, game.player.pos.z) : 0;
     AUDIO.zombieDie(d, this.growlPitch);
     PARTICLES.blood(this.pos.x, 1.1 * this.group.scale.x, this.pos.z, 14);
+    this._gibDeath(headshot, overkill);
     if (typeof spawnLoot !== 'undefined' && !this.dummy) spawnLoot(game, this);
     if (this.type.deathPool) spawnAcidPool(game, this.pos.x, this.pos.z, { poolDps: 12, poolRadius: 2.6, poolTime: 5 });
     if (this.type.explode) explodeBloater(game, this);

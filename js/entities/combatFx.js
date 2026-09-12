@@ -81,3 +81,65 @@ const TRACERS = {
     }
   },
 };
+
+/* ---------- 尸块系统（v6.8 肢解） ----------
+ * 共享单位立方体 + 缩放表示尺寸；抛体物理 + 落地弹跳 + 末段缩小消失。
+ * 材质直接引用丧尸共享材质（不淡出透明度，避免污染共享材质）。
+ */
+const GIBS = {
+  _geo: null, pool: [],
+
+  spawn(x, y, z, sx, sy, sz, mat, dir, power) {
+    if (!this._geo) this._geo = new THREE.BoxGeometry(1, 1, 1);
+    let g = this.pool.find(p => p.life <= 0);
+    if (!g) {
+      if (this.pool.length >= 36) return;   // 池上限：超出直接丢弃
+      g = {
+        mesh: new THREE.Mesh(this._geo, mat),
+        vel: new THREE.Vector3(), ang: new THREE.Vector3(),
+        base: new THREE.Vector3(), life: 0,
+      };
+      g.mesh.visible = false;
+      ENGINE.scene.add(g.mesh);
+      this.pool.push(g);
+    }
+    g.mesh.material = mat;
+    g.base.set(Math.max(0.05, sx), Math.max(0.05, sy), Math.max(0.05, sz));
+    g.mesh.scale.copy(g.base);
+    g.mesh.position.set(x, Math.max(y, g.base.y * 0.5), z);
+    g.mesh.rotation.set(rand(0, TAU), rand(0, TAU), rand(0, TAU));
+    const pw = power || 1;
+    const ox = (dir && dir.dx) || 0, oz = (dir && dir.dz) || 0;
+    const ol = Math.hypot(ox, oz) || 1;
+    g.vel.set(ox / ol * rand(1.5, 3) * pw + rand(-1.2, 1.2), rand(2.5, 4.5) * pw, oz / ol * rand(1.5, 3) * pw + rand(-1.2, 1.2));
+    g.ang.set(rand(-7, 7), rand(-7, 7), rand(-7, 7));
+    g.life = rand(1.4, 2.0);
+    g.mesh.visible = true;
+  },
+
+  update(dt) {
+    for (const g of this.pool) {
+      if (g.life <= 0) continue;
+      g.life -= dt;
+      const m = g.mesh;
+      g.vel.y -= 16 * dt;
+      m.position.x += g.vel.x * dt;
+      m.position.y += g.vel.y * dt;
+      m.position.z += g.vel.z * dt;
+      const floor = g.base.y * 0.5;
+      if (m.position.y < floor) {
+        m.position.y = floor;
+        if (Math.abs(g.vel.y) > 1.6) { g.vel.y *= -0.38; g.vel.x *= 0.6; g.vel.z *= 0.6; g.ang.multiplyScalar(0.55); }
+        else { g.vel.y = 0; g.vel.x *= 0.85; g.vel.z *= 0.85; g.ang.multiplyScalar(0.85); }
+      }
+      m.rotation.x += g.ang.x * dt;
+      m.rotation.y += g.ang.y * dt;
+      m.rotation.z += g.ang.z * dt;
+      if (g.life < 0.4) {
+        const k = Math.max(0.01, g.life / 0.4);
+        m.scale.set(g.base.x * k, g.base.y * k, g.base.z * k);
+      }
+      if (g.life <= 0) m.visible = false;
+    }
+  },
+};

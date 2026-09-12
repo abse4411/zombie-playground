@@ -142,6 +142,7 @@ class Game {
     this.hitstopT = 0; this.slowmoT = 0;
     this.killStreak = 0; this.streakT = 0;
     this._fireCount = 0; this._fragWindowT = 0;
+    this._lootTipShown = false;
     this.weather = { kind: 'clear', t: rand(35, 60) };
     this.runStats = { damageTaken: 0, fragKills: 0 };
     if (typeof STORY !== 'undefined') STORY.cancel();   // 防上一局残留对话冻结新对局
@@ -364,6 +365,7 @@ class Game {
 
     // 曳光与头顶血条
     if (typeof TRACERS !== 'undefined') TRACERS.update(dt);
+    if (typeof GIBS !== 'undefined') GIBS.update(dt);
     if (typeof HPBARS !== 'undefined') { for (const z of zs) if (z.hpbar && !z.dead) HPBARS.update(z); }
 
     // 掉落物

@@ -92,11 +92,11 @@ const WEAPONS = {
     id: 'm79', name: 'M79 榴弹枪', slot: 'primary', price: 4200,
     weight: 0.88,
     damage: 30, rpm: 45, mag: 1, reserve: 20, reserveMax: 40,
-    reloadTime: 3.0, spread: 0.012, adsSpread: 0.008, auto: false,
+    reloadTime: 3.0, spread: 0.012, adsSpread: 0.008, auto: true,
     pellets: 1, headMult: 1.5, range: 120, falloff: null, launcher: true,
     recoil: 0.04, color: 0x2e4030, len: 0.8,
     sound: { freq: 300, dur: 0.18, boom: 1.1 },
-    desc: '单发肩射榴弹枪——抛物线飞行的榴弹碰物即炸，120范围杀伤。攻城锤般的火力，装填慢，走位要精。',
+    desc: '肩射榴弹枪——可按住连发，抛物线榴弹碰丧尸/墙/地即炸，范围杀伤。装填慢，走位要精。',
   },
   scar: {
     id: 'scar', name: 'SCAR-H 战斗步枪', slot: 'primary', price: 3400,

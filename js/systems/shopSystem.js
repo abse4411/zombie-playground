@@ -23,13 +23,14 @@ const SHOP = {
         const owned = !!rackInst;
         const equipped = p.weapons[tabId] && p.weapons[tabId].def.id === id;
         const inst = equipped ? p.weapons[tabId] : rackInst;
-        const fullAmmo = inst && inst.mag >= inst.magSize && inst.reserve >= Math.floor(w.reserve * p.reserveMult);
-        const needAmmo = owned && !fullAmmo;
+        // 近战无弹药概念：永不显示"补充弹药"
+        const fullAmmo = w.melee || (inst && inst.mag >= inst.magSize && inst.reserve >= Math.floor(w.reserve * p.reserveMult));
+        const needAmmo = owned && !w.melee && !fullAmmo;
         items.push({
           kind: 'weapon', id, def: w,
           name: w.name,
           desc: w.desc,
-          price: owned ? GAMECONFIG.economy.ammoPrice : w.price,
+          price: owned ? (w.melee ? 0 : GAMECONFIG.economy.ammoPrice) : w.price,
           owned, state: owned ? (needAmmo ? 'ammo' : 'owned') : 'buy',
           lvl: inst ? inst.lvl : 0,
           stats: w.melee

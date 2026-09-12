@@ -75,6 +75,11 @@ class LootDrop {
     this.dead = true;
     ENGINE.scene.remove(this.group);
     if (!picked) return;
+    // 首次拾取引导：告诉玩家背包入口（战利品/武器架/消耗品都在背包里）
+    if (!game._lootTipShown) {
+      game._lootTipShown = true;
+      HUD.toast(INPUT.touch ? '🎒 战利品已入背包，点右下角🎒查看' : '🎒 战利品已入背包，按 Tab 查看（医疗包按 H 使用）');
+    }
     const p = game.player;
     switch (this.kind) {
       case 'cash':

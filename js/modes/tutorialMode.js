@@ -112,7 +112,7 @@ class TutorialMode {
       },
       {
         text: '走到绿色光环的补给站，按 B 打开并购买任意商品',
-        hint: '资金已备好——买把 MP5 试试火力',
+        hint: '资金已备好——买把 MP5 试试火力。战利品与武器架在背包（Tab）里，医疗包按 H 使用',
         init: (g) => {
           this.shopStep = true;
           g.player.addMoney(1500);

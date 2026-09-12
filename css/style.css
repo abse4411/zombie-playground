@@ -470,6 +470,10 @@ button { font-family: var(--font); cursor: pointer; }
 #medkit-row i { font-style: normal; color: var(--dim); font-size: 11px; }
 #medkit-row b { color: #ff8f9f; }
 #medkit-row.empty { opacity: .4; }
+#bp-hint { margin-top: 4px; font-size: 13px; color: rgba(255,255,255,.85); text-shadow: 0 1px 3px #000; cursor: pointer; pointer-events: auto; }
+#bp-hint i { font-style: normal; color: var(--dim); font-size: 11px; }
+#bp-hint:hover { color: #ffd76a; }
+body.touch #bp-hint i { display: none; }
 #pickup-feed {
   position: absolute; right: 22px; top: 34%; text-align: right; pointer-events: none;
 }

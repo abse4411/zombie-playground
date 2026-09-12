@@ -26,8 +26,13 @@ const HUD = {
       streak: $('streak-banner'), dmgDir: $('dmg-dir'),
       bloodLayer: $('blood-layer'), fps: $('fps-counter'),
       bossBar: $('boss-bar'), bossName: $('boss-name'), bossFill: $('boss-fill'),
+      bpHint: $('bp-hint'),
     };
     this.radarCtx = this.el.radar.getContext('2d');
+    // 背包入口：左下角提示可点击（触屏同样生效）
+    this.el.bpHint.addEventListener('click', () => {
+      if (typeof BACKPACK !== 'undefined' && GAME && GAME.state === 'playing') BACKPACK.toggle(GAME);
+    });
     $('btn-tut-skip').addEventListener('click', () => {
       if (GAME && GAME.state === 'playing') { HUD.hideObjective(); GAME.quitToMenu(); }
     });

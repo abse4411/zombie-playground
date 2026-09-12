@@ -245,6 +245,20 @@ function buildGunModel(def, opts = {}) {
     const legR = B(0.014, 0.14, 0.014, M.metal, 0.03, -0.12, -0.44, 0.3, 0, -0.25);
     B(0.016, 0.03, 0.02, M.dark, 0, 0.075, -0.6);                    // 准星
     g.userData.muzzleZ = -0.66;
+  } else if (def.id === 'frag') {
+    const bd = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), M.body);
+    bd.scale.set(1, 1.25, 1); bd.position.y = -0.02; g.add(bd);
+    C(0.02, 0.02, 0.05, M.metal, 0, 0.09, 0, 'y');                   // 引信柄
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.032, 0.008, 6, 14), M.metal);
+    ring.position.set(0.05, 0.11, 0); g.add(ring);                    // 保险拉环
+    B(0.015, 0.06, 0.015, M.metal, 0.03, 0.12, 0, 0, 0, 0.4);        // 保险销
+    g.userData.muzzleZ = -0.2;
+  } else if (def.id === 'molotov') {
+    C(0.055, 0.065, 0.2, ART.mat(0x7a5a2a, 0x1a1005), 0, 0.0, 0, 'y'); // 瓶身
+    C(0.024, 0.024, 0.07, M.metal, 0, 0.13, 0, 'y');                 // 瓶口
+    B(0.05, 0.1, 0.02, ART.mat(0xc0b090, 0x2a2218), 0.02, 0.16, 0, 0, 0, 0.5); // 布条
+    C(0.058, 0.05, 0.05, ART.mat(0x9a8030, 0x1a1005), 0, -0.04, 0, 'y'); // 汽油液面
+    g.userData.muzzleZ = -0.2;
   } else {
     // 通用兜底（新武器未建模时）：基础机匣组合
     B(0.07, 0.1, L * 0.55, M.body, 0, 0, -L * 0.2);

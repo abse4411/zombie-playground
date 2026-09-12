@@ -327,6 +327,14 @@ button { font-family: var(--font); cursor: pointer; }
   color: var(--dim); font-size: 13.5px; letter-spacing: 1px;
 }
 .shop-tab.active { color: #fff; border-color: var(--red); background: rgba(230,57,70,.16); }
+#shop-preview {
+  display: flex; align-items: center; gap: 18px; padding: 8px 20px;
+  border-bottom: 1px solid var(--line); background: rgba(0,0,0,.25); height: 150px;
+}
+#gun-preview { width: 300px; height: 150px; flex: none; }
+#gp-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+#gp-name { font-size: 20px; font-weight: 800; color: #ffd76a; text-shadow: 0 2px 0 #000; }
+#gp-hint { font-size: 12px; color: var(--dim); }
 #shop-items {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
   gap: 10px; padding: 14px 20px 20px; overflow-y: auto;

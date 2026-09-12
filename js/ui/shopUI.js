@@ -17,6 +17,8 @@ const SHOPUI = {
       this.els.tabs.appendChild(b);
     }
     this.els.close.addEventListener('click', () => this.close());
+    // 3D 预览渲染器（v7.4）
+    GUNPREVIEW.init(document.getElementById('gun-preview'), document.getElementById('gp-name'));
   },
 
   open(game) {
@@ -90,7 +92,17 @@ const SHOPUI = {
         btn.classList.add('maxed');
       }
       card.appendChild(btn);
+      // 3D 预览（v7.4）：悬停/点击卡片展示武器模型
+      if (item.def || item.id === 'frag' || item.id === 'molotov') {
+        const prevDef = item.def || THROWABLES[item.id];
+        const showIt = () => GUNPREVIEW.show(prevDef, item.name);
+        card.addEventListener('mouseenter', showIt);
+        card.addEventListener('click', showIt);
+      }
       this.els.items.appendChild(card);
     }
+    // 默认展示第一个含模型的商品
+    const first = items.find(i => i.def || i.id === 'frag' || i.id === 'molotov');
+    if (first) GUNPREVIEW.show(first.def || THROWABLES[first.id], first.name);
   },
 };

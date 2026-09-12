@@ -202,6 +202,8 @@ function explodeGrenade(game, x, y, z, cfg, selfMult) {
   if (pd < pr && game.player.alive) {
     game.player.takeDamage(cfg.damage * selfMult * (1 - pd / pr), game);
   }
+  // 波及尸巢（v10.3 燃烧/爆炸烧巢）
+  if (typeof NESTS !== 'undefined') NESTS.hitAt(game, x, z, cfg.radius, cfg.damage);
   // 波及可破坏物（链式引爆在 Destructible.destroy 内处理）
   if (typeof Destructible !== 'undefined' && game.destructibles) {
     for (const d of game.destructibles) {

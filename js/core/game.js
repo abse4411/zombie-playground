@@ -168,6 +168,8 @@ class Game {
     if (typeof spawnDestructibles !== 'undefined') spawnDestructibles(this);
     // 探索补给箱
     if (typeof spawnSupplyCrates !== 'undefined') spawnSupplyCrates(this);
+    // 尸巢（v10.3 往日不再）
+    if (typeof NESTS !== 'undefined') NESTS.spawnFor(this);
     // 成就专属武器注入（v8.4）
     if (SAVE.data.unlockedWeapons && SAVE.data.unlockedWeapons.length) {
       const _p = this.player;
@@ -435,6 +437,8 @@ class Game {
     if (typeof GIBS !== 'undefined') GIBS.update(dt);
     if (typeof HPBARS !== 'undefined') { for (const z of zs) if (z.hpbar && !z.dead) HPBARS.update(z); }
 
+    // 尸巢孵化
+    if (typeof NESTS !== 'undefined') NESTS.update(dt, this);
     // 掉落物
     for (const l of this.loots) l.update(dt, this);
     this.loots = this.loots.filter(l => !l.dead);
@@ -743,6 +747,7 @@ class Game {
     for (const d of this.destructibles) if (!d.dead) d.dispose();
     this.destructibles = [];
     if (this.playerBody) { ENGINE.scene.remove(this.playerBody.group); this.playerBody = null; }
+    if (typeof NESTS !== 'undefined') NESTS.clear(this);
     if (this.crates) for (const c of this.crates) c.dispose();
     this.crates = [];
     if (this.weapons) this.weapons._disposeViewmodel();

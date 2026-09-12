@@ -58,4 +58,16 @@ const PERKS = {
     valName: v => `掉落率 +${Math.round(v * 100)}%`,
     desc: '战场搜刮直觉：感染体掉落战利品的概率大幅提升。',
   },
+  bulletstorm: {
+    id: 'bulletstorm', name: '弹雨瘾', icon: '🌀', unlockBy: 'killer1000',
+    tiers: [{ price: 2400, val: 0.3 }],
+    valName: v => `连杀≥8时换弹速度 +${Math.round(v * 100)}%`,
+    desc: '【成就专属】千人斩解锁——肾上腺素上瘾：杀红了眼（连杀≥8）时换弹快如本能。',
+  },
+  laststand: {
+    id: 'laststand', name: '背水一战', icon: '🔥', unlockBy: 'flawless3',
+    tiers: [{ price: 2600, val: 0.3 }],
+    valName: v => `生命<25%时伤害+${Math.round(v * 100)}%、移速+15%`,
+    desc: '【成就专属】无伤大师解锁——濒死时爆发的求生本能：伤害与移速大幅提升。',
+  },
 };

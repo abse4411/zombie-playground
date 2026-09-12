@@ -62,6 +62,10 @@ class Player {
     this.reloadMult = ch.reload * (1 - (p.reload > 0 ? PERKS.reload.tiers[p.reload - 1].val : 0));
     this.dmgMult = ch.dmg * (1 + (p.ap > 0 ? PERKS.ap.tiers[p.ap - 1].val : 0));
     this.regenRate = p.regen > 0 ? PERKS.regen.tiers[p.regen - 1].val : 0;
+    // 专属强化（v8.4）
+    this.bulletstormOn = false; this.laststandOn = false;
+    if (p.bulletstorm > 0) this.bulletstormVal = PERKS.bulletstorm.tiers[p.bulletstorm - 1].val;
+    if (p.laststand > 0) this.laststandVal = PERKS.laststand.tiers[p.laststand - 1].val;
     if (this.armor > this.maxArmor) this.armor = this.maxArmor;
   }
 
@@ -119,6 +123,8 @@ class Player {
     let spd = (sprint ? P.sprintSpeed : P.walkSpeed) * this.speedMult;
     if (this.slowT > 0) { spd *= 0.55; this.slowT -= dt; }
     spd *= this.moveMult;
+    // 背水一战（v8.4）：濒死移速
+    if (this.laststandVal && this.hp <= this.maxHp * 0.25) spd *= 1.15;
 
     // ---- 闪避冲刺 ----
     this.dashCd -= dt;

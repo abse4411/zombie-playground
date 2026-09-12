@@ -89,6 +89,22 @@ const ACHV = {
         }
       }
     }
+    // 解锁专属强化提示（v8.4 Perk 在商城出现）
+    if (typeof PERKS !== 'undefined') {
+      const pk = Object.values(PERKS).find(x => x.unlockBy === id);
+      if (pk) HUD.banner('🏆 强化解锁：' + pk.name, pk.desc);
+    }
+    // 解锁专属武器检测（v8.4）
+    if (typeof WEAPONS !== 'undefined') {
+      const w = Object.values(WEAPONS).find(x => x.unlockBy === id);
+      if (w) {
+        if (!SAVE.data.unlockedWeapons) SAVE.data.unlockedWeapons = [];
+        if (!SAVE.data.unlockedWeapons.includes(w.id)) {
+          SAVE.data.unlockedWeapons.push(w.id);
+          HUD.banner('🎖 专属武器入库：' + w.name, '下局开局自动装备在武器架');
+        }
+      }
+    }
     // 奖励发放（皮肤入 unlockedSkins / 酬金挂账开局发放）
     const rw = ACHV_REWARDS[id];
     if (rw) {

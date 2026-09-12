@@ -321,8 +321,51 @@ class WeaponSystem {
     }
     if (anyHit) game.stats.hits++;
 
-    // 一次性施加伤害与击退（联机客户端：只上报命中，伤害由房主结算）
     const isNetClient = typeof NET !== 'undefined' && NET.role === 'client';
+
+    // 专属武器机制（v8.4）
+    const exMult = (this.p.explodeMult !== undefined) ? 1 : 1;
+    for (const [z, h] of hits) {
+      // 链式闪电（猎犬咆哮者）：跳跃至3m内下一只 ×0.6，最多3跳
+      if (def.chain && !isNetClient) {
+        let cur = z, dmg2 = h.dmg, jumped = new Set([z]);
+        for (let hop = 0; hop < def.chain; hop++) {
+          let best = null, bd = 3;
+          for (const z2 of game.zombies) {
+            if (z2.dead || z2 === cur || jumped.has(z2) || z2.state === 'rise') continue;
+            const d2 = dist2d(z2.pos.x, z2.pos.z, cur.pos.x, cur.pos.z);
+            if (d2 < bd) { bd = d2; best = z2; }
+          }
+          if (!best) break;
+          dmg2 *= 0.6;
+          PARTICLES.spawn('spark', best.pos.x, 1.2 * best.group.scale.x, best.pos.z, 4,
+            { speed: 2, vy: 1, life: 0.3, color: [0.4, 0.8, 1], color2: [0.1, 0.3, 0.8] });
+          best.takeDamage(dmg2, false, { x: best.pos.x, y: 1.2 * best.group.scale.x, z: best.pos.z }, game, null);
+          jumped.add(best); cur = best;
+        }
+      }
+      // 冰冻（冬霜之刺）：命中减速3秒
+      if (def.frost && !isNetClient) {
+        z.slowT = Math.max(z.slowT || 0, 3);
+        PARTICLES.spawn('smoke', z.pos.x, 1.1 * z.group.scale.x, z.pos.z, 3,
+          { speed: 0.5, vy: 0.4, life: 0.6, color: [0.7, 0.9, 1], color2: [0.3, 0.5, 0.8] });
+      }
+    }
+    // 三连齐射（九头蛇）：额外发射2枚小火箭
+    if (def.volley && !isNetClient) {
+      for (let vi = 1; vi < def.volley; vi++) {
+        const sp = (vi - 1) * 0.05 - 0.025;
+        const dirV = fwd.clone();
+        dirV.applyAxisAngle(up, sp);
+        game.projectiles.push(new Projectile('gl',
+          origin.x + dirV.x * 0.5, origin.y - 0.05, origin.z + dirV.z * 0.5,
+          dirV.x * 14, dirV.y * 14 + 2.2, dirV.z * 14,
+          { fuse: 4 }));
+      }
+    }
+
+
+    // 一次性施加伤害与击退（联机客户端：只上报命中，伤害由房主结算）
     const kbPow = def.pellets > 1 ? GAMECONFIG.feel.kbShotgun : 0;
     for (const [z, h] of hits) {
       if (isNetClient) {
@@ -381,6 +424,8 @@ class WeaponSystem {
       hitZ = first.z; isHead = first.head; bestT = first.t;
       const calcDmg = (t2, head2) => {
         let d2 = def.damage * this.w.dmgMult * this.p.dmgMult * (head2 ? def.headMult : 1);
+        // 背水一战（v8.4）：生命<25% 伤害加成
+        if (this.p.laststandVal && this.p.hp <= this.p.maxHp * 0.25) d2 *= (1 + this.p.laststandVal);
         if (def.falloff) {
           const f = def.falloff;
           if (t2 > f.end) d2 *= f.min;
@@ -469,6 +514,13 @@ class WeaponSystem {
   }
 
   /* ---------- 换弹 / 切换 / 投掷 ---------- */
+  // 弹雨瘾（v8.4）：连杀≥8 换弹加速
+  _reloadMult() {
+    let m = this.p.reloadMult;
+    if (this.p.bulletstormVal && this.p.killStreak >= 8) m *= (1 - this.p.bulletstormVal);
+    return m;
+  }
+
   _startReload() {
     const w = this.w;
     if (!w || w.def.melee) return;
@@ -494,6 +546,8 @@ class WeaponSystem {
     else if (!this.p.weapons[slot]) return;
     this.p.current = slot;
     this.switchT = 0.38; this.reloadT = 0; this.adsT = 0;
+    // 转管预热（v8.4 minigun）：切换时间加长
+    if (this.w.def.spinup) this.switchT = this.w.def.spinup;
     this.swingT = -1; this._fireKick = 0;
     this._buildViewmodel();
     AUDIO.weaponSwitch();
@@ -582,7 +636,7 @@ class WeaponSystem {
     let rx = 0, rz = 0, ox = 0, oy = 0;
     if (this.switchT > 0) oy = -0.28 * (this.switchT / 0.38);
     if (this.reloadT > 0) {
-      const k = 1 - this.reloadT / (def.reloadTime * p.reloadMult);
+      const k = 1 - this.reloadT / (def.reloadTime * this._reloadMult());
       rx = 0.95 * Math.sin(clamp(k, 0, 1) * Math.PI);          // 大幅翻枪
       oy -= 0.14 + 0.05 * Math.sin(k * Math.PI * 3);           // 下沉+抖动
       rz = 0.3 * Math.sin(k * Math.PI * 2);                    // 左右晃

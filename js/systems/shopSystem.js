@@ -19,6 +19,7 @@ const SHOP = {
       for (const id in WEAPONS) {
         const w = WEAPONS[id];
         if (w.slot !== tabId) continue;
+        if (w.unlockBy) continue;   // 成就专属武器不入商城（v8.4）
         const rackInst = p.rack[tabId].find(r => r.def.id === id);
         const owned = !!rackInst;
         const equipped = p.weapons[tabId] && p.weapons[tabId].def.id === id;
@@ -67,6 +68,7 @@ const SHOP = {
     } else if (tabId === 'perk') {
       for (const id in PERKS) {
         const k = PERKS[id];
+        if (k.unlockBy && !(SAVE.data.achievements || []).includes(k.unlockBy)) continue;   // 成就专属Perk未解锁不显示
         const tier = p.perks[id] || 0;   // 旧存档可能缺新Perk键
         if (tier >= k.tiers.length) {
           items.push({ kind: 'perk', id, name: `${k.icon} ${k.name} MAX`, desc: k.desc, price: 0, state: 'maxed', stats: [['等级', 'MAX']] });

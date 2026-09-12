@@ -166,6 +166,22 @@ class Game {
     if (typeof spawnDestructibles !== 'undefined') spawnDestructibles(this);
     // 探索补给箱
     if (typeof spawnSupplyCrates !== 'undefined') spawnSupplyCrates(this);
+    // 成就专属武器注入（v8.4）
+    if (SAVE.data.unlockedWeapons && SAVE.data.unlockedWeapons.length) {
+      const _p = this.player;
+      for (const wid of SAVE.data.unlockedWeapons) {
+        if (!WEAPONS[wid]) continue;
+        const slot = WEAPONS[wid].slot;
+        if (!_p.rack[slot].some(r => r.def.id === wid)) {
+          const inst = new WeaponInstance(WEAPONS[wid]);
+          inst.mag = inst.magSize;
+          inst.reserve = Math.floor(inst.def.reserve * _p.reserveMult);
+          _p.rack[slot].push(inst);
+          if (!_p.weapons[slot]) { _p.weapons[slot] = inst; if (_p.current === 'secondary' && slot === 'primary') _p.current = 'primary'; }
+        }
+      }
+      if (this.weapons) this.weapons._buildViewmodel();
+    }
     // 成就酬金发放（v8.2奖励）
     if (SAVE.data.bonusMoney > 0) { this.player.money += SAVE.data.bonusMoney; HUD.toast(`🏆 成就酬金 +$${SAVE.data.bonusMoney}`); SAVE.data.bonusMoney = 0; }
     // 角色属性（v6.2）

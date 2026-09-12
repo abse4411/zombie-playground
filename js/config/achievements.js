@@ -78,6 +78,17 @@ const ACHV = {
     const a = ACHIEVEMENTS.find(x => x.id === id);
     if (!a) return;
     SAVE.data.achievements.push(id);
+    // 解锁角色检测（v8.3）：成就为解锁条件的新干员
+    if (typeof CHARACTERS !== 'undefined') {
+      const ch = CHARACTERS.find(c => c.unlockBy === id);
+      if (ch) {
+        if (!SAVE.data.unlockedChars) SAVE.data.unlockedChars = ['raven', 'nightingale', 'bastion', 'apricot'];
+        if (!SAVE.data.unlockedChars.includes(ch.id)) {
+          SAVE.data.unlockedChars.push(ch.id);
+          HUD.banner('🎖 新干员加入：' + ch.name, ch.prof + ' · ' + (ch.passiveText || ''));
+        }
+      }
+    }
     // 奖励发放（皮肤入 unlockedSkins / 酬金挂账开局发放）
     const rw = ACHV_REWARDS[id];
     if (rw) {

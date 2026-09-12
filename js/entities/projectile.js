@@ -116,6 +116,9 @@ class Projectile {
 /* ---------- 手雷爆炸 ---------- */
 function explodeGrenade(game, x, y, z, cfg, selfMult) {
   selfMult = selfMult !== undefined ? selfMult : cfg.selfMult;
+  // 爆破专家被动（v8.3）：爆炸伤害×1.5
+  const exMult = (game.player && game.player.explodeMult) || 1;
+  if (exMult !== 1) cfg = Object.assign({}, cfg, { damage: cfg.damage * exMult });
   PARTICLES.explosion(x, y, z);
   const pd = dist2d(x, z, game.player.pos.x, game.player.pos.z);
   AUDIO.explode(pd);

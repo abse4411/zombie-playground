@@ -241,11 +241,14 @@ const MENU = {
     const list = document.getElementById('char-list');
     list.innerHTML = '';
     const cur = SAVE.data.character || 'raven';
+    const unlockedChars = SAVE.data.unlockedChars || ['raven', 'nightingale', 'bastion', 'apricot'];
     for (const c of CHARACTERS) {
+      const locked = !unlockedChars.includes(c.id);
       const card = document.createElement('div');
-      card.className = 'card char-card' + (c.id === cur ? ' char-active' : '');
+      card.className = 'card char-card' + (c.id === cur ? ' char-active' : '') + (locked ? ' char-locked' : '');
+      const achv = c.unlockBy ? ACHIEVEMENTS.find(a => a.id === c.unlockBy) : null;
       card.innerHTML = `
-        <h3>${c.gender === '女' ? '♀' : '♂'} ${c.name} · ${c.prof}</h3>
+        <h3>${locked ? '🔒 ' : ''}${c.gender === '女' ? '♀' : '♂'} ${c.name} · ${c.prof}</h3>
         <div class="char-stats">
           <span>❤ 生命 <b>${c.hp}</b></span>
           <span>🏃 速度 <b>×${c.speed.toFixed(2)}</b></span>
@@ -254,8 +257,12 @@ const MENU = {
           ${c.medkits !== 2 ? `<span>🧪 医疗包 <b>${c.medkits}</b></span>` : ''}
           <span>💢 伤害 <b>×${c.dmg.toFixed(2)}</b></span>
         </div>
+        ${locked
+          ? `<p style="color:#ff8f9f">🔒 成就解锁：${achv ? achv.name + ' — ' + achv.desc : '???'}</p>`
+          : (c.passiveText ? `<p style="color:#8ad8ff">★ ${c.passiveText}</p>` : '')}
         <p>${c.desc}</p>`;
       card.addEventListener('click', () => {
+        if (locked) { AUDIO.denied(); HUD.toast(`🔒 完成「${achv ? achv.name : '?'}」成就解锁 ${c.name}`); return; }
         SAVE.data.character = c.id; SAVE.commit();
         AUDIO.purchase();
         CHARPREVIEW.show(c.id);

@@ -166,6 +166,8 @@ class Game {
     if (typeof spawnDestructibles !== 'undefined') spawnDestructibles(this);
     // 探索补给箱
     if (typeof spawnSupplyCrates !== 'undefined') spawnSupplyCrates(this);
+    // 成就酬金发放（v8.2奖励）
+    if (SAVE.data.bonusMoney > 0) { this.player.money += SAVE.data.bonusMoney; HUD.toast(`🏆 成就酬金 +$${SAVE.data.bonusMoney}`); SAVE.data.bonusMoney = 0; }
     // 角色属性（v6.2）
     const ch = getCharacter(SAVE.data.character || 'raven');
     this.player.charStats = ch;
@@ -175,6 +177,27 @@ class Game {
     if (ch.armorStart > 0) { this.player.maxArmor = Math.max(this.player.maxArmor, ch.armorStart); this.player.armor = ch.armorStart; }
     this.player.medkits = ch.medkits;
     this.player.medkitHeal = ch.medkitHeal || GAMECONFIG.inventory.medkitHeal;
+    // 解锁角色被动（v8.3）
+    if (ch.passive) {
+      const pv = ch.passive;
+      this.player.explodeMult = pv.explodeMult || 1;
+      if (pv.throwMaxBonus) this.player.throwMaxBonus = pv.throwMaxBonus;
+      if (pv.fragFull) { this.player.throwables.frag.count = THROWABLES.frag.max; this.player.throwables.molotov.count = Math.min(THROWABLES.molotov.max, THROWABLES.molotov.max); }
+      if (pv.scopePenaltyHalf) this.player.scopePenaltyHalf = true;
+      if (pv.startWeapon && WEAPONS[pv.startWeapon] && !this.player.rack.primary.some(r => r.def.id === pv.startWeapon)) {
+        const inst = new WeaponInstance(WEAPONS[pv.startWeapon]);
+        inst.mag = inst.magSize;
+        inst.reserve = Math.floor(inst.def.reserve * this.player.reserveMult);
+        this.player.rack.primary.push(inst);
+        this.player.weapons.primary = inst;
+        this.player.current = 'primary';
+        if (this.weapons) this.weapons._buildViewmodel();
+      }
+    } else {
+      this.player.explodeMult = 1;
+      this.player.throwMaxBonus = 0;
+      this.player.scopePenaltyHalf = false;
+    }
     // 战役继承（在剧情对话前应用）
     if (this._pendingCarry) { this._applyCarry(this._pendingCarry); this._pendingCarry = null; }
     // 联机：标记在局

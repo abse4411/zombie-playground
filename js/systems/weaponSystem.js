@@ -85,6 +85,7 @@ class WeaponSystem {
     this.swingT = -1; this.sawPhase = 0; this._emptyCd = 0;
     this.kickCd = 0;
     this._swingDur = 0.3; this._heavySwing = false; this._prevRmb = false; this._fireKick = 0;
+    this.chargeThrow = null; this.chargePower = 0;
     this.viewmodel = null; this.muzzleSprite = null; this.muzzleLight = null;
     this._buildViewmodel();
 
@@ -175,9 +176,28 @@ class WeaponSystem {
     if (INPUT.justPressed('Digit2')) this._cycleSlot('secondary');
     if (INPUT.justPressed('Digit3')) this._cycleSlot('melee');
     if (INPUT.justPressed('KeyQ')) this._lastInv();
-    if (INPUT.justPressed('KeyG')) this._throw('frag', game);
-    if (INPUT.justPressed('KeyV')) this._throw('attractor', game);
-    if (INPUT.justPressed('KeyT')) this._throw('molotov', game);
+    // 投掷蓄力（v11.7）：按下键进入蓄力预备，左键释放按力度抛出
+    if (INPUT.justPressed('KeyG') && !this.chargeThrow) this._beginCharge('frag');
+    if (INPUT.justPressed('KeyV') && !this.chargeThrow) this._beginCharge('attractor');
+    if (INPUT.justPressed('KeyT') && !this.chargeThrow) this._beginCharge('molotov');
+    if (this.chargeThrow) {
+      if (!this._chargeLmbSeen) {
+        // 阶段1：等待玩家按下左键（防按G瞬间误投）
+        if (INPUT.lmb || INPUT.lmbEdge) this._chargeLmbSeen = true;
+        else if (INPUT.justPressed('KeyG') || INPUT.justPressed('KeyT') || INPUT.justPressed('KeyV')) { /* 保持蓄力 */ }
+        else {
+          // 松开投掷键取消
+          this.chargeThrow = null; this._chargeLmbSeen = false;
+        }
+      } else if (INPUT.lmb) {
+        // 阶段2：按住左键蓄力
+        this.chargePower = Math.min(1, (this.chargePower || 0) + dt * 1.4);
+      } else {
+        // 阶段3：松开左键→投出
+        this._chargeLmbSeen = false;
+        this._releaseCharge(game);
+      }
+    }
     if (INPUT.justPressed('KeyR')) this._startReload();
     if (INPUT.justPressed('KeyF')) this._kick(game);
     if (INPUT.justPressed('KeyH')) this.p.useMedkit();
@@ -683,7 +703,25 @@ class WeaponSystem {
     }
   }
 
-  _throw(kind, game) {
+  // 投掷蓄力（v11.7）
+  _beginCharge(kind) {
+    const t = this.p.throwables[kind];
+    if (!t || t.count <= 0) { AUDIO.emptyClick(); return; }
+    this.chargeThrow = kind;
+    this.chargePower = 0;
+    this._chargeLmbSeen = false;
+    HUD.toast('按住左键蓄力，松开投掷');
+    if (typeof GAME !== 'undefined' && GAME.playerBody) bodyAct(GAME.playerBody, 'throw', 0.9);
+  }
+
+  _releaseCharge(game) {
+    const kind = this.chargeThrow;
+    this.chargeThrow = null;
+    const power = clamp(this.chargePower || 0.4, 0.25, 1);
+    this._throw(kind, game, power);
+  }
+
+  _throw(kind, game, power) {
     const t = this.p.throwables[kind];
     if (!t || t.count <= 0) { AUDIO.emptyClick(); return; }
     t.count--;
@@ -694,12 +732,14 @@ class WeaponSystem {
     cam.getWorldPosition(origin);
     const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
     const cfg = THROWABLES[kind];
-    game._fragWindowT = 3;   // 手雷击杀归因窗口（教学用）
+    game._fragWindowT = 3;
     if (typeof GAME !== 'undefined' && GAME.playerBody) bodyAct(GAME.playerBody, 'throw', 0.5);
-    this.throwAnimT = 0.5;   // 视图模型抬臂投掷
+    this.throwAnimT = 0.5;
+    // 蓄力：初速 45%~110% 按力度；视角 pitch 决定抛射角（dir已含）
+    const spd = cfg.speed * (0.45 + 0.65 * (power !== undefined ? power : 0.75));
     game.projectiles.push(new Projectile(kind,
       origin.x + dir.x * 0.5, origin.y - 0.08, origin.z + dir.z * 0.5,
-      dir.x * cfg.speed, dir.y * cfg.speed + 2.6, dir.z * cfg.speed,
+      dir.x * spd, dir.y * spd + 2.6 * (0.5 + (power || 0.75) * 0.5), dir.z * spd,
       { fuse: cfg.fuse }));
   }
 
@@ -707,7 +747,9 @@ class WeaponSystem {
   _updateViewmodel(dt) {
     const vm = this.viewmodel;
     if (!vm) return;
-    const def = this.w.def;
+    const w = this.w;
+    if (!w) return;
+    const def = w.def;
     const p = this.p;
     const base = def.melee ? { x: 0.32, y: -0.3, z: -0.55 } : { x: 0.28, y: -0.24, z: -0.5 };
     const adsPos = { x: 0, y: -0.155, z: -0.38 };
@@ -725,7 +767,7 @@ class WeaponSystem {
     let rx = 0, rz = 0, ox = 0, oy = 0;
     if (this.switchT > 0) oy = -0.28 * (this.switchT / 0.38);
     if (this.reloadT > 0) {
-      const k = 1 - this.reloadT / (def.reloadTime * this._reloadMult() * (w.reloadTimeMult || 1));
+      const k = this._swingDur > 0 ? 1 - this.reloadT / (def.reloadTime * this._reloadMult() * ((w && w.reloadTimeMult) || 1)) : 0;
       rx = 0.95 * Math.sin(clamp(k, 0, 1) * Math.PI);          // 大幅翻枪
       oy -= 0.14 + 0.05 * Math.sin(k * Math.PI * 3);           // 下沉+抖动
       rz = 0.3 * Math.sin(k * Math.PI * 2);                    // 左右晃
@@ -746,6 +788,12 @@ class WeaponSystem {
     // 冲刺摆臂 / 脚踢前蹬
     if (p.dashT > 0) { ox -= 0.06; rz += 0.2; }
     if (this.kickAnimT > 0) { ox -= 0.16 * Math.sin((0.22 - this.kickAnimT) / 0.22 * Math.PI); oy -= 0.07 * Math.sin((0.22 - this.kickAnimT) / 0.22 * Math.PI); rx += 0.35 * Math.sin((0.22 - this.kickAnimT) / 0.22 * Math.PI); }
+    // 投掷蓄力（v11.7）：武器下沉+后仰，屏显力度
+    if (this.chargeThrow) {
+      const cp = this.chargePower || 0;
+      oy -= 0.1 + cp * 0.1; rx += 0.3 + cp * 0.4; rz -= 0.2 + cp * 0.2;
+      HUD.toast(`💥 蓄力 ${Math.round(cp * 100)}% —— 松开左键投掷`);
+    }
     // 投掷臂摆（v8.7）：抬臂过肩→前甩
     if (this.throwAnimT > 0) {
       this.throwAnimT -= dt;

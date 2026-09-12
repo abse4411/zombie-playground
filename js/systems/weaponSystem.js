@@ -175,7 +175,7 @@ class WeaponSystem {
           if (this._emptyCd <= 0) { AUDIO.emptyClick(); this._emptyCd = 0.3; if (SAVE.data.settings.autoReload !== false) this._startReload(); }
         } else {
           w.mag--;
-          this.cooldown = 60 / def.rpm;
+          this.cooldown = 60 / (def.rpm * (this.p.rogueRof || 1));
           AUDIO.shot(def.sound.freq, def.sound.dur, def.sound.boom);
           this.recoilKick = Math.min(1, this.recoilKick + 0.8);
           ENGINE.shake(0.15);
@@ -208,7 +208,7 @@ class WeaponSystem {
           this._meleeHit(def, game, true);
           ENGINE.shake(0.1);
         } else if (wantFire) {
-          this.cooldown = 60 / def.rpm;
+          this.cooldown = 60 / (def.rpm * (this.p.rogueRof || 1));
           this._swingDur = 0.3;
           this.swingT = 0;
           this._heavySwing = false;
@@ -245,7 +245,7 @@ class WeaponSystem {
   /* ---------- 开火与弹道（多弹丸聚合伤害 + 击退） ---------- */
   _fire(def, w, game) {
     w.mag--;
-    this.cooldown = 60 / def.rpm;
+    this.cooldown = 60 / (def.rpm * (this.p.rogueRof || 1));
     AUDIO.shot(def.sound.freq, def.sound.dur, def.sound.boom);
     this.recoilKick = Math.min(1, this.recoilKick + 0.55);
     const kick = def.recoil * rand(0.7, 1.3);
@@ -426,7 +426,9 @@ class WeaponSystem {
       const first = take[0];
       hitZ = first.z; isHead = first.head; bestT = first.t;
       const calcDmg = (t2, head2) => {
-        let d2 = def.damage * this.w.dmgMult * this.p.dmgMult * (head2 ? def.headMult : 1);
+        let d2 = def.damage * this.w.dmgMult * this.p.dmgMult * (this.p.rogueAtk || 1) * (head2 ? def.headMult : 1);
+        // 暴击（v10.6）
+        if (this.p.critChance > 0 && Math.random() < this.p.critChance) d2 *= 2;
         // 背水一战（v8.4）：生命<25% 伤害加成
         if (this.p.laststandVal && this.p.hp <= this.p.maxHp * 0.25) d2 *= (1 + this.p.laststandVal);
         if (def.falloff) {
@@ -532,7 +534,7 @@ class WeaponSystem {
   /* ---------- 换弹 / 切换 / 投掷 ---------- */
   // 弹雨瘾（v8.4）：连杀≥8 换弹加速
   _reloadMult() {
-    let m = this.p.reloadMult;
+    let m = this.p.reloadMult * (this.p.rogueRel || 1);
     if (this.p.bulletstormVal && this.p.killStreak >= 8) m *= (1 - this.p.bulletstormVal);
     return m;
   }

@@ -738,3 +738,24 @@ body.touch #ammo-mag { font-size: 30px; }
 .bp-w.in-storage { border-left: 3px solid #3aa0ff; }
 .bp-cap-full { color: #ff8f9f !important; }
 .bp-empty-slot { opacity: .35; font-style: italic; }
+
+/* ---------- 升级三选一（v10.6） ---------- */
+#levelup { position: fixed; inset: 0; z-index: 120; display: flex; align-items: center; justify-content: center; background: rgba(5,4,10,.78); backdrop-filter: blur(3px); }
+#levelup.hidden { display: none; }
+#lu-panel { width: min(760px, 94vw); text-align: center; }
+#lu-title { font-size: 26px; font-weight: 900; color: #ffd76a; letter-spacing: 3px; margin-bottom: 22px; text-shadow: 0 0 20px rgba(255,180,60,.4); }
+#lu-cards { display: flex; gap: 14px; justify-content: center; margin-bottom: 18px; }
+.lu-card {
+  flex: 1; max-width: 230px; padding: 22px 16px; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--line);
+  transition: transform .12s, border-color .12s, box-shadow .12s;
+}
+.lu-card:hover { transform: translateY(-6px); border-color: var(--red); box-shadow: 0 8px 30px rgba(230,57,70,.3); }
+.lu-icon { font-size: 42px; margin-bottom: 10px; }
+.lu-card h4 { font-size: 17px; margin-bottom: 8px; color: #fff; }
+.lu-lv { color: #3aa0ff; font-size: 13px; }
+.lu-card p { font-size: 13px; color: var(--dim); }
+#lu-close { margin-top: 6px; padding: 8px 22px; background: transparent; border: 1px solid var(--line); color: var(--dim); cursor: pointer; }
+#lu-close:hover { color: #fff; border-color: #fff; }
+body.touch #lu-cards { flex-direction: column; align-items: center; }
+body.touch .lu-card { max-width: 100%; width: 92%; display: flex; align-items: center; gap: 14px; text-align: left; padding: 14px; }

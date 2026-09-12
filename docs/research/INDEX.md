@@ -27,3 +27,4 @@
 | v9.7-l4d-mechanics.md | 求生之路机制移植（特感5型/导演三态/尸潮事件/安全屋） | v9.7~v9.9 |
 | v10.0-csol-cataclysm.md | CSOL大灾变移植（阶段关卡/机械Boss/Boss掉落） | v10.0~v10.2 |
 | v10.3-days-gone.md | 往日不再移植（尸巢/诱饵/兽群/NERO收集） | v10.3~v10.5 |
+| v10.6-roguelite-mechanics.md | 肉鸽割草上瘾机制（宝石磁吸/三选一/宝箱轮盘/元进度/连携） | v10.6~v10.10 |

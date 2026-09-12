@@ -51,6 +51,10 @@ class Player {
     this.moveMult = 1;
     this.dashCd = 0; this.dashT = 0; this.iframesT = 0; this._dashDir = { x: 0, z: 1 };
     this.bileT = 0; this.draggedBy = null;   // L4D特感状态（v9.7）
+    // 肉鸽强化（v10.6）
+    this.xp = 0; this.level = 1; this.xpNext = 10;
+    this.rogueLevels = {}; this.rogueAtk = 1; this.rogueRof = 1; this.rogueSpd = 1;
+    this.rogueRel = 1; this.critChance = 0; this.cashMult = 1; this.xpMagnet = 0;
     this.recoilAccum = 0;   // 未回复的后坐力（自动回正）
     this.fovPunch = 0;      // 终结镜头 FOV 冲击
     this.recomputePerks();
@@ -127,7 +131,7 @@ class Player {
     const P = GAMECONFIG.player;
     let spd = (sprint ? P.sprintSpeed : P.walkSpeed) * this.speedMult;
     if (this.slowT > 0) { spd *= 0.55; this.slowT -= dt; }
-    spd *= this.moveMult;
+    spd *= this.moveMult * (this.rogueSpd || 1);
     // 背水一战（v8.4）：濒死移速
     if (this.laststandVal && this.hp <= this.maxHp * 0.25) spd *= 1.15;
 
@@ -271,6 +275,14 @@ class Player {
     return true;
   }
 
+  // 应用肉鸽强化系数（v10.6）
+  recomputeRogue() {
+    this.dmgRogue = this.rogueAtk;
+    this.rofRogue = this.rogueRof;
+    this.spdRogue = this.rogueSpd;
+    this.relRogue = this.rogueRel;
+  }
+
   useMedkit() {
     if (typeof GAME !== 'undefined' && GAME && SAVE.data) SAVE.data.totalMedkits = (SAVE.data.totalMedkits || 0) + 1;
     if (this.medkits <= 0 || this.hp >= this.maxHp) { AUDIO.emptyClick(); return; }
@@ -281,6 +293,7 @@ class Player {
   }
 
   addMoney(n) {
+    if (this.cashMult > 1) n *= this.cashMult;
     const v = Math.round(n);
     this.money += v;
     this.moneyEarned += v;

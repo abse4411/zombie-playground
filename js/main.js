@@ -14,6 +14,7 @@ window.addEventListener('DOMContentLoaded', () => {
   SHOPUI.init();
   STORY.init();
   BACKPACK.init();
+  if (typeof LEVELUP !== 'undefined') LEVELUP.init();
   MENU.init(GAME);
   TOUCH.init();
   if (typeof TRACERS !== 'undefined') TRACERS.init(ENGINE.scene);

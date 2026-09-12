@@ -103,6 +103,8 @@ button { font-family: var(--font); cursor: pointer; }
 .card .best-tag { color: var(--green); font-size: 12px; margin-top: 6px; }
 
 /* ==================== 难度选择 ==================== */
+#difficulty-row2 { margin: 4px 0 10px; display: flex; gap: 8px; align-items: center; }
+#difficulty-row2 .diff-label { color: var(--dim); font-size: 13px; }
 #difficulty-row { margin: 0 0 16px; }
 .diff-label { color: var(--dim); margin-right: 8px; font-size: 14px; }
 .diff-btn {

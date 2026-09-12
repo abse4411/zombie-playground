@@ -73,11 +73,13 @@ class Game {
     this._begin(mapId, () => new HuntMode(this, mapId, diffKey));
   }
 
-  startMission(idx, skipIntro) {
-    this._lastStart = { type: 'mission', idx };
+  startMission(idx, skipIntro, diffKey) {
+    this._lastStart = { type: 'mission', idx, diffKey: diffKey || 'normal' };
     const m = MISSIONS[idx];
-    // 战役继承：仅当从上一章胜利接续时生效
-    this._pendingCarry = (SAVE.data.carry && SAVE.data.carry.nextIdx === idx) ? SAVE.data.carry : null;
+    // 战役继承：仅当从上一章胜利接续时生效（噩梦不可继承——难度自担）
+    this._pendingCarry = (diffKey === 'nightmare') ? null
+      : ((SAVE.data.carry && SAVE.data.carry.nextIdx === idx) ? SAVE.data.carry : null);
+    this._missionDiff = diffKey || 'normal';
     this._begin(m.map, () => new EncounterMode(this, idx, skipIntro));
   }
 

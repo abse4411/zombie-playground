@@ -2,7 +2,7 @@
  * 菜单系统 —— 主菜单 / 任务与地图选择 / 图鉴 / 设置 / 暂停
  * ============================================================ */
 const MENU = {
-  game: null, diff: 'normal', settingsFrom: 'menu', codexTab: 'zombies',
+  game: null, diff: 'normal', missionDiff: 'normal', settingsFrom: 'menu', codexTab: 'zombies',
   screens: {},
 
   init(game) {
@@ -43,6 +43,14 @@ const MENU = {
         AUDIO.uiClick();
       }));
     document.querySelector('#difficulty-row .diff-btn[data-diff="normal"]').classList.add('active');
+    // 遭遇战难度（v8.5）：独立记忆
+    document.querySelectorAll('#difficulty-row2 .diff2-btn').forEach(b =>
+      b.addEventListener('click', () => {
+        this.missionDiff = b.dataset.diff;
+        document.querySelectorAll('#difficulty-row2 .diff2-btn').forEach(x => x.classList.toggle('active', x === b));
+        AUDIO.uiClick();
+      }));
+    document.querySelector('#difficulty-row2 .diff2-btn[data-diff="normal"]').classList.add('active');
 
     // 图鉴页签
     document.querySelectorAll('.codex-tab').forEach(b =>
@@ -297,11 +305,11 @@ const MENU = {
         card.innerHTML = `
           ${rating ? `<span class="card-rating rating-${rating}">${rating}</span>` : ''}
           ${done ? '<span class="card-done">✔ 已完成</span>' : locked ? '<span class="card-lock">🔒</span>' : ''}
-          <h3>${m.name}</h3>
+          <h3>${m.name}${this.missionDiff !== 'normal' ? ` <span style="font-size:12px;color:${this.missionDiff === 'nightmare' ? '#ff5a5a' : '#ffb044'}">[${this.missionDiff === 'nightmare' ? '噩梦' : '困难'}]</span>` : ''}</h3>
           <div class="card-map">📍 ${MAPS[m.map].name} · ⏱ ${fmtTime(m.duration)}${isSpin ? ' · 番外剧情' : ''}</div>
           <p>${locked && isSpin ? `🔒 完成主战役第 ${m.reqDone} 章后解锁` : m.brief}</p>
         `;
-        if (!locked) card.addEventListener('click', () => { AUDIO.uiClick(); GAME.startMission(i); });
+        if (!locked) card.addEventListener('click', () => { AUDIO.uiClick(); GAME.startMission(i, false, this.missionDiff); });
         list.appendChild(card);
       }
     }

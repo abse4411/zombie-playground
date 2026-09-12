@@ -204,6 +204,12 @@
   <div class="screen-inner">
     <h2 class="screen-title">遭遇战 · 任务简报</h2>
     <div class="screen-sub">完成章节自动解锁下一章 · 进度自动保存</div>
+    <div id="difficulty-row2">
+      <span class="diff-label">难度：</span>
+      <button class="diff-btn diff2-btn" data-diff="normal">普通</button>
+      <button class="diff-btn diff2-btn" data-diff="hard">困难</button>
+      <button class="diff-btn diff2-btn" data-diff="nightmare">噩梦</button>
+    </div>
     <div id="mission-list" class="card-list"></div>
     <button class="btn-back" data-back="menu">◂ 返回主菜单</button>
   </div>
@@ -436,56 +442,56 @@
 <div id="toast" class="hidden"></div>
 
 <!-- ==================== 脚本（按依赖顺序加载） ==================== -->
-<script src="js/lib/three.min.js?v=8.4"></script>
+<script src="js/lib/three.min.js?v=8.5"></script>
 <!-- 配置层 -->
-<script src="js/config/gameConfig.js?v=8.4"></script>
-<script src="js/config/weapons.js?v=8.4"></script>
-<script src="js/config/zombies.js?v=8.4"></script>
-<script src="js/config/characters.js?v=8.4"></script>
-<script src="js/config/perks.js?v=8.4"></script>
-<script src="js/config/achievements.js?v=8.4"></script>
-<script src="js/config/maps.js?v=8.4"></script>
-<script src="js/config/story.js?v=8.4"></script>
+<script src="js/config/gameConfig.js?v=8.5"></script>
+<script src="js/config/weapons.js?v=8.5"></script>
+<script src="js/config/zombies.js?v=8.5"></script>
+<script src="js/config/characters.js?v=8.5"></script>
+<script src="js/config/perks.js?v=8.5"></script>
+<script src="js/config/achievements.js?v=8.5"></script>
+<script src="js/config/maps.js?v=8.5"></script>
+<script src="js/config/story.js?v=8.5"></script>
 <!-- 核心层 -->
-<script src="js/core/utils.js?v=8.4"></script>
-<script src="js/core/artkit.js?v=8.4"></script>
-<script src="js/core/audio.js?v=8.4"></script>
-<script src="js/core/input.js?v=8.4"></script>
-<script src="js/core/touch.js?v=8.4"></script>
-<script src="js/core/particles.js?v=8.4"></script>
-<script src="js/core/collision.js?v=8.4"></script>
-<script src="js/core/engine.js?v=8.4"></script>
+<script src="js/core/utils.js?v=8.5"></script>
+<script src="js/core/artkit.js?v=8.5"></script>
+<script src="js/core/audio.js?v=8.5"></script>
+<script src="js/core/input.js?v=8.5"></script>
+<script src="js/core/touch.js?v=8.5"></script>
+<script src="js/core/particles.js?v=8.5"></script>
+<script src="js/core/collision.js?v=8.5"></script>
+<script src="js/core/engine.js?v=8.5"></script>
 <!-- 实体层 -->
-<script src="js/entities/fpbody.js?v=8.4"></script>
-<script src="js/entities/player.js?v=8.4"></script>
-<script src="js/entities/zombie.js?v=8.4"></script>
-<script src="js/entities/projectile.js?v=8.4"></script>
-<script src="js/entities/combatFx.js?v=8.4"></script>
-<script src="js/entities/loot.js?v=8.4"></script>
-<script src="js/entities/destructible.js?v=8.4"></script>
-<script src="js/entities/supplyCrate.js?v=8.4"></script>
+<script src="js/entities/fpbody.js?v=8.5"></script>
+<script src="js/entities/player.js?v=8.5"></script>
+<script src="js/entities/zombie.js?v=8.5"></script>
+<script src="js/entities/projectile.js?v=8.5"></script>
+<script src="js/entities/combatFx.js?v=8.5"></script>
+<script src="js/entities/loot.js?v=8.5"></script>
+<script src="js/entities/destructible.js?v=8.5"></script>
+<script src="js/entities/supplyCrate.js?v=8.5"></script>
 <!-- 系统层 -->
-<script src="js/systems/gunModels.js?v=8.4"></script>
-    <script src="js/systems/weaponSystem.js?v=8.4"></script>
-<script src="js/systems/spawnSystem.js?v=8.4"></script>
-<script src="js/systems/shopSystem.js?v=8.4"></script>
-<script src="js/systems/saveSystem.js?v=8.4"></script>
+<script src="js/systems/gunModels.js?v=8.5"></script>
+    <script src="js/systems/weaponSystem.js?v=8.5"></script>
+<script src="js/systems/spawnSystem.js?v=8.5"></script>
+<script src="js/systems/shopSystem.js?v=8.5"></script>
+<script src="js/systems/saveSystem.js?v=8.5"></script>
 <!-- UI层 -->
-<script src="js/ui/hud.js?v=8.4"></script>
-<script src="js/ui/damageNumbers.js?v=8.4"></script>
-<script src="js/ui/gunPreview.js?v=8.4"></script>
-    <script src="js/ui/shopUI.js?v=8.4"></script>
-<script src="js/ui/storyUI.js?v=8.4"></script>
-<script src="js/ui/backpack.js?v=8.4"></script>
-<script src="js/ui/charPreview.js?v=8.4"></script>
-<script src="js/ui/menu.js?v=8.4"></script>
+<script src="js/ui/hud.js?v=8.5"></script>
+<script src="js/ui/damageNumbers.js?v=8.5"></script>
+<script src="js/ui/gunPreview.js?v=8.5"></script>
+    <script src="js/ui/shopUI.js?v=8.5"></script>
+<script src="js/ui/storyUI.js?v=8.5"></script>
+<script src="js/ui/backpack.js?v=8.5"></script>
+<script src="js/ui/charPreview.js?v=8.5"></script>
+<script src="js/ui/menu.js?v=8.5"></script>
 <!-- 模式层 -->
-<script src="js/modes/huntMode.js?v=8.4"></script>
-<script src="js/modes/encounterMode.js?v=8.4"></script>
-<script src="js/modes/tutorialMode.js?v=8.4"></script>
+<script src="js/modes/huntMode.js?v=8.5"></script>
+<script src="js/modes/encounterMode.js?v=8.5"></script>
+<script src="js/modes/tutorialMode.js?v=8.5"></script>
 <!-- 主循环 -->
-<script src="js/net/net.js?v=8.4"></script>
-<script src="js/core/game.js?v=8.4"></script>
-<script src="js/main.js?v=8.4"></script>
+<script src="js/net/net.js?v=8.5"></script>
+<script src="js/core/game.js?v=8.5"></script>
+<script src="js/main.js?v=8.5"></script>
 </body>
 </html>

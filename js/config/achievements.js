@@ -51,6 +51,9 @@ const ACHIEVEMENTS = [
   { id: 'rating_s',    cat: 'story', tier: 'silver', name: 'S级行动', desc: '任意章节获得 S 评级', goal: d => [d.bestRating && Object.values(d.bestRating).includes('S') ? 1 : 0, 1] },
   { id: 'rating_all_s', cat: 'story', tier: 'platinum', name: '完美主义者', desc: '全部主线章节获得 S 评级', goal: d => [Object.values(d.bestRating || {}).filter(r => r === 'S').length, 10] },
   { id: 'tutorial',    cat: 'story', tier: 'bronze', name: '训练营毕业', desc: '完成全部新手教学', goal: d => [d.tutorialDone ? 1 : 0, 1] },
+  { id: 'hard_win1',   cat: 'story', tier: 'silver', name: '迎难而上', desc: '困难难度通关任意章节', goal: d => [d.hardWins ? Math.min(d.hardWins, 1) : 0, 1] },
+  { id: 'hard_win5',   cat: 'story', tier: 'gold',   name: '困难收割机', desc: '困难难度通关 5 个章节', goal: d => [Math.min(d.hardWins || 0, 5), 5] },
+  { id: 'nightmare1',  cat: 'story', tier: 'platinum', name: '噩梦行者', desc: '噩梦难度通关任意章节', goal: d => [d.nightmareWins ? 1 : 0, 1] },
 
   /* ---------- 收集 collect ---------- */
   { id: 'rich',        cat: 'collect', tier: 'bronze', name: '万贯家财', desc: '单局赚取 $10,000', goal: d => [Math.min(d.bestMoneyEarned || 0, 10000), 10000] },
@@ -168,6 +171,15 @@ const ACHV = {
         this.unlock('chapter5');
         if (d.missionsDone >= 7) this.unlock('chapter7');
         if (d.missionsDone >= 10) this.unlock('chapter10');
+        break;
+      case 'hardWin':
+        d.hardWins = (d.hardWins || 0) + 1;
+        this.unlock('hard_win1');
+        if ((d.hardWins || 0) >= 5) this.unlock('hard_win5');
+        break;
+      case 'nightmareWin':
+        d.nightmareWins = (d.nightmareWins || 0) + 1;
+        this.unlock('nightmare1');
         break;
       case 'flawless':
         d.flawless = 1;

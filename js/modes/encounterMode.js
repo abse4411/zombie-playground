@@ -52,11 +52,13 @@ class EncounterMode {
 
     // 按时间表投放波次
     while (this.wavePtr < m.waves.length && m.waves[this.wavePtr].at <= this.elapsed) {
+      // 难度倍率（v8.5）：章节难度 × 玩家选择难度
+      const df = DIFFICULTIES[GAME._missionDiff] || DIFFICULTIES.normal;
       g.spawner.setMults({
-        hp: m.hpMult,
-        speed: 1 + (m.hpMult - 1) * 0.15,
-        dmg: 1 + (m.hpMult - 1) * 0.3,
-        reward: m.rewardMult,
+        hp: m.hpMult * df.hp,
+        speed: (1 + (m.hpMult - 1) * 0.15) * df.speed,
+        dmg: (1 + (m.hpMult - 1) * 0.3) * df.dmg,
+        reward: m.rewardMult * df.reward,
       });
       g.spawner.addComposition(m.waves[this.wavePtr].comp);
       HUD.banner(`第 ${this.wavePtr + 1} 波来袭`, m.name);
@@ -139,6 +141,14 @@ class EncounterMode {
     }
     // ---- 章节评级（命中率40% + 击杀效率30% + 承伤30%）----
     const g = this.game, p = g.player;
+    // 难度加成（v8.5）：困难章末奖金+30% 噩梦+60% + 难度成就
+    const df = DIFFICULTIES[GAME._missionDiff] || DIFFICULTIES.normal;
+    if (GAME._missionDiff === 'hard') this.chapterBonus = Math.round((this.chapterBonus || 0) * 1.3);
+    if (GAME._missionDiff === 'nightmare') this.chapterBonus = Math.round((this.chapterBonus || 0) * 1.6);
+    if (GAME._missionDiff !== 'normal' && typeof ACHV !== 'undefined') {
+      if (GAME._missionDiff === 'hard') ACHV.event('hardWin', g);
+      if (GAME._missionDiff === 'nightmare') ACHV.event('nightmareWin', g);
+    }
     const acc = g.stats.shots ? g.stats.hits / g.stats.shots : 0.5;
     const kpm = p.kills / (this.m.duration / 60);
     const dmgK = Math.max(0, 1 - g.runStats.damageTaken / 12);

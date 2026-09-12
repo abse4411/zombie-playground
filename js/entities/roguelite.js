@@ -40,7 +40,7 @@ const XPGEMS = {
 
   update(dt, game) {
     const p = game.player;
-    const magnet = 2.2 + (p.xpMagnet || 0);   // 磁吸半径（可被强化扩大）
+    const magnet = (2.2 + (p.xpMagnet || 0)) * (p.synMagnet ? 2 : 1);   // 磁吸半径（星辰引力翻倍 v10.9）
     for (const g of this.pool) {
       if (g.life <= 0) continue;
       g.life -= dt;
@@ -64,6 +64,7 @@ const XPGEMS = {
 
   gain(game, xp) {
     const p = game.player;
+    if (p.synMagnet) p.addMoney(1);   // 星辰引力：拾取宝石+1现金（v10.9）
     p.xp += xp;
     while (p.xp >= p.xpNext) {
       p.xp -= p.xpNext;
@@ -149,6 +150,8 @@ const LEVELUP = {
     }
     this.isOpen = false;
     this.els.panel.classList.add('hidden');
+    // 连携检测（v10.9）
+    SYNERGY.check(g);
     if (this.pending > 0) { this.show(g); return; }
     g.state = 'playing';
     g.requestLock();
@@ -322,5 +325,45 @@ const META = {
     if (L('m_cash')) p.cashMult = (p.cashMult || 1) + L('m_cash') * 0.06;
     if (L('m_armor')) { p.maxArmor = Math.max(p.maxArmor, L('m_armor') * 15); p.armor = L('m_armor') * 15; }
     if (L('m_crit')) p.critChance = (p.critChance || 0) + L('m_crit') * 0.03;
+  },
+};
+
+/* ---------- 连携 Build（v10.9 VS式evolution）：强化组合触发进化 ---------- */
+const ROGUE_SYNERGIES = [
+  { id: 's_inferno', name: '炼狱风暴', icon: '🔥', need: ['r_atk2', 'r_crit2'],
+    desc: '火力全开Lv2+弱点洞察Lv2 → 暴击附带小范围爆炸',
+    apply: p => p.synInferno = true },
+  { id: 's_gale', name: '飓风枪手', icon: '🌪', need: ['r_rof2', 'r_spd2'],
+    desc: '极速扳机Lv2+疾风步Lv2 → 移动时射速额外+25%',
+    apply: p => p.synGale = true },
+  { id: 's_vampire', name: '血猎本能', icon: '🩸', need: ['r_hp2', 'r_cash2'],
+    desc: '铁壁Lv2+贪婪Lv2 → 击杀回复1点生命',
+    apply: p => p.synVampire = true },
+  { id: 's_magnet', name: '星辰引力', icon: '🌟', need: ['r_mag2', 'r_rel1'],
+    desc: '磁力核心Lv2+快手Lv1 → 宝石磁吸翻倍且拾取宝石+1现金',
+    apply: p => p.synMagnet = true },
+];
+
+const SYNERGY = {
+  // 每次选完强化后检查
+  check(game) {
+    const p = game.player;
+    p.rogueLevels = p.rogueLevels || {};
+    const lv = id => p.rogueLevels[id.replace(/\d$/, '')] || 0;
+    for (const sy of ROGUE_SYNERGIES) {
+      if (p['syn_' + sy.id]) continue;
+      const ok = sy.need.every(n => {
+        const m = n.match(/^([a-z_]+)([0-9])$/);
+        return (p.rogueLevels[m[1]] || 0) >= +m[2];
+      });
+      if (ok) {
+        sy.apply(p);
+        p['syn_' + sy.id] = true;
+        HUD.banner(sy.icon + ' 连携觉醒：' + sy.name, sy.desc);
+        AUDIO.hordeHorn();
+        return sy;
+      }
+    }
+    return null;
   },
 };

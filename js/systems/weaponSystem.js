@@ -218,7 +218,8 @@ class WeaponSystem {
       }
     } else {
       const wantFire = def.auto ? INPUT.lmb : INPUT.consumeLmb();
-      if (wantFire && this.switchT <= 0 && this.reloadT <= 0 && this.cooldown <= 0) {
+      const galeBoost = this.p.synGale && this.p.moving ? 1.25 : 1;   // 飓风枪手（v10.9）
+      if (wantFire && this.switchT <= 0 && this.reloadT <= 0 && this.cooldown <= 60 / (def.rpm * (this.p.rogueRof || 1) * galeBoost)) {
         if (w.mag <= 0) {
           if (this._emptyCd <= 0) { AUDIO.emptyClick(); this._emptyCd = 0.3; if (SAVE.data.settings.autoReload !== false) this._startReload(); }
         } else {
@@ -428,7 +429,17 @@ class WeaponSystem {
       const calcDmg = (t2, head2) => {
         let d2 = def.damage * this.w.dmgMult * this.p.dmgMult * (this.p.rogueAtk || 1) * (this.p.metaAtk || 1) * (head2 ? def.headMult : 1);
         // 暴击（v10.6）
-        if (this.p.critChance > 0 && Math.random() < this.p.critChance) d2 *= 2;
+        let crit = false;
+        if (this.p.critChance > 0 && Math.random() < this.p.critChance) { d2 *= 2; crit = true; }
+        // 炼狱风暴（v10.9）：暴击附带小爆炸
+        if (crit && this.p.synInferno) {
+          const hx = origin.x + dir.x * t2, hz = origin.z + dir.z * t2;
+          for (const zb2 of game.zombies) {
+            if (zb2.dead || zb2 === game.zombies[0] && false) continue;
+            if (dist2d(zb2.pos.x, zb2.pos.z, hx, hz) < 2.2) zb2.takeDamage(d2 * 0.4, false, { x: zb2.pos.x, y: 1.2, z: zb2.pos.z }, game, null);
+          }
+          PARTICLES.explosion(hx, 1.2, hz);
+        }
         // 背水一战（v8.4）：生命<25% 伤害加成
         if (this.p.laststandVal && this.p.hp <= this.p.maxHp * 0.25) d2 *= (1 + this.p.laststandVal);
         if (def.falloff) {

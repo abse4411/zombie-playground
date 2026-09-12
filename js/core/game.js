@@ -139,6 +139,15 @@ class Game {
     if (typeof spawnDestructibles !== 'undefined') spawnDestructibles(this);
     // 探索补给箱
     if (typeof spawnSupplyCrates !== 'undefined') spawnSupplyCrates(this);
+    // 角色属性（v6.2）
+    const ch = getCharacter(SAVE.data.character || 'raven');
+    this.player.charStats = ch;
+    this.player.recomputePerks();
+    this.player.maxHp = ch.hp + (this.player.perks.hp > 0 ? PERKS.hp.tiers[this.player.perks.hp - 1].val : 0);
+    this.player.hp = this.player.maxHp;
+    if (ch.armorStart > 0) { this.player.maxArmor = Math.max(this.player.maxArmor, ch.armorStart); this.player.armor = ch.armorStart; }
+    this.player.medkits = ch.medkits;
+    this.player.medkitHeal = ch.medkitHeal || GAMECONFIG.inventory.medkitHeal;
     // 战役继承（在剧情对话前应用）
     if (this._pendingCarry) { this._applyCarry(this._pendingCarry); this._pendingCarry = null; }
     // 联机：标记在局

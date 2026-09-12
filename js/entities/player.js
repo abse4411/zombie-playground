@@ -46,12 +46,13 @@ class Player {
 
   recomputePerks() {
     const p = this.perks;
-    this.maxHp = p.hp > 0 ? PERKS.hp.tiers[p.hp - 1].val : GAMECONFIG.player.maxHp;
+    const ch = this.charStats || { hp: 100, speed: 1, reload: 1, dmg: 1 };
+    this.maxHp = ch.hp + (p.hp > 0 ? PERKS.hp.tiers[p.hp - 1].val : 0);
     this.maxArmor = p.armor > 0 ? PERKS.armor.tiers[p.armor - 1].val : 0;
-    this.speedMult = 1 + (p.speed > 0 ? PERKS.speed.tiers[p.speed - 1].val : 0);
+    this.speedMult = ch.speed * (1 + (p.speed > 0 ? PERKS.speed.tiers[p.speed - 1].val : 0));
     this.reserveMult = 1 + (p.ammo > 0 ? PERKS.ammo.tiers[p.ammo - 1].val : 0);
-    this.reloadMult = 1 - (p.reload > 0 ? PERKS.reload.tiers[p.reload - 1].val : 0);
-    this.dmgMult = 1 + (p.ap > 0 ? PERKS.ap.tiers[p.ap - 1].val : 0);
+    this.reloadMult = ch.reload * (1 - (p.reload > 0 ? PERKS.reload.tiers[p.reload - 1].val : 0));
+    this.dmgMult = ch.dmg * (1 + (p.ap > 0 ? PERKS.ap.tiers[p.ap - 1].val : 0));
     this.regenRate = p.regen > 0 ? PERKS.regen.tiers[p.regen - 1].val : 0;
     if (this.armor > this.maxArmor) this.armor = this.maxArmor;
   }
@@ -193,7 +194,7 @@ class Player {
   useMedkit() {
     if (this.medkits <= 0 || this.hp >= this.maxHp) { AUDIO.emptyClick(); return; }
     this.medkits--;
-    this.hp = Math.min(this.maxHp, this.hp + GAMECONFIG.inventory.medkitHeal);
+    this.hp = Math.min(this.maxHp, this.hp + (this.medkitHeal || GAMECONFIG.inventory.medkitHeal));
     AUDIO.purchase();
     HUD.pickup(`🧪 使用医疗包 +${GAMECONFIG.inventory.medkitHeal}HP（剩 ${this.medkits}）`, 1);
   }

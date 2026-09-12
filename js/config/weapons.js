@@ -8,6 +8,7 @@ const WEAPONS = {
   /* ---------- 副武器 ---------- */
   p92: {
     id: 'p92', name: 'P92 手枪', slot: 'secondary', price: 0,
+    weight: 0.98,
     damage: 22, rpm: 330, mag: 12, reserve: 72, reserveMax: 144,
     reloadTime: 1.4, spread: 0.020, adsSpread: 0.008, auto: false,
     pellets: 1, headMult: 2.0, range: 55, falloff: null,
@@ -17,6 +18,7 @@ const WEAPONS = {
   },
   deagle: {
     id: 'deagle', name: '沙漠之鹰', slot: 'secondary', price: 900,
+    weight: 0.96,
     damage: 58, rpm: 190, mag: 7, reserve: 42, reserveMax: 84,
     reloadTime: 1.9, spread: 0.024, adsSpread: 0.010, auto: false,
     pellets: 1, headMult: 2.0, range: 70, falloff: null,
@@ -26,6 +28,7 @@ const WEAPONS = {
   },
   r8: {
     id: 'r8', name: 'R8 左轮', slot: 'secondary', price: 1500,
+    weight: 0.95,
     damage: 80, rpm: 120, mag: 6, reserve: 30, reserveMax: 60,
     reloadTime: 2.8, spread: 0.014, adsSpread: 0.005, auto: false,
     pellets: 1, headMult: 2.2, range: 80, falloff: null,
@@ -37,6 +40,7 @@ const WEAPONS = {
   /* ---------- 主武器 ---------- */
   mp5: {
     id: 'mp5', name: 'MP5 冲锋枪', slot: 'primary', price: 1200,
+    weight: 0.97,
     damage: 16, rpm: 780, mag: 30, reserve: 180, reserveMax: 360,
     reloadTime: 2.0, spread: 0.030, adsSpread: 0.015, auto: true,
     pellets: 1, headMult: 2.0, range: 45, falloff: { start: 18, end: 40, min: 0.55 },
@@ -46,6 +50,7 @@ const WEAPONS = {
   },
   spas: {
     id: 'spas', name: 'SPAS-12 霰弹枪', slot: 'primary', price: 1900,
+    weight: 0.93,
     damage: 13, pellets: 8, rpm: 75, mag: 8, reserve: 48, reserveMax: 96,
     reloadTime: 3.0, spread: 0.055, adsSpread: 0.040, auto: false,
     pellets: 8, headMult: 1.6, range: 24, falloff: { start: 6, end: 18, min: 0.25 },
@@ -55,6 +60,7 @@ const WEAPONS = {
   },
   ak47: {
     id: 'ak47', name: 'AK-47 突击步枪', slot: 'primary', price: 2500,
+    weight: 0.95,
     damage: 33, rpm: 580, mag: 30, reserve: 150, reserveMax: 300,
     reloadTime: 2.3, spread: 0.034, adsSpread: 0.017, auto: true,
     pellets: 1, headMult: 2.0, range: 60, falloff: { start: 25, end: 55, min: 0.7 },
@@ -64,6 +70,7 @@ const WEAPONS = {
   },
   m4a1: {
     id: 'm4a1', name: 'M4A1 突击步枪', slot: 'primary', price: 2900,
+    weight: 0.94,
     damage: 27, rpm: 700, mag: 30, reserve: 180, reserveMax: 360,
     reloadTime: 2.1, spread: 0.024, adsSpread: 0.010, auto: true,
     pellets: 1, headMult: 2.0, range: 70, falloff: { start: 30, end: 60, min: 0.75 },
@@ -73,6 +80,7 @@ const WEAPONS = {
   },
   sawedoff: {
     id: 'sawedoff', name: '双管截短霰弹', slot: 'secondary', price: 1300,
+    weight: 0.94,
     damage: 15, pellets: 10, rpm: 160, mag: 2, reserve: 40, reserveMax: 80,
     reloadTime: 2.4, spread: 0.075, adsSpread: 0.055, auto: false,
     pellets: 10, headMult: 1.6, range: 18, falloff: { start: 5, end: 14, min: 0.2 },
@@ -82,6 +90,7 @@ const WEAPONS = {
   },
   m79: {
     id: 'm79', name: 'M79 榴弹枪', slot: 'primary', price: 4200,
+    weight: 0.88,
     damage: 30, rpm: 45, mag: 1, reserve: 20, reserveMax: 40,
     reloadTime: 3.0, spread: 0.012, adsSpread: 0.008, auto: false,
     pellets: 1, headMult: 1.5, range: 120, falloff: null, launcher: true,
@@ -89,8 +98,36 @@ const WEAPONS = {
     sound: { freq: 300, dur: 0.18, boom: 1.1 },
     desc: '单发肩射榴弹枪——抛物线飞行的榴弹碰物即炸，120范围杀伤。攻城锤般的火力，装填慢，走位要精。',
   },
+  scar: {
+    id: 'scar', name: 'SCAR-H 战斗步枪', slot: 'primary', price: 3400,
+    damage: 42, rpm: 320, mag: 20, reserve: 100, reserveMax: 200,
+    reloadTime: 2.6, spread: 0.022, adsSpread: 0.008, auto: false,
+    pellets: 1, headMult: 2.0, range: 75, falloff: { start: 30, end: 60, min: 0.8 },
+    recoil: 0.02, weight: 0.93, color: 0x8a7448, len: 0.78,
+    sound: { freq: 560, dur: 0.13, boom: 1.0 },
+    desc: '7.62战斗步枪：半自动点射每一发都像敲钟，精度与威力兼备的中距离之王。',
+  },
+  p90: {
+    id: 'p90', name: 'P90 冲锋枪', slot: 'primary', price: 2600,
+    damage: 14, rpm: 900, mag: 50, reserve: 200, reserveMax: 400,
+    reloadTime: 2.7, spread: 0.032, adsSpread: 0.018, auto: true,
+    pellets: 1, headMult: 1.8, range: 40, falloff: { start: 15, end: 35, min: 0.5 },
+    recoil: 0.006, weight: 0.96, color: 0x2a2e24, len: 0.66,
+    sound: { freq: 1250, dur: 0.06, boom: 0.4 },
+    desc: '50发弹匣的泼水神器：900射速几乎无后坐，弹雨淹死一切靠近的东西。',
+  },
+  glock18: {
+    id: 'glock18', name: '格洛克18C 全自动', slot: 'secondary', price: 1100,
+    damage: 13, rpm: 1100, mag: 19, reserve: 95, reserveMax: 190,
+    reloadTime: 1.6, spread: 0.045, adsSpread: 0.03, auto: true,
+    pellets: 1, headMult: 1.8, range: 35, falloff: { start: 12, end: 28, min: 0.45 },
+    recoil: 0.007, weight: 0.98, color: 0x22262a, len: 0.4,
+    sound: { freq: 1000, dur: 0.06, boom: 0.4 },
+    desc: '全自动手枪：1100射速的泼水小钢炮，近距离倾泻火力。',
+  },
   awm: {
     id: 'awm', name: 'AWM 狙击步枪', slot: 'primary', price: 3600,
+    weight: 0.90,
     damage: 170, rpm: 42, mag: 5, reserve: 25, reserveMax: 50,
     reloadTime: 3.2, spread: 0.006, adsSpread: 0.0004, auto: false,
     pellets: 1, headMult: 2.5, range: 250, falloff: null, scope: true,
@@ -100,6 +137,7 @@ const WEAPONS = {
   },
   m249: {
     id: 'm249', name: 'M249 轻机枪', slot: 'primary', price: 5200,
+    weight: 0.82,
     damage: 26, rpm: 850, mag: 100, reserve: 300, reserveMax: 600,
     reloadTime: 4.6, spread: 0.048, adsSpread: 0.030, auto: true,
     pellets: 1, headMult: 2.0, range: 60, falloff: { start: 25, end: 55, min: 0.7 },
@@ -111,6 +149,7 @@ const WEAPONS = {
   /* ---------- 近战 ---------- */
   knife: {
     id: 'knife', name: '战术军刀', slot: 'melee', price: 0,
+    weight: 1.02,
     damage: 42, rpm: 140, range: 2.3, arc: 0.55, melee: true,
     color: 0xb9c2cc, len: 0.5,
     sound: { whoosh: 1 },
@@ -118,6 +157,7 @@ const WEAPONS = {
   },
   axe: {
     id: 'axe', name: '消防斧', slot: 'melee', price: 800,
+    weight: 0.98,
     damage: 100, rpm: 70, range: 2.6, arc: 0.5, melee: true, wideArc: true,
     color: 0x9c2b23, len: 0.7,
     sound: { whoosh: 1.6 },
@@ -125,6 +165,7 @@ const WEAPONS = {
   },
   chainsaw: {
     id: 'chainsaw', name: '电锯', slot: 'melee', price: 3200,
+    weight: 0.90,
     damage: 30, rpm: 600, range: 2.0, arc: 0.4, melee: true, continuous: true,
     color: 0xd8641e, len: 0.85,
     sound: { whoosh: 0.5 },

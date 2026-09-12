@@ -152,7 +152,8 @@ class WeaponSystem {
   /* ---------- 主更新 ---------- */
   update(dt, game) {
     const p = this.p;
-    p.moveMult = (this.w && this.w.def.slowMove) || 1;
+    // 武器重量移速（v6.3）：近战1.02最快，机枪0.82最慢
+    p.moveMult = (this.w && (this.w.def.weight || this.w.def.slowMove)) || 1;
 
     // 切换武器
     const wheel = INPUT.consumeWheel();

@@ -5,8 +5,8 @@
 const PERKS = {
   hp: {
     id: 'hp', name: '铁躯针剂', icon: '❤',
-    tiers: [{ price: 800, val: 130 }, { price: 1600, val: 160 }, { price: 3000, val: 200 }],
-    valName: v => `生命上限 ${v}`,
+    tiers: [{ price: 800, val: 30 }, { price: 1600, val: 60 }, { price: 3000, val: 90 }],
+    valName: v => `生命上限 +${v}`,
     desc: '军用肾上腺素合剂，大幅提升生命上限。每一级都让你更难被撕碎。',
   },
   armor: {

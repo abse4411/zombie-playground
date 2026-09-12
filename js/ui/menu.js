@@ -13,6 +13,7 @@ const MENU = {
     $('btn-encounter').addEventListener('click', () => { AUDIO.uiClick(); this.buildMissionCards(); this.show('screen-missions'); });
     $('btn-hunt').addEventListener('click', () => { AUDIO.uiClick(); this.buildMapCards(); this.show('screen-maps'); });
     $('btn-tutorial').addEventListener('click', () => { AUDIO.uiClick(); GAME.startTutorial(); });
+    $('btn-character').addEventListener('click', () => { AUDIO.uiClick(); this.show('screen-character'); CHARPREVIEW.init(document.getElementById('char-canvas')); CHARPREVIEW.show(SAVE.data.character || 'raven'); this.buildCharCards(); });
     $('btn-net').addEventListener('click', () => { AUDIO.uiClick(); this.show('screen-net'); this.initNetUI(); });
     $('btn-codex').addEventListener('click', () => { AUDIO.uiClick(); this.buildCodex(); this.show('screen-codex'); });
     $('btn-help').addEventListener('click', () => { AUDIO.uiClick(); this.show('screen-help'); });
@@ -212,6 +213,35 @@ const MENU = {
     const isHost = NET.role === 'host';
     document.getElementById('net-host-ctrl').classList.toggle('hidden', !isHost);
     document.getElementById('net-wait').classList.toggle('hidden', isHost);
+  },
+
+  /* ---------- 角色选择卡片 ---------- */
+  buildCharCards() {
+    const list = document.getElementById('char-list');
+    list.innerHTML = '';
+    const cur = SAVE.data.character || 'raven';
+    for (const c of CHARACTERS) {
+      const card = document.createElement('div');
+      card.className = 'card char-card' + (c.id === cur ? ' char-active' : '');
+      card.innerHTML = `
+        <h3>${c.gender === '女' ? '♀' : '♂'} ${c.name} · ${c.prof}</h3>
+        <div class="char-stats">
+          <span>❤ 生命 <b>${c.hp}</b></span>
+          <span>🏃 速度 <b>×${c.speed.toFixed(2)}</b></span>
+          <span>↻ 换弹 <b>×${c.reload.toFixed(2)}</b></span>
+          ${c.armorStart ? `<span>🛡 初始护甲 <b>${c.armorStart}</b></span>` : ''}
+          ${c.medkits !== 2 ? `<span>🧪 医疗包 <b>${c.medkits}</b></span>` : ''}
+          <span>💢 伤害 <b>×${c.dmg.toFixed(2)}</b></span>
+        </div>
+        <p>${c.desc}</p>`;
+      card.addEventListener('click', () => {
+        SAVE.data.character = c.id; SAVE.commit();
+        AUDIO.purchase();
+        CHARPREVIEW.show(c.id);
+        this.buildCharCards();
+      });
+      list.appendChild(card);
+    }
   },
 
   /* ---------- 任务卡片（v5.1 三幕+番外分组） ---------- */

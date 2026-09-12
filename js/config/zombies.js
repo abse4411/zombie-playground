@@ -61,6 +61,13 @@ const ZOMBIE_TYPES = {
     attackRange: 1.7, attackRate: 0.9,
     desc: '游乐园人偶服里长出的东西。之字形乱窜还间歇性狂奔，枪法不好的猎人最怕它。',
   },
+  boar: {
+    id: 'boar', name: '獠王·变异野猪', role: '非人感染体 · 森林霸主',
+    hp: 380, speed: 2.0, damage: 22, reward: 110, cost: 3.8, minWave: 9, weight: 1.4,
+    scale: 1.5, skin: 0x4a3526, cloth: 0x3a2c1e, pants: 0x2a2018, quadruped: true, charge: true, lunge: true,
+    attackRange: 2.0, attackRate: 1.4, lungeRange: 10, lungeSpeed: 11,
+    desc: '森林里的变异野猪——獠牙有一尺长。发起冲锋时像一辆失控的卡车，血厚速快，听到蹄声立刻散开。',
+  },
   charger: {
     id: 'charger', name: '冲锋者', role: '二代特化 · 直线冲撞',
     hp: 340, speed: 2.4, damage: 24, reward: 85, cost: 3.2, minWave: 10, weight: 1.8,

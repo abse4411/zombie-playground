@@ -438,6 +438,34 @@ class Zombie {
       if (this.lungeActive > 0) { this.lungeActive -= dt; spd = cfg.lungeSpeed * (this.buffT > 0 ? 1.3 : 1); }
     }
 
+    // Boss 机制（v6.5）：二阶段狂暴 / 周期召唤 / 跺地AOE
+    if (this.boss) {
+      const M = GAMECONFIG.bossMech;
+      const phase2 = this.hp < this.maxHp * M.phase2At;
+      if (phase2 && !this.phase2Done) {
+        this.phase2Done = true;
+        this.speed *= M.rageSpeed;
+        HUD.banner('⚠ ' + this.displayName + ' 狂暴', '它撕下了伪装');
+        AUDIO.hordeHorn();
+        ENGINE.shake(0.3);
+      }
+      this.summonT = (this.summonT === undefined ? M.summonEvery : this.summonT) - dt;
+      if (this.summonT <= 0) {
+        this.summonT = M.summonEvery;
+        for (let i = 0; i < M.summonN; i++) game.spawner.spawnOne('runner');
+        HUD.killfeed('⚠ ' + this.displayName + ' 召唤了增援！', 'big');
+      }
+      this.slamT = (this.slamT === undefined ? M.slamEvery : this.slamT) - dt;
+      if (this.slamT <= 0 && dist < M.slamRadius + 2) {
+        this.slamT = M.slamEvery;
+        ENGINE.shake(0.45);
+        PARTICLES.dust(this.pos.x, 0.3, this.pos.z, 16);
+        AUDIO.impact();
+        if (p.alive && dist < M.slamRadius) p.takeDamage(M.slamDmg, game, this.pos);
+        HUD.toast('💥 跺地冲击！远离 Boss 脚下红圈');
+      }
+    }
+
     // 尖啸者：周期性召唤
     if (cfg.scream) {
       this.screamT -= dt;

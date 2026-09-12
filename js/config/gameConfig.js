@@ -117,6 +117,17 @@ const GAMECONFIG = {
     medkitHeal: 55,     // 单个回复量
   },
 
+  /* ---------- Boss 战机制（v6.5） ---------- */
+  bossMech: {
+    phase2At: 0.5,          // 血量50%进入二阶段
+    rageSpeed: 1.35,        // 二阶段移速
+    rageRate: 0.7,          // 二阶段攻击间隔
+    summonEvery: 9,         // 召唤杂兵间隔(秒)
+    summonN: 2,
+    slamEvery: 11,          // 跺地AOE间隔(秒)
+    slamDmg: 35,
+    slamRadius: 6,
+  },
   radar: { range: 55 },
   sensBase: 0.0021,       // 灵敏度基数 rad/px
   touchSensBase: 0.0042,  // 触屏灵敏度基数

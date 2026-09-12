@@ -296,6 +296,14 @@ class WeaponSystem {
         } else {
           hits.set(res.zombie, { dmg: res.dmg, head: res.head, pt: res.pt, dir });
         }
+        // 穿透目标（v7.5 M107）：伤害衰减的后续敌人
+        if (res.pierced) {
+          for (const pe of res.pierced) {
+            const pv = hits.get(pe.zombie);
+            if (pv) { pv.dmg += pe.dmg; pv.head = pv.head || pe.head; }
+            else hits.set(pe.zombie, { dmg: pe.dmg, head: pe.head, pt: pe.pt, dir });
+          }
+        }
       }
     }
     if (anyHit) game.stats.hits++;
@@ -339,27 +347,46 @@ class WeaponSystem {
     }
     let hitZ = null, isHead = false;
 
+    // 收集全部丧尸命中（v7.5 穿透：按距离排序取前 pierce+1 个）
+    const allHits = [];
     for (const z of game.zombies) {
       if (z.dead) continue;
       const s = z.group.scale.x, fy = z.pos.y;
       const hr = (z.type.headBig ? 0.32 : 0.23) * s;
       let t = raySphere(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z,
         z.pos.x, fy + 1.68 * s, z.pos.z, hr);
-      if (t !== null && t < bestT) { bestT = t; hitZ = z; isHead = true; continue; }
+      if (t !== null && t < bestT) { allHits.push({ z, t, head: true }); continue; }
       t = raySphere(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z,
         z.pos.x, fy + 0.95 * s, z.pos.z, 0.42 * s);
-      if (t !== null && t < bestT) { bestT = t; hitZ = z; isHead = false; }
+      if (t !== null && t < bestT) allHits.push({ z, t, head: false });
     }
+    allHits.sort((a, b) => a.t - b.t);
 
-    if (hitZ) {
+    const take = allHits.slice(0, (def.pierce || 0) + 1);
+    if (take.length) {
+      const first = take[0];
+      hitZ = first.z; isHead = first.head; bestT = first.t;
+      const calcDmg = (t2, head2) => {
+        let d2 = def.damage * this.w.dmgMult * this.p.dmgMult * (head2 ? def.headMult : 1);
+        if (def.falloff) {
+          const f = def.falloff;
+          if (t2 > f.end) d2 *= f.min;
+          else if (t2 > f.start) d2 *= lerp(1, f.min, (t2 - f.start) / (f.end - f.start));
+        }
+        return d2;
+      };
       const hx = origin.x + dir.x * bestT, hy = origin.y + dir.y * bestT, hz = origin.z + dir.z * bestT;
-      let dmg = def.damage * this.w.dmgMult * this.p.dmgMult * (isHead ? def.headMult : 1);
-      if (def.falloff) {
-        const f = def.falloff;
-        if (bestT > f.end) dmg *= f.min;
-        else if (bestT > f.start) dmg *= lerp(1, f.min, (bestT - f.start) / (f.end - f.start));
+      const res = { zombie: hitZ, dmg: calcDmg(bestT, isHead), head: isHead, pt: { x: hx, y: hy, z: hz } };
+      // 穿透目标：伤害逐个 ×0.65 衰减
+      if (def.pierce) {
+        res.pierced = take.slice(1).map((h2, i) => ({
+          zombie: h2.z,
+          dmg: calcDmg(h2.t, h2.head) * Math.pow(0.65, i + 1),
+          head: h2.head,
+          pt: { x: origin.x + dir.x * h2.t, y: origin.y + dir.y * h2.t, z: origin.z + dir.z * h2.t },
+        }));
       }
-      return { zombie: hitZ, dmg, head: isHead, pt: { x: hx, y: hy, z: hz } };
+      return res;
     }
     if (bestT < maxT) {
       PARTICLES.impact(origin.x + dir.x * bestT, origin.y + dir.y * bestT, origin.z + dir.z * bestT);

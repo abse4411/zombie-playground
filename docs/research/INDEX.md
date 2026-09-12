@@ -9,3 +9,4 @@
 | v7.2-weapon-model-design.md | 武器模型精致化设计语言（剪影件/部件库/每枪标志件） | v7.2 |
 | v7.3-zombie-model-design.md | 感染体造型精致化（生化危机语言/14型特征件规划） | v7.3 |
 | (v7.4 无新调研——复用 v7.2 武器建模调研与 gunModels 契约) | 商城3D预览 | v7.4 |
+| v7.5-new-weapons-batch1.md | 新武器批次1（Vector/M1014/VSS/M107+穿透机制） | v7.5 |

@@ -122,6 +122,12 @@ class LootDrop {
 // 掷掉落表（击杀时调用；精英/Boss提高大奖权重）
 function rollLoot(z) {
   let table = LOOT_TABLE;
+  // 搜刮者 Perk：压缩空掉落权重
+  const sc = game.player ? (game.player.perks.scavenger || 0) : 0;
+  if (sc > 0) {
+    const cut = PERKS.scavenger.tiers[sc - 1].val;
+    table = table.map(l => ({ ...l, weight: l.id === 'none' ? l.weight * (1 - cut) : l.weight }));
+  }
   if (z.affix || z.boss) {
     // 精英/Boss：提升大奖与医疗权重
     table = LOOT_TABLE.map(l => ({ ...l, weight: l.id === 'big' ? l.weight * 4 : l.id === 'none' ? l.weight * 0.4 : l.weight }));

@@ -136,3 +136,17 @@ const DIFFICULTIES = {
   hard:      { name: '困难', hp: 1.35, dmg: 1.25, speed: 1.08, reward: 1.3 },
   nightmare: { name: '噩梦', hp: 1.8,  dmg: 1.55, speed: 1.16, reward: 1.65 },
 };
+
+/* ---------- 外观系统（v5.4） ---------- */
+const SKINS = [
+  { id: 'default',  name: '制式作战服', tint: 0xffffff, soldier: 0x3a4a3e },
+  { id: 'arctic',   name: '极地雪-compatible', tint: 0xcfe4ff, soldier: 0x8aa4b8 },
+  { id: 'midnight', name: '午夜行动', tint: 0x7d8ac0, soldier: 0x2a3048 },
+  { id: 'hazard',   name: '橙色警戒', tint: 0xffb044, soldier: 0x9a6a28 },
+];
+const CAMOS = [
+  { id: 'default', name: '制式黑',   tint: 0xffffff },
+  { id: 'chrome',  name: '镀铬',     tint: 0x9fd8ff },
+  { id: 'jungle',  name: '丛林',     tint: 0x9dc27a },
+  { id: 'crimson', name: '绯红',     tint: 0xff9a7a },
+];

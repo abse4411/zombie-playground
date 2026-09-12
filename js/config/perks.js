@@ -45,4 +45,17 @@ const PERKS = {
     valName: v => `脱战后回复 ${v}/秒`,
     desc: '实验性纳米修复液。脱战5秒后每秒回复2点生命。',
   },
+
+  tough: {
+    id: 'tough', name: '钢铁之躯', icon: '🛠',
+    tiers: [{ price: 1100, val: 0.10 }, { price: 2200, val: 0.18 }, { price: 3800, val: 0.25 }],
+    valName: v => `受伤减少 ${Math.round(v * 100)}%`,
+    desc: '军用护甲插层与增稠血清：所有受到的伤害按百分比降低。',
+  },
+  scavenger: {
+    id: 'scavenger', name: '搜刮者', icon: '🧲',
+    tiers: [{ price: 900, val: 0.3 }, { price: 1800, val: 0.6 }],
+    valName: v => `掉落率 +${Math.round(v * 100)}%`,
+    desc: '战场搜刮直觉：感染体掉落战利品的概率大幅提升。',
+  },
 };

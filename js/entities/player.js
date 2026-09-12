@@ -169,6 +169,8 @@ class Player {
   takeDamage(dmg, game, srcPos) {
     if (!this.alive) return;
     if (this.iframesT > 0) return;   // 闪避无敌帧
+    // 钢铁之躯减伤
+    if (this.perks.tough > 0) dmg *= (1 - PERKS.tough.tiers[this.perks.tough - 1].val);
     const P = GAMECONFIG.player;
     if (this.armor > 0) {
       const ab = Math.min(this.armor, dmg * P.armorAbsorb);

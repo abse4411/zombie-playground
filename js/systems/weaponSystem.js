@@ -71,11 +71,18 @@ class WeaponSystem {
     this._disposeViewmodel();
     const def = this.w.def;
     const g = new THREE.Group();
-    const body = ART.mat(def.color, {});
-    const dark = ART.mat(0x17181c, {});
-    const metal = ART.mat(0x8f979e, {});
-    // 枪械金属质感：Standard PBR（CS:GO 式枪模）
-    for (const mm of [body, dark, metal]) { mm.roughness = 0.38; mm.metalness = 0.72; }
+    // 武器涂装（外观系统）：实例化材质避免污染缓存
+    const camo = CAMOS.find(c2 => c2.id === (SAVE.data.camo || 'default')) || CAMOS[0];
+    const tint = new THREE.Color(camo.tint);
+    const body = ART.mat(def.color, {}).clone();
+    body.color.copy(new THREE.Color(def.color)).multiply(tint);
+    body.roughness = 0.38; body.metalness = 0.72;
+    const dark = ART.mat(0x17181c, {}).clone();
+    dark.color.copy(new THREE.Color(0x17181c)).multiply(tint);
+    dark.roughness = 0.4; dark.metalness = 0.7;
+    const metal = ART.mat(0x8f979e, {}).clone();
+    metal.color.copy(new THREE.Color(0x8f979e)).multiply(tint);
+    metal.roughness = 0.3; metal.metalness = 0.8;
     const wood = ART.mat(0x6a4a2e);
     const outlines = ENGINE.quality.outlines;
     const part = (geo, mat, x, y, z) => {

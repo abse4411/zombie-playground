@@ -6,7 +6,7 @@ class HuntMode {
     this.game = game;
     this.mapId = mapId;
     this.diffKey = diffKey;
-    this.diff = DIFFICULTIES[diffKey];
+    this.diff = DIFFICULTIES[diffKey] || DIFFICULTIES.normal;
     this.wave = 0;
     this.state = 'intermission';
     this.timer = GAMECONFIG.hunt.startCountdown;

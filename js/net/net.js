@@ -174,7 +174,8 @@ const NET = {
 
   _buildSoldier(name) {
     const g = new THREE.Group();
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.66, 0.3), ART.mat(0x3a4a3e));
+    const sk = (typeof SKINS !== 'undefined') ? SKINS.find(k => k.id === (SAVE.data.skin || 'default')) : null;
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.66, 0.3), ART.mat(sk ? sk.soldier : 0x3a4a3e));
     torso.position.y = 1.18;
     const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.32, 0.32), ART.mat(0xc8a88a));
     head.position.y = 1.66;

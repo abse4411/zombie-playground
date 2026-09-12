@@ -35,13 +35,13 @@ const MENU = {
       b.addEventListener('click', () => { AUDIO.uiClick(); this.show('screen-menu'); }));
 
     // 难度
-    document.querySelectorAll('.diff-btn').forEach(b =>
+    document.querySelectorAll('#difficulty-row .diff-btn').forEach(b =>
       b.addEventListener('click', () => {
         this.diff = b.dataset.diff;
-        document.querySelectorAll('.diff-btn').forEach(x => x.classList.toggle('active', x === b));
+        document.querySelectorAll('#difficulty-row .diff-btn').forEach(x => x.classList.toggle('active', x === b));
         AUDIO.uiClick();
       }));
-    document.querySelector('.diff-btn[data-diff="normal"]').classList.add('active');
+    document.querySelector('#difficulty-row .diff-btn[data-diff="normal"]').classList.add('active');
 
     // 图鉴页签
     document.querySelectorAll('.codex-tab').forEach(b =>
@@ -95,6 +95,21 @@ const MENU = {
       setFcapActive();
       AUDIO.uiClick();
     }));
+    // 外观系统
+    const cBtns = document.querySelectorAll('.cmo-btn');
+    const setCam = () => cBtns.forEach(b => b.classList.toggle('active', b.dataset.c === (SAVE.data.camo || 'default')));
+    setCam();
+    cBtns.forEach(b => b.addEventListener('click', () => {
+      SAVE.data.camo = b.dataset.c; SAVE.commit(); setCam(); AUDIO.uiClick();
+      if (GAME.weapons) GAME.weapons._buildViewmodel();
+    }));
+    const sBtns = document.querySelectorAll('.sk-btn');
+    const setSk = () => sBtns.forEach(b => b.classList.toggle('active', b.dataset.s === (SAVE.data.skin || 'default')));
+    setSk();
+    sBtns.forEach(b => b.addEventListener('click', () => {
+      SAVE.data.skin = b.dataset.s; SAVE.commit(); setSk(); AUDIO.uiClick();
+    }));
+
     // 存档导出 / 导入
     const io = $('save-io');
     $('btn-save-export').addEventListener('click', () => {

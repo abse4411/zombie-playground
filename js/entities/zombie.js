@@ -177,6 +177,8 @@ class Zombie {
     this.buffT = 0; this.flashT = 0;
     this.kvx = 0; this.kvz = 0;             // 击退冲量
     this.growlPitch = rand(0.85, 1.25);
+    // 追击AI（v4.2）：视线记忆 + 沿墙方向 + 卡住脱困
+    this.steer = { side: Math.random() < 0.5 ? 1 : -1, wallT: 0, stuckT: 0, lastX: x, lastZ: z, hasLOS: false };
 
     if (!_shadowMat) _shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32 });
     if (!_shadowGeo) _shadowGeo = new THREE.CircleGeometry(0.5, 14);
@@ -264,6 +266,43 @@ class Zombie {
     const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z;
     const dist = Math.sqrt(dx * dx + dz * dz) || 0.001;
     const nx = dx / dist, nz = dz / dist;
+    let mvx = nx, mvz = nz;
+    let spd = this.speed * (this.buffT > 0 ? 1.45 : 1);
+
+    // ---- 追击AI（v4.2）：视线检测 → 无视线时沿墙绕行 → 卡住自动换向 ----
+    {
+      const st = this.steer;
+      // 1) 视线：胸口射线(眼睛) + 膝盖射线(可通行性) —— 双射线防"看得见走不过去"
+      const eyeY = this.pos.y + 0.9 * this.group.scale.x;
+      const targetY = p.pos.y + 1.0;
+      const losDx = nx, losDy = (targetY - eyeY) / dist, losDz = nz;
+      const eyeT = rayAABBs(this.pos.x, eyeY, this.pos.z, losDx, losDy, losDz, dist);
+      const kneeY = this.pos.y + 0.25;
+      const kneeT = rayAABBs(this.pos.x, kneeY, this.pos.z, nx, (p.pos.y - this.pos.y) / dist, nz, dist);
+      st.hasLOS = eyeT >= dist - 0.5 && kneeT >= dist - 0.5;
+      if (st.hasLOS) { st.lastX = p.pos.x; st.lastZ = p.pos.z; st.wallT = 0; }
+
+      // 2) 始终朝玩家方位追（尸潮气味感知），无通行视线时叠加沿墙滑行分量
+      let tx = nx, tz = nz;
+      if (!st.hasLOS) {
+        st.wallT += dt;
+        // 侧向滑行：方向稳定避免抖动
+        tx += -nz * st.side * 0.9;
+        tz += nx * st.side * 0.9;
+        const tl2 = Math.hypot(tx, tz) || 1; tx /= tl2; tz /= tl2;
+        // 3) 卡住检测：1.2秒位移不足 → 反转沿墙方向
+        st.stuckT += dt;
+        if (st.stuckT > 1.2) {
+          const moved = Math.hypot(this.pos.x - st.lastX, this.pos.z - st.lastZ);
+          if (moved < 0.35) st.side *= -1;
+          st.stuckT = 0; st.lastX = this.pos.x; st.lastZ = this.pos.z;
+        }
+      } else {
+        st.stuckT = 0;
+        st.lastX = this.pos.x; st.lastZ = this.pos.z;
+      }
+      mvx = tx; mvz = tz;
+    }
 
     // ---- 网络傀儡（联机客户端）：仅插值到房主快照，不跑AI ----
     if (this.net) {
@@ -290,8 +329,6 @@ class Zombie {
     this.group.rotation.y = angleLerp(this.group.rotation.y, targetYaw, Math.min(1, 7 * dt));
 
     // ---- 行为决策 ----
-    let mvx = nx, mvz = nz;
-    let spd = this.speed * (this.buffT > 0 ? 1.45 : 1);
     if (this.buffT > 0) this.buffT -= dt;
 
     if (this.dummy) {

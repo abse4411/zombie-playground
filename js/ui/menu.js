@@ -12,6 +12,18 @@ const MENU = {
     const $ = id => document.getElementById(id);
     $('btn-encounter').addEventListener('click', () => { AUDIO.uiClick(); this.buildMissionCards(); this.show('screen-missions'); });
     $('btn-hunt').addEventListener('click', () => { AUDIO.uiClick(); this.buildMapCards(); this.show('screen-maps'); });
+    // 继续狩猎（v14.3）：存在狩猎存档时显示进度入口
+    const cont = $('btn-continue');
+    cont.addEventListener('click', () => { AUDIO.uiClick(); this.hideAll(); GAME.continueHunt(); });
+    this.refreshContinue = () => {
+      const sv = SAVE.data && SAVE.data.huntSave;
+      cont.classList.toggle('hidden', !sv);
+      if (sv) {
+        const mapName = MAPS[sv.map] ? MAPS[sv.map].name : sv.map;
+        cont.textContent = `📂 继续狩猎 · ${mapName} 第 ${sv.wave} 波`;
+      }
+    };
+    this.refreshContinue();
     $('btn-tutorial').addEventListener('click', () => { AUDIO.uiClick(); GAME.startTutorial(); });
     $('btn-character').addEventListener('click', () => { AUDIO.uiClick(); this.show('screen-character'); CHARPREVIEW.init(document.getElementById('char-canvas')); CHARPREVIEW.show(SAVE.data.character || 'raven'); this.buildCharCards(); });
     $('btn-net').addEventListener('click', () => { AUDIO.uiClick(); this.show('screen-net'); this.initNetUI(); });
@@ -166,7 +178,8 @@ const MENU = {
     $('btn-resume').addEventListener('click', () => { AUDIO.uiClick(); GAME.resume(); });
     $('btn-restart').addEventListener('click', () => { AUDIO.uiClick(); this.hideAll(); GAME.restart(); });
     $('btn-pause-settings').addEventListener('click', () => { AUDIO.uiClick(); this.settingsFrom = 'pause'; this.show('screen-settings'); });
-    $('btn-quit').addEventListener('click', () => { AUDIO.uiClick(); GAME.quitToMenu(); });
+    $('btn-savequit').addEventListener('click', () => { AUDIO.uiClick(); this.hideAll(); GAME.saveQuitHunt(); });
+    $('btn-quit').addEventListener('click', () => { AUDIO.uiClick(); GAME.clearHuntSave(); GAME.quitToMenu(); });
 
     // 结算
     $('btn-retry').addEventListener('click', () => { AUDIO.uiClick(); this.hideAll(); GAME.restart(); });

@@ -68,9 +68,10 @@ class Game {
   }
 
   /* ================= 开局 ================= */
-  async startHunt(mapId, diffKey) {
+  async startHunt(mapId, diffKey, restore) {
     this._lastStart = { type: 'hunt', mapId, diffKey };
-    if (!(await this._loadFor(mapId, '正在进入猎场…'))) return;
+    this._pendingRestore = restore || null;
+    if (!(await this._loadFor(mapId, '正在进入猎场…'))) { this._pendingRestore = null; return; }
     this._begin(mapId, () => new HuntMode(this, mapId, diffKey));
   }
 
@@ -128,6 +129,109 @@ class Game {
   hideLoading() {
     const el = document.getElementById('load-overlay');
     if (el) el.classList.add('hidden');
+  }
+
+  /* ---------- 狩猎保存/继续（v14.3） ---------- */
+  // 波次间歇或手动保存时快照；恢复时重打保存的那一波（刷怪重置，玩家进度全保留）
+  captureHuntSave() {
+    const g = this, p = g.player, m = g.mode;
+    if (!p || !m || m.constructor.name !== 'HuntMode') return null;
+    const serW = inst => ({ id: inst.def.id, lvl: inst.lvl || 0, up: inst.upgrades || {}, mag: inst.mag, reserve: inst.reserve });
+    const s = {
+      v: 1, map: m.mapId, diff: m.diffKey,
+      wave: m.state === 'combat' ? m.wave : m.wave + 1,   // 战斗中退出→重打当前波
+      at: Date.now(),
+      player: {
+        x: p.pos.x, y: p.pos.y, z: p.pos.z, yaw: p.yaw,
+        hp: p.hp, armor: p.armor, maxArmor: p.maxArmor, money: p.money,
+        kills: p.kills, headshots: p.headshots, moneyEarned: p.moneyEarned,
+        perks: Object.assign({}, p.perks), medkits: p.medkits, medkitHeal: p.medkitHeal,
+        throwables: { frag: p.throwables.frag.count, molotov: p.throwables.molotov.count, attractor: p.throwables.attractor.count },
+        stamina: p.stamina,
+        current: p.current,
+        rack: {
+          primary: p.rack.primary.map(serW),
+          secondary: p.rack.secondary.map(serW),
+          melee: p.rack.melee.map(serW),
+        },
+        storage: p.storage.map(it => it && it.kind === 'weapon' ? { kind: 'weapon', w: serW(it.inst) } : Object.assign({}, it)),
+      },
+    };
+    SAVE.data.huntSave = s;
+    SAVE.commit();
+    return s;
+  }
+
+  clearHuntSave() {
+    if (SAVE.data.huntSave) { delete SAVE.data.huntSave; SAVE.commit(); }
+    if (typeof MENU !== 'undefined') MENU.refreshContinue();
+  }
+
+  continueHunt() {
+    const s = SAVE.data && SAVE.data.huntSave;
+    if (!s) { HUD.toast('没有可继续的狩猎存档'); return; }
+    this.startHunt(s.map, s.diff, s);
+  }
+
+  saveQuitHunt() {
+    const s = this.captureHuntSave();
+    this.quitToMenu();
+    if (s) HUD.toast(`📂 狩猎进度已保存（第 ${s.wave} 波）`);
+  }
+
+  _applyHuntRestore(sv) {
+    const p = this.player;
+    const build = w => {
+      if (!WEAPONS[w.id]) return null;
+      const inst = new WeaponInstance(WEAPONS[w.id]);
+      inst.lvl = w.lvl || 0;
+      inst.upgrades = w.up || {};
+      inst.mag = Math.max(0, Math.min(w.mag, inst.magSize));
+      inst.reserve = Math.max(0, w.reserve);
+      return inst;
+    };
+    // 武器架与手持
+    const rack = {};
+    for (const slot of ['primary', 'secondary', 'melee']) {
+      rack[slot] = (sv.player.rack[slot] || []).map(build).filter(Boolean);
+      if (!rack[slot].length && WEAPONS[slot === 'primary' ? 'm4a1' : slot === 'secondary' ? 'p92' : 'knife']) {
+        rack[slot] = [new WeaponInstance(WEAPONS[slot === 'primary' ? 'm4a1' : slot === 'secondary' ? 'p92' : 'knife'])];
+      }
+    }
+    p.rack = rack;
+    p.weapons = { primary: rack.primary[0] || null, secondary: rack.secondary[0] || null, melee: rack.melee[0] || null };
+    const cur = sv.player.current;
+    p.current = (p.weapons[cur]) ? cur : (['secondary', 'primary', 'melee'].find(sl => p.weapons[sl]) || 'secondary');
+    // 仓库
+    p.storage = (sv.player.storage || []).map(it => it && it.kind === 'weapon'
+      ? { kind: 'weapon', inst: build(it.w) }
+      : it).filter(it => it && (it.kind !== 'weapon' || it.inst));
+    // 数值
+    p.hp = Math.max(1, sv.player.hp);
+    p.maxArmor = sv.player.maxArmor || 0;
+    p.armor = sv.player.armor || 0;
+    p.money = sv.player.money;
+    p.kills = sv.player.kills || 0;
+    p.headshots = sv.player.headshots || 0;
+    p.moneyEarned = sv.player.moneyEarned || 0;
+    p.perks = Object.assign(zeroPerks(), sv.player.perks || {});
+    p.medkits = sv.player.medkits;
+    if (sv.player.medkitHeal) p.medkitHeal = sv.player.medkitHeal;
+    p.throwables.frag.count = sv.player.throwables.frag;
+    p.throwables.molotov.count = sv.player.throwables.molotov;
+    p.throwables.attractor.count = sv.player.throwables.attractor;
+    p.recomputePerks();
+    p.stamina = Math.min(sv.player.stamina !== undefined ? sv.player.stamina : p.maxStamina, p.maxStamina);
+    p.pos.set(sv.player.x, sv.player.y, sv.player.z);
+    p.yaw = sv.player.yaw || 0;
+    // 波次：恢复为"重打保存的那一波"
+    const m = this.mode;
+    m.wave = Math.max(0, sv.wave - 1);
+    m.state = 'intermission';
+    m.timer = GAMECONFIG.hunt.startCountdown;
+    this.weapons._buildViewmodel();
+    HUD.banner(`📂 进度已恢复 · 第 ${sv.wave} 波`, '装备与资金已还原 —— 整备好再迎战');
+    SAVE.data.huntSave = sv;   // 恢复后保留存档（下次退出再次覆盖）
   }
 
   // 应用上一章继承：武器/装备/金钱 + 全补给（v3.1）
@@ -274,6 +378,11 @@ class Game {
     }
     // 战役继承（在剧情对话前应用）
     if (this._pendingCarry) { this._applyCarry(this._pendingCarry); this._pendingCarry = null; }
+    // 狩猎进度恢复（v14.3：在角色/继承之后最后应用，覆盖装备与波次）
+    if (this._pendingRestore && this.mode && this.mode.constructor.name === 'HuntMode') {
+      this._applyHuntRestore(this._pendingRestore);
+    }
+    this._pendingRestore = null;
     // 联机：标记在局
     if (typeof NET !== 'undefined' && NET.role !== 'off') NET.inGame = true;
     this.state = 'playing';
@@ -755,6 +864,7 @@ class Game {
 
   restart() {
     if (!this._lastStart) return this.quitToMenu();
+    if (this._lastStart.type === 'hunt') this.clearHuntSave();   // 重新开始=放弃旧进度（v14.3）
     this.state = 'playing';
     if (this._lastStart.type === 'hunt') {
       this.startHunt(this._lastStart.mapId, this._lastStart.diffKey);
@@ -784,6 +894,7 @@ class Game {
     if (typeof NET !== 'undefined' && NET.role !== 'off') { NET.inGame = false; MENU.refreshNetUI(); }
     if (typeof STORY !== 'undefined') STORY.cancel();
     MENU.show('screen-menu');
+    if (typeof MENU.refreshContinue === 'function') MENU.refreshContinue();
     MENU.refreshStats();
   }
 

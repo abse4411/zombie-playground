@@ -90,6 +90,7 @@ class HuntMode {
         g.player.fovPunch = 0.7;                // 终结镜头
         this.state = 'intermission';
         this.timer = GAMECONFIG.hunt.intermission;
+        g.captureHuntSave();   // 波次间歇自动存档（v14.3）
         // 波间小回复
         g.player.hp = Math.min(g.player.maxHp, g.player.hp + 15);
         if (typeof ACHV !== 'undefined' && g.runStats.damageTaken === this._waveDmgMark) ACHV.event('flawless', g);

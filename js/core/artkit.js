@@ -30,13 +30,13 @@ const ART = (() => {
     if (_mats[key]) return _mats[key];
     let m;
     if (opts.map) {
-      m = new THREE.MeshLambertMaterial({ color: 0xffffff, map: opts.map });
+      m = new THREE.MeshStandardMaterial({ color: 0xffffff, map: opts.map, roughness: 0.85, metalness: 0.05 });
       if (opts.e) m.emissive = new THREE.Color(opts.e);
     } else if (opts.toon) {
-      m = new THREE.MeshToonMaterial({ color, gradientMap: gradientMap() });
+      m = new THREE.MeshStandardMaterial({ color, roughness: 0.82, metalness: 0.04 });
       if (opts.e) m.emissive = new THREE.Color(opts.e);
     } else {
-      m = new THREE.MeshLambertMaterial({ color });
+      m = new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.35 });
       if (opts.e) m.emissive = new THREE.Color(opts.e);
     }
     if (opts.opacity !== undefined && opts.opacity < 1) {
@@ -48,9 +48,9 @@ const ART = (() => {
     return m;
   }
 
-  // 实例专属 Toon 材质（丧尸受击闪红需要独立材质）
+  // 实例专属 PBR 材质（丧尸/武器受击闪红需要独立材质；CS:GO 式写实明暗）
   function toon(color, emissive) {
-    const m = new THREE.MeshToonMaterial({ color, gradientMap: gradientMap() });
+    const m = new THREE.MeshStandardMaterial({ color, roughness: 0.86, metalness: 0.03 });
     if (emissive) m.emissive = new THREE.Color(emissive);
     return m;
   }

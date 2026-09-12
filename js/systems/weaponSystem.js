@@ -36,8 +36,18 @@ class WeaponSystem {
     this.adsT = 0; this.recoilKick = 0; this.muzzleT = 0;
     this.swingT = -1; this.sawPhase = 0; this._emptyCd = 0;
     this.kickCd = 0;
+    this._swingDur = 0.3; this._heavySwing = false; this._prevRmb = false; this._fireKick = 0;
     this.viewmodel = null; this.muzzleSprite = null; this.muzzleLight = null;
     this._buildViewmodel();
+
+    // 挥砍轨迹（近战弧光，挂在相机）
+    this.trail = new THREE.Mesh(
+      new THREE.RingGeometry(0.32, 0.62, 24, 1, -0.4, 2.2),
+      new THREE.MeshBasicMaterial({ color: 0xdfe8ff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthTest: false })
+    );
+    this.trail.position.set(0.05, -0.02, -0.85);
+    this.trail.renderOrder = 999;
+    ENGINE.camera.add(this.trail);
 
     // 枪口动态光（挂在相机上）
     this.muzzleLight = new THREE.PointLight(0xffc060, 0, 14);
@@ -61,9 +71,11 @@ class WeaponSystem {
     this._disposeViewmodel();
     const def = this.w.def;
     const g = new THREE.Group();
-    const body = ART.toon(def.color);
-    const dark = ART.mat(0x17181c);
-    const metal = ART.mat(0x8f979e);
+    const body = ART.mat(def.color, {});
+    const dark = ART.mat(0x17181c, {});
+    const metal = ART.mat(0x8f979e, {});
+    // 枪械金属质感：Standard PBR（CS:GO 式枪模）
+    for (const mm of [body, dark, metal]) { mm.roughness = 0.38; mm.metalness = 0.72; }
     const wood = ART.mat(0x6a4a2e);
     const outlines = ENGINE.quality.outlines;
     const part = (geo, mat, x, y, z) => {
@@ -169,12 +181,27 @@ class WeaponSystem {
 
     // 开火
     if (def.melee) {
+      // 轻击 LMB；重击 RMB（近战时右键无ADS占用）——触屏用🎯键
+      const heavyEdge = INPUT.rmb && !this._prevRmb;
+      this._prevRmb = INPUT.rmb;
       const wantFire = def.continuous ? INPUT.lmb : INPUT.consumeLmb();
-      if (this.swingT >= 0) { this.swingT += dt; if (this.swingT > 0.3) this.swingT = -1; }
-      if (wantFire && this.cooldown <= 0 && this.switchT <= 0) {
-        this.cooldown = 60 / def.rpm;
-        if (!def.continuous) this.swingT = 0;
-        this._meleeHit(def, game);
+      if (this.swingT >= 0) { this.swingT += dt; if (this.swingT > this._swingDur) this.swingT = -1; }
+      if (this.cooldown <= 0 && this.switchT <= 0) {
+        if (heavyEdge) {
+          // 重击：前摇短促、伤害x2.2、击退x2.2、硬直1.4s
+          this.cooldown = 60 / (def.rpm * 0.5);
+          this._swingDur = 0.55;
+          this.swingT = 0;
+          this._heavySwing = true;
+          this._meleeHit(def, game, true);
+          ENGINE.shake(0.1);
+        } else if (wantFire) {
+          this.cooldown = 60 / def.rpm;
+          this._swingDur = 0.3;
+          this.swingT = 0;
+          this._heavySwing = false;
+          this._meleeHit(def, game, false);
+        }
       }
     } else {
       const wantFire = def.auto ? INPUT.lmb : INPUT.consumeLmb();
@@ -189,6 +216,15 @@ class WeaponSystem {
 
     this.muzzleT -= dt;
     if (this.muzzleSprite) this.muzzleSprite.visible = this.muzzleT > 0 && this.adsT < 0.6;
+    // 近战弧光
+    if (this.trail) {
+      const show = def.melee && this.swingT >= 0;
+      this.trail.material.opacity = show ? 0.55 * (1 - this.swingT / this._swingDur) : 0;
+      if (show) {
+        this.trail.rotation.z = lerp(1.2, -1.6, this.swingT / this._swingDur) * (this._heavySwing ? -1 : 1);
+        this.trail.scale.setScalar(this._heavySwing ? 1.25 : 1);
+      }
+    }
     this._updateViewmodel(dt);
     HUD.setScope(!!def.scope && this.adsT > 0.75);
   }
@@ -205,6 +241,13 @@ class WeaponSystem {
     this.p.yaw += def.recoil * rand(-0.4, 0.4);
     this.muzzleT = 0.045;
     if (this.muzzleLight) this.muzzleLight.intensity = 2.6;
+    this._fireKick = Math.min(1.5, this._fireKick + 0.9);   // 准星扩散
+    // 弹壳抛出（右侧金色小粒子）
+    {
+      const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
+      PARTICLES.spawn('spark', origin.x + right.x * 0.3, origin.y - 0.1, origin.z + right.z * 0.3, 1,
+        { speed: 1.6, vy: 1.5, life: 0.5, color: [1, 0.85, 0.3], color2: [0.9, 0.6, 0.1] });
+    }
     ENGINE.shake(def.recoil * 1.1);
 
     const cam = ENGINE.camera;
@@ -310,30 +353,36 @@ class WeaponSystem {
     return null;
   }
 
-  _meleeHit(def, game) {
-    AUDIO.melee(def.damage > 60);
+  /* ---------- 近战：轻击(LMB)/重击(RMB) ---------- */
+  _meleeHit(def, game, heavy) {
+    AUDIO.melee(def.damage > 60 || heavy);
+    if (heavy) AUDIO.impact();
     const p = this.p;
     const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
+    const range = def.range + (heavy ? 0.4 : 0);
+    const dmg = def.damage * this.w.dmgMult * p.dmgMult * (heavy ? 2.2 : 1);
+    const kbPow = GAMECONFIG.feel.kbMelee * (heavy ? 2.2 : 1);
     let hitAny = false;
     game.stats.shots++;
     for (const z of game.zombies) {
       if (z.dead) continue;
       const dx = z.pos.x - p.pos.x, dz = z.pos.z - p.pos.z;
       const d = Math.hypot(dx, dz);
-      if (d > def.range + 0.35 * z.group.scale.x) continue;
-      if ((dx * fx + dz * fz) / (d || 1) < Math.cos(def.arc + 0.55)) continue;
-      const dmg = def.damage * this.w.dmgMult * p.dmgMult;   // 近战也吃强化等级
-      z.takeDamage(dmg, true, { x: z.pos.x, y: 1.25 * z.group.scale.x, z: z.pos.z }, game,
-        { x: fx * GAMECONFIG.feel.kbMelee, z: fz * GAMECONFIG.feel.kbMelee });
-      DMGNUM.spawn(z.pos.x, 1.5 * z.group.scale.x, z.pos.z, Math.round(dmg), false);
+      if (d > range + 0.35 * z.group.scale.x) continue;
+      if ((dx * fx + dz * fz) / (d || 1) < Math.cos(def.arc + (heavy ? 0.85 : 0.55))) continue;
+      z.stagger = Math.max(z.stagger, heavy ? 1.4 : GAMECONFIG.combat.staggerTime);
+      z.takeDamage(dmg, heavy, { x: z.pos.x, y: 1.25 * z.group.scale.x, z: z.pos.z }, game,
+        { x: fx * kbPow, z: fz * kbPow });
+      DMGNUM.spawn(z.pos.x, 1.5 * z.group.scale.x, z.pos.z, Math.round(dmg), heavy);
       hitAny = true;
     }
     if (hitAny) {
       game.stats.hits++;
-      HUD.hitmarker(false);
+      HUD.hitmarker(heavy);
       AUDIO.hitFlesh(0);
-      game.hitstop(GAMECONFIG.feel.hitstopKill);
+      game.hitstop(heavy ? 0.09 : GAMECONFIG.feel.hitstopKill);
       HUD.bloodSplat();
+      ENGINE.shake(heavy ? 0.22 : 0.08);
     }
   }
 
@@ -434,6 +483,7 @@ class WeaponSystem {
     const bobY = (p.moving && p.onGround) ? Math.abs(Math.cos(p.bobPhase)) * 0.013 * (1 - this.adsT) : 0;
 
     this.recoilKick = Math.max(0, this.recoilKick - dt * 7);
+    this._fireKick = Math.max(0, this._fireKick - dt * 5);
     if (this.kickAnimT > 0) this.kickAnimT -= dt;
     let rx = 0, rz = 0, ox = 0, oy = 0;
     if (this.switchT > 0) oy = -0.28 * (this.switchT / 0.38);
@@ -443,10 +493,12 @@ class WeaponSystem {
       oy -= 0.07;
     }
     if (this.swingT >= 0) {
-      const k = this.swingT / 0.3;
-      rz = -1.5 * Math.sin(k * Math.PI);
-      ox = -0.13 * Math.sin(k * Math.PI);
-      rx = -0.5 * Math.sin(k * Math.PI);
+      const k = this.swingT / this._swingDur;
+      const hv = this._heavySwing;
+      rz = (hv ? -2.2 : -1.5) * Math.sin(k * Math.PI);
+      ox = (hv ? -0.22 : -0.13) * Math.sin(k * Math.PI);
+      rx = (hv ? -0.9 : -0.5) * Math.sin(k * Math.PI);
+      oy -= hv ? 0.05 * Math.sin(k * Math.PI) : 0;
     }
     if (def.continuous && INPUT.lmb) {
       this.sawPhase += dt * 55;

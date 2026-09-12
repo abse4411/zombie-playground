@@ -245,10 +245,11 @@ const HUD = {
       } else tl.classList.add('hidden');
     }
 
-    // 准星随ADS收拢
+    // 准星随ADS收拢 + 开火扩散
     const ch = document.getElementById('crosshair');
     ch.style.opacity = (game.weapons.adsT > 0.85 && w && w.def.scope) ? '0' : '1';
-    const gap = 6 + (w && !w.def.melee ? game.weapons.adsT * -4 : 0) + (p.moving ? 3 : 0);
+    const gap = 6 + (w && !w.def.melee ? game.weapons.adsT * -4 : 0) + (p.moving ? 3 : 0)
+      + (game.weapons._fireKick || 0) * 7;
     for (const c of ch.children) {
       if (c.classList.contains('ch-t')) c.style.top = `-${gap + 8}px`;
       if (c.classList.contains('ch-b')) c.style.top = `${gap}px`;

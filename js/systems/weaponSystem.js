@@ -83,74 +83,24 @@ class WeaponSystem {
     if (!this.w) this._ensureFallbackWeapon();
     const def = this.w.def;
     const g = new THREE.Group();
-    // 武器涂装（外观系统）：实例化材质避免污染缓存
-    const camo = CAMOS.find(c2 => c2.id === (SAVE.data.camo || 'default')) || CAMOS[0];
-    const tint = new THREE.Color(camo.tint);
-    const body = ART.mat(def.color, {}).clone();
-    body.color.copy(new THREE.Color(def.color)).multiply(tint);
-    body.roughness = 0.38; body.metalness = 0.72;
-    const dark = ART.mat(0x17181c, {}).clone();
-    dark.color.copy(new THREE.Color(0x17181c)).multiply(tint);
-    dark.roughness = 0.4; dark.metalness = 0.7;
-    const metal = ART.mat(0x8f979e, {}).clone();
-    metal.color.copy(new THREE.Color(0x8f979e)).multiply(tint);
-    metal.roughness = 0.3; metal.metalness = 0.8;
-    const wood = ART.mat(0x6a4a2e);
-    const outlines = ENGINE.quality.outlines;
-    const part = (geo, mat, x, y, z) => {
-      const m = new THREE.Mesh(geo, mat);
-      m.position.set(x, y, z);
-      g.add(m);
-      if (outlines) ART.outline(m, 1.18);
-      return m;
-    };
-
+    // 精致化枪模（v7.2）：部件化建模器 gunModels.js（商城预览共用）
+    const gun = buildGunModel(def, { outlines: ENGINE.quality.outlines });
+    // 第一人称持枪姿态：枪体右移下沉微内旋，枪口不挡准星
     if (def.melee) {
-      if (def.id === 'knife') {
-        part(new THREE.BoxGeometry(0.035, 0.09, 0.42), ART.mat(0xc8d2dc), 0, 0.02, -0.32);
-        part(new THREE.BoxGeometry(0.02, 0.02, 0.4), ART.mat(0x9aa4ac), 0, 0.075, -0.32);
-        part(new THREE.BoxGeometry(0.05, 0.07, 0.2), dark, 0, 0, -0.02);
-      } else if (def.id === 'axe') {
-        part(new THREE.BoxGeometry(0.05, 0.05, 0.72), wood, 0, 0.02, -0.3);
-        part(new THREE.BoxGeometry(0.06, 0.2, 0.18), ART.mat(0xb02a20), 0, 0.06, -0.62);
-        part(new THREE.BoxGeometry(0.02, 0.22, 0.05), metal, 0.03, 0.06, -0.6);
-      } else {
-        part(new THREE.BoxGeometry(0.16, 0.2, 0.45), body, 0, -0.02, -0.1);
-        part(new THREE.BoxGeometry(0.05, 0.12, 0.55), ART.mat(0x9aa2ac), 0, 0.06, -0.5);
-        part(new THREE.BoxGeometry(0.05, 0.03, 0.5), dark, 0, 0.13, -0.5);
-        part(new THREE.BoxGeometry(0.06, 0.14, 0.1), dark, 0, -0.14, 0.08);
-      }
-      g.rotation.z = 0.35;
+      gun.position.set(0.02, -0.04, 0.08);
+      gun.rotation.z = 0.35;
     } else {
-      // 枪身
-      part(new THREE.BoxGeometry(0.09, 0.13, def.len * 0.6), body, 0, 0, -def.len * 0.22);
-      // 枪管
-      part(new THREE.BoxGeometry(0.045, 0.045, def.len * 0.55), dark, 0, 0.02, -def.len * 0.55);
-      // 准星
-      part(new THREE.BoxGeometry(0.02, 0.035, 0.06), dark, 0, 0.09, -def.len * 0.3);
-      // 弹匣
-      part(new THREE.BoxGeometry(0.06, 0.16, 0.09), dark, 0, -0.13, -def.len * 0.28);
-      // 握把
-      const grip = part(new THREE.BoxGeometry(0.06, 0.15, 0.08), dark, 0, -0.12, 0.05);
-      grip.rotation.x = 0.25;
-      // 护木
-      part(new THREE.BoxGeometry(0.07, 0.06, def.len * 0.3), body, 0, -0.06, -def.len * 0.52);
-      // 枪托
-      part(new THREE.BoxGeometry(0.07, 0.11, 0.16), body, 0, -0.03, 0.16);
-      // 侧轨
-      part(new THREE.BoxGeometry(0.015, 0.02, def.len * 0.5), metal, 0.048, 0.04, -def.len * 0.35);
-      if (def.scope) {
-        const scope = part(new THREE.CylinderGeometry(0.035, 0.035, 0.22, 10), dark, 0, 0.1, -def.len * 0.3);
-        scope.rotation.x = Math.PI / 2;
-      }
-      // 枪口火光
-      const sm = new THREE.SpriteMaterial({ map: getMuzzleTex(), transparent: true, depthTest: false });
-      this.muzzleSprite = new THREE.Sprite(sm);
-      this.muzzleSprite.scale.setScalar(0.32);
-      this.muzzleSprite.position.set(0, 0.02, -def.len * 0.85);
-      this.muzzleSprite.visible = false;
-      g.add(this.muzzleSprite);
+      gun.position.set(0.03, -0.05, 0.1);
+      gun.rotation.y = -0.04;
     }
+    g.add(gun);
+    // 枪口火光
+    const sm = new THREE.SpriteMaterial({ map: getMuzzleTex(), transparent: true, depthTest: false });
+    this.muzzleSprite = new THREE.Sprite(sm);
+    this.muzzleSprite.scale.setScalar(0.32);
+    this.muzzleSprite.position.set(0, 0.02, gun.userData.muzzleZ || -def.len * 0.85);
+    this.muzzleSprite.visible = false;
+    g.add(this.muzzleSprite);
 
     // 第一人称手臂（v6.1）
     const sleeveColor = 0x3a4236;

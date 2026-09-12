@@ -180,6 +180,28 @@ class WeaponSystem {
       ENGINE.camera.updateProjectionMatrix();
     }
 
+    // 榴弹发射器：左键发射碰炸榴弹
+    if (def.launcher) {
+      if (INPUT.consumeLmb() && this.cooldown <= 0 && this.switchT <= 0 && this.reloadT <= 0) {
+        if (w.mag <= 0) {
+          if (this._emptyCd <= 0) { AUDIO.emptyClick(); this._emptyCd = 0.3; this._startReload(); }
+        } else {
+          w.mag--;
+          this.cooldown = 60 / def.rpm;
+          AUDIO.shot(def.sound.freq, def.sound.dur, def.sound.boom);
+          this.recoilKick = Math.min(1, this.recoilKick + 0.8);
+          ENGINE.shake(0.15);
+          const cam = ENGINE.camera;
+          const origin = new THREE.Vector3();
+          cam.getWorldPosition(origin);
+          const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+          game._fragWindowT = 3;
+          game.projectiles.push(new Projectile('gl',
+            origin.x + dir.x * 0.5, origin.y - 0.08, origin.z + dir.z * 0.5,
+            dir.x * 16, dir.y * 16 + 1.5, dir.z * 16, { fuse: 3 }));
+        }
+      }
+    } else
     // 开火
     if (def.melee) {
       // 轻击 LMB；重击 RMB（近战时右键无ADS占用）——触屏用🎯键

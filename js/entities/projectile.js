@@ -5,6 +5,7 @@ const PROJ_CFG = {
   frag:    { r: 0.11, c: 0x3d5a3d, e: 0x000000, g: 13 },
   molotov: { r: 0.12, c: 0x8a4b1f, e: 0x552200, g: 13 },
   acid:    { r: 0.15, c: 0x66cc33, e: 0x2a6600, g: 9 },
+  gl:      { r: 0.13, c: 0x334422, e: 0x223311, g: 11 },  // 榴弹
 };
 
 function pointBlocked(x, y, z) {
@@ -53,6 +54,12 @@ class Projectile {
 
     if (this.kind === 'molotov') PARTICLES.flames(p.x, p.y, p.z, 1);
     if (this.kind === 'acid' && Math.random() < 0.4) PARTICLES.acidSplash(p.x, p.y, p.z);
+    // M79榴弹：碰炸（墙/地/碰到即炸）
+    if (this.kind === 'gl' && (this.wallHit || p.y <= this.r + 0.01 || this.fuse <= 0)) {
+      this._finish(game);
+      explodeGrenade(game, p.x, p.y, p.z, { damage: 120, radius: 6, selfMult: 0.4 });
+      return;
+    }
 
     const pd = dist2d(p.x, p.z, game.player.pos.x, game.player.pos.z);
 

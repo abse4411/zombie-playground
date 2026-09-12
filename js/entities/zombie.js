@@ -383,6 +383,26 @@ class Zombie {
       return;
     }
 
+    // 冲锋者：锁定直线狂冲（可被闪避）
+    if (cfg.charge) {
+      this.chargeCd = (this.chargeCd === undefined ? rand(1, 2.5) : this.chargeCd) - dt;
+      if (this.chargeActive > 0) {
+        this.chargeActive -= dt;
+        spd = 9.5;
+        mvx = this.chargeDx; mvz = this.chargeDz;
+        if (dist < cfg.attackRange && this.attackCd <= 0) {
+          if (p.alive) { p.takeDamage(this.damage * 1.5, game, this.pos); p.vel.x += this.chargeDx * 7; p.vel.z += this.chargeDz * 7; p.vel.y += 3; }
+          this.chargeActive = 0;
+          this.attackCd = cfg.attackRate;
+        }
+      } else if (this.chargeCd <= 0 && dist < 14 && dist > 3.5) {
+        this.chargeDx = nx; this.chargeDz = nz;
+        this.chargeActive = 1.1;
+        this.chargeCd = rand(3.5, 5);
+        AUDIO.growl(dist, 0.7);
+      }
+    }
+
     // 吐酸者：保持距离、环绕、吐酸
     if (cfg.ranged) {
       const R = cfg.ranged;

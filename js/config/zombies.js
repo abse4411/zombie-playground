@@ -61,6 +61,21 @@ const ZOMBIE_TYPES = {
     attackRange: 1.7, attackRate: 0.9,
     desc: '游乐园人偶服里长出的东西。之字形乱窜还间歇性狂奔，枪法不好的猎人最怕它。',
   },
+  charger: {
+    id: 'charger', name: '冲锋者', role: '二代特化 · 直线冲撞',
+    hp: 340, speed: 2.4, damage: 24, reward: 85, cost: 3.2, minWave: 10, weight: 1.8,
+    scale: 1.15, skin: 0x6a4a3a, cloth: 0x3a2c22, pants: 0x2a2018, big: true, charge: true,
+    attackRange: 1.9, attackRate: 1.3,
+    desc: '变异的肌肉集中在双肩与下肢——锁定目标后低头直线狂冲，撞中能把人撞飞数米。侧移闪避是唯一的解。',
+  },
+  toxic: {
+    id: 'toxic', name: '腐蚀射手', role: '二代特化 · 远程腐蚀',
+    hp: 190, speed: 1.8, damage: 12, reward: 88, cost: 3.0, minWave: 12, weight: 1.5,
+    scale: 1.0, skin: 0x5a7a3a, cloth: 0x3e4a2c, pants: 0x2e3622,
+    attackRange: 1.7, attackRate: 1.2,
+    ranged: { dmg: 14, speed: 12, cooldown: 2.6, keepMin: 9, keepMax: 18, poolDps: 18, poolRadius: 2.4, poolTime: 4 },
+    desc: '吐酸者的二代强化种：喉囊二倍化，腐蚀弹更快更痛，酸洼腐蚀性更强。听见"啪嗒"的黏液声就找掩体。',
+  },
   radiant: {
     id: 'radiant', name: '辐射变种', role: '二代特化 · 腐蚀光环',
     hp: 260, speed: 2.2, damage: 14, reward: 90, cost: 3.4, minWave: 11, weight: 1.6,

@@ -116,6 +116,14 @@ function explodeGrenade(game, x, y, z, cfg, selfMult) {
   if (pd < pr && game.player.alive) {
     game.player.takeDamage(cfg.damage * selfMult * (1 - pd / pr), game);
   }
+  // 波及可破坏物（链式引爆在 Destructible.destroy 内处理）
+  if (typeof Destructible !== 'undefined' && game.destructibles) {
+    for (const d of game.destructibles) {
+      if (d.dead) continue;
+      const dd = dist2d(x, z, d.x, d.z);
+      if (dd < cfg.radius) d.hit(cfg.damage * (1 - dd / cfg.radius), game, true);
+    }
+  }
 }
 
 function explodeBloater(game, z) {

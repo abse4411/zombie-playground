@@ -19,6 +19,7 @@ class Game {
     this.fireZones = [];
     this.acidPools = [];
     this.loots = [];
+    this.destructibles = [];
     this.stats = { shots: 0, hits: 0 };
     this.interactText = null;
     this._last = performance.now();
@@ -123,6 +124,8 @@ class Game {
     this._fireCount = 0; this._fragWindowT = 0;
     this.weather = { kind: 'clear', t: rand(35, 60) };
     this.runStats = { damageTaken: 0, fragKills: 0 };
+    // 可破坏物布置（每局重新生成）
+    if (typeof spawnDestructibles !== 'undefined') spawnDestructibles(this);
     // 战役继承（在剧情对话前应用）
     if (this._pendingCarry) { this._applyCarry(this._pendingCarry); this._pendingCarry = null; }
     // 联机：标记在局
@@ -296,7 +299,6 @@ class Game {
     // 掉落物
     for (const l of this.loots) l.update(dt, this);
     this.loots = this.loots.filter(l => !l.dead);
-
     // 火焰环境声
     const fc = this.fireZones.length;
     if (fc > 0 && this._fireCount === 0) AUDIO.startFireLoop();
@@ -534,6 +536,8 @@ class Game {
     this.fireZones = []; this.acidPools = [];
     for (const l of this.loots) l.dispose();
     this.loots = [];
+    for (const d of this.destructibles) if (!d.dead) d.dispose();
+    this.destructibles = [];
     if (this.weapons) this.weapons._disposeViewmodel();
     this.player = null; this.weapons = null; this.mode = null;
     this.interactText = null;

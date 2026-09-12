@@ -265,6 +265,21 @@ class WeaponSystem {
   _hitscan(game, origin, dir, def) {
     const maxT = def.range;
     let bestT = rayAABBs(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, maxT);
+    // 可破坏物遮挡判定（爆炸桶可被引爆）
+    if (typeof hitDestructibles !== 'undefined' && game.destructibles && game.destructibles.length) {
+      let nearest = null, nearestT = bestT;
+      for (const d of game.destructibles) {
+        if (d.dead) continue;
+        const c = { minX: d.x - d.cfg.w / 2, maxX: d.x + d.cfg.w / 2, minZ: d.z - d.cfg.w / 2, maxZ: d.z + d.cfg.w / 2, minY: 0, maxY: d.cfg.h };
+        const t = rayOneAABB(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, c);
+        if (t !== null && t < nearestT) { nearestT = t; nearest = d; }
+      }
+      if (nearest) {
+        nearest.hit(def.damage * this.w.dmgMult, game);
+        PARTICLES.impact(origin.x + dir.x * nearestT, origin.y + dir.y * nearestT, origin.z + dir.z * nearestT);
+        return null;
+      }
+    }
     let hitZ = null, isHead = false;
 
     for (const z of game.zombies) {

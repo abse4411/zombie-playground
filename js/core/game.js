@@ -504,10 +504,22 @@ class Game {
       if (this._beatT <= 0) { this._beatT = 1.05; AUDIO.heartbeat(); }
     }
 
-    // 补给区交互
+    // 补给区交互（v9.8 升级为安全屋：屏障挡尸+缓慢回血）
     this.interactText = null;
     const bz = ENGINE.mapDef.buyZone;
     const inZone = dist2d(p.pos.x, p.pos.z, bz.x, bz.z) < bz.r;
+    // 安全屋屏障：丧尸被推出圈外（L4D safe room 规则）
+    for (const z of this.zombies) {
+      if (z.dead || z.boss) continue;
+      const dz2 = dist2d(z.pos.x, z.pos.z, bz.x, bz.z);
+      if (dz2 < bz.r + 0.3) {
+        const push = (bz.r + 0.4 - dz2) / (dz2 || 1);
+        z.pos.x += (z.pos.x - bz.x) * push;
+        z.pos.z += (z.pos.z - bz.z) * push;
+      }
+    }
+    // 安全屋回血：圈内每秒+3（战斗中躲圈=战术撤退）
+    if (inZone && p.alive && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + 3 * dt);
     if (p.alive && inZone) this.interactText = (INPUT.touch ? '点击补给站按钮' : '[E] 打开补给站');
     const shopAnywhere = (this.mode instanceof HuntMode && this.mode.state === 'intermission')
       || (this.mode instanceof TutorialMode && this.mode.shopStep);

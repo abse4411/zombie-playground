@@ -78,6 +78,7 @@ class HuntMode {
       }
     } else {
       this._directorTick(dt);
+      g.spawner.directorTick(dt);   // L4D三态导演+尸潮事件（v9.8）
       g.spawner.update(dt);
       if (g.spawner.exhausted() && g.aliveZombies() === 0) {
         const bonus = GAMECONFIG.economy.waveBonusBase + GAMECONFIG.economy.waveBonusPerWave * this.wave;

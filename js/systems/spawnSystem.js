@@ -61,6 +61,46 @@ class SpawnSystem {
 
   setMults(m) { this.mults = m; }
 
+  /* ---------- L4D 导演三态 + 尸潮事件（v9.8） ---------- */
+  // 狩猎模式每帧调用：Build→Peak→Relax 强度曲线 + 随机尸潮事件
+  directorTick(dt) {
+    const g = this.game;
+    if (!this.director) this.director = { state: 'build', t: 0, hordeT: rand(75, 130), hordeActive: 0 };
+    const D = this.director;
+    D.t += dt;
+    const tension = clamp(g.aliveZombies() / 14, 0, 1);
+    switch (D.state) {
+      case 'build':   // 酝酿：常规节奏
+        if (tension > 0.75 && D.t > 20) { D.state = 'peak'; D.t = 0; HUD.banner('⚡ 感染风暴', '撑住这波！'); }
+        break;
+      case 'peak':    // 顶峰：加速刷怪
+        this.interval = Math.max(0.5, this.interval * (1 - dt * 0.05));
+        if (tension < 0.35 || D.t > 45) { D.state = 'relax'; D.t = 0; HUD.toast('🫧 尸潮退去——抓紧补给'); }
+        break;
+      case 'relax':   // 释放：刷怪降速30%
+        if (D.t > 18) { D.state = 'build'; D.t = 0; }
+        break;
+    }
+    // 尸潮事件（L4D Horde）：周期触发40秒高强度潮
+    D.hordeT -= dt;
+    if (D.hordeT <= 0 && D.hordeActive <= 0 && g.state === 'playing') {
+      D.hordeT = rand(90, 150);
+      D.hordeActive = 40;
+      HUD.banner('🚨 尸潮来袭！', '普通感染体蜂拥而至');
+      AUDIO.hordeHorn();
+      ENGINE.shake(0.25);
+    }
+    if (D.hordeActive > 0) {
+      D.hordeActive -= dt;
+      this.timer -= dt * 2.2;   // 刷速×2.2
+      // 额外预算注入（小尸为主）
+      if (this.budget < 30) this.budget += dt * 6;
+      if (Math.random() < dt * 1.2) this.spawnOne(Math.random() < 0.8 ? 'walker' : 'runner');
+    }
+    // relax 态刷怪间隔 ×1.4
+    if (D.state === 'relax') this.interval = Math.min(6, this.interval * (1 + dt * 0.02));
+  }
+
   remaining() {
     let r = this.queue.length;
     if (this.budget > 0) r += Math.ceil(this.budget / 1.6);

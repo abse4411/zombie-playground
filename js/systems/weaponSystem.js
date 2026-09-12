@@ -141,6 +141,7 @@ class WeaponSystem {
     if (INPUT.justPressed('KeyT')) this._throw('molotov', game);
     if (INPUT.justPressed('KeyR')) this._startReload();
     if (INPUT.justPressed('KeyF')) this._kick(game);
+    if (INPUT.justPressed('KeyH')) this.p.useMedkit();
 
     this.cooldown -= dt; this.switchT -= dt; this._emptyCd -= dt; this.kickCd -= dt;
     if (this.reloadT > 0) {

@@ -24,6 +24,7 @@ class Player {
     };
     this.current = 'secondary';
     this.throwables = { frag: { count: 2 }, molotov: { count: 1 } };
+    this.medkits = 2;   // 背包医疗包
     this.alive = true;
     this.lastDamageT = -99;
     this.slowT = 0; this.ads = false; this.onGround = true;
@@ -170,6 +171,15 @@ class Player {
       this.hp = 0; this.alive = false;
       if (game) game.playerDied();
     }
+  }
+
+  // 使用医疗包（H键）
+  useMedkit() {
+    if (this.medkits <= 0 || this.hp >= this.maxHp) { AUDIO.emptyClick(); return; }
+    this.medkits--;
+    this.hp = Math.min(this.maxHp, this.hp + GAMECONFIG.inventory.medkitHeal);
+    AUDIO.purchase();
+    HUD.pickup(`🧪 使用医疗包 +${GAMECONFIG.inventory.medkitHeal}HP（剩 ${this.medkits}）`, 1);
   }
 
   addMoney(n) {

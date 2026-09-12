@@ -427,6 +427,29 @@ button { font-family: var(--font); cursor: pointer; }
   transition: width .1s;
 }
 
+/* ---------- 掉落物拾取播报 ---------- */
+#medkit-row { margin-top: 5px; font-size: 13px; color: rgba(255,255,255,.85); text-shadow: 0 1px 3px #000; }
+#medkit-row i { font-style: normal; color: var(--dim); font-size: 11px; }
+#medkit-row b { color: #ff8f9f; }
+#medkit-row.empty { opacity: .4; }
+#pickup-feed {
+  position: absolute; right: 22px; top: 34%; text-align: right; pointer-events: none;
+}
+.pickup-item {
+  font-size: 14px; font-weight: 700; margin: 3px 0;
+  text-shadow: 0 1px 3px #000; animation: pickIn 2.8s ease-out forwards;
+}
+.pickup-item.r0 { color: #b8c0cc; }
+.pickup-item.r1 { color: #52d273; }
+.pickup-item.r2 { color: #3aa0ff; }
+.pickup-item.r3 { color: #b05cff; font-size: 16px; }
+@keyframes pickIn {
+  0% { opacity: 0; transform: translateX(40px); }
+  10% { opacity: 1; transform: none; }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-14px); }
+}
+
 /* ---------- 联机队友列表 ---------- */
 #team-list {
   position: absolute; left: 16px; top: 64px; z-index: 4;

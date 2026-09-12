@@ -113,6 +113,18 @@ const HUD = {
     setTimeout(() => { if (d.parentNode) d.parentNode.removeChild(d); }, 900);
   },
 
+  // 拾取播报（右侧中部，带稀有度色）
+  pickup(text, rarity) {
+    const feed = document.getElementById('pickup-feed');
+    if (!feed) return;
+    const d = document.createElement('div');
+    d.className = 'pickup-item r' + (rarity || 0);
+    d.textContent = text;
+    feed.appendChild(d);
+    while (feed.children.length > 5) feed.removeChild(feed.firstChild);
+    setTimeout(() => { if (d.parentNode) d.parentNode.removeChild(d); }, 2800);
+  },
+
   banner(main, sub) {
     const b = this.el.banner;
     b.classList.remove('hidden');
@@ -160,6 +172,12 @@ const HUD = {
     this.el.moneyVal.textContent = fmtMoney(p.money);
     this.el.killsVal.textContent = `击杀 ${p.kills}`;
     this.el.headshotVal.textContent = `爆头 ${p.headshots}`;
+    // 医疗包
+    const mk = document.getElementById('medkit-count');
+    if (mk) {
+      mk.textContent = p.medkits;
+      mk.parentElement.classList.toggle('empty', p.medkits <= 0);
+    }
 
     // 武器
     const w = game.weapons.w;

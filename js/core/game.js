@@ -18,6 +18,7 @@ class Game {
     this.projectiles = [];
     this.fireZones = [];
     this.acidPools = [];
+    this.loots = [];
     this.stats = { shots: 0, hits: 0 };
     this.interactText = null;
     this._last = performance.now();
@@ -292,6 +293,10 @@ class Game {
     for (const a of this.acidPools) a.update(dt, this);
     this.acidPools = this.acidPools.filter(a => !a.dead);
 
+    // 掉落物
+    for (const l of this.loots) l.update(dt, this);
+    this.loots = this.loots.filter(l => !l.dead);
+
     // 火焰环境声
     const fc = this.fireZones.length;
     if (fc > 0 && this._fireCount === 0) AUDIO.startFireLoop();
@@ -527,6 +532,8 @@ class Game {
     for (const f of this.fireZones) ENGINE.scene.remove(f.mesh);
     for (const a of this.acidPools) ENGINE.scene.remove(a.mesh);
     this.fireZones = []; this.acidPools = [];
+    for (const l of this.loots) l.dispose();
+    this.loots = [];
     if (this.weapons) this.weapons._disposeViewmodel();
     this.player = null; this.weapons = null; this.mode = null;
     this.interactText = null;

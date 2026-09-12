@@ -111,6 +111,12 @@ const GAMECONFIG = {
     rewardMult: 4,
   },
 
+  /* ---------- 背包（v3.5） ---------- */
+  inventory: {
+    medkitMax: 5,       // 医疗包携带上限
+    medkitHeal: 55,     // 单个回复量
+  },
+
   radar: { range: 55 },
   sensBase: 0.0021,       // 灵敏度基数 rad/px
   touchSensBase: 0.0042,  // 触屏灵敏度基数

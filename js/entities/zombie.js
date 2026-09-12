@@ -481,6 +481,7 @@ class Zombie {
     const d = game.player ? dist2d(this.pos.x, this.pos.z, game.player.pos.x, game.player.pos.z) : 0;
     AUDIO.zombieDie(d, this.growlPitch);
     PARTICLES.blood(this.pos.x, 1.1 * this.group.scale.x, this.pos.z, 14);
+    if (typeof spawnLoot !== 'undefined' && !this.dummy) spawnLoot(game, this);
     if (this.type.explode) explodeBloater(game, this);
     game.onZombieKilled(this, headshot);
   }

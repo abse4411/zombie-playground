@@ -381,6 +381,10 @@ button { font-family: var(--font); cursor: pointer; }
 .si-btn.poor:hover { background: transparent; }
 .si-btn.owned { border-color: var(--gold); color: var(--gold); background: rgba(255,200,87,.06); }
 .si-btn.maxed { border-color: rgba(255,255,255,.15); color: #5a6068; cursor: default; }
+/* 满级精通（v11.11） */
+#weapon-name.mastery { color: #ffd76a; text-shadow: 0 0 14px rgba(255,200,80,.55); }
+.bp-star { color: #ffd76a; font-style: normal; text-shadow: 0 0 8px rgba(255,200,80,.6); }
+
 /* 升级工作台（v11.10） */
 .si-lines { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
 .si-line { border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.25); padding: 6px 8px; display: flex; align-items: center; gap: 8px; }

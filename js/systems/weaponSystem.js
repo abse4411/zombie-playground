@@ -8,11 +8,42 @@
 const W_UPGRADES = {
   dmg:  { name: '威力',     max: 5, gain: '伤害 +8%',            drawback: '弹匣容量 -5%',   price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.28 * (lv + 1)) },
   mag:  { name: '扩容弹匣', max: 3, gain: '弹匣容量 +20%',        drawback: '换弹时间 +6%',   price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.22 * (lv + 1)) },
-  rel:  { name: '快速换弹', max: 4, gain: '换弹时间 -10%',        drawback: '备弹上限 -8%',   price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.24 * (lv + 1)) },
+  rel:  { name: '快速换弹', max: 4, gain: '换弹时间 -10%',        drawback: '备弹 -8%',       price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.24 * (lv + 1)) },
   rof:  { name: '射速',     max: 3, gain: '射速 +7%',             drawback: '后坐力 +6%',     price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.26 * (lv + 1)) },
   acc:  { name: '精准',     max: 3, gain: '散布 -12%',            drawback: '移速 -1.5%',     price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.22 * (lv + 1)) },
   res:  { name: '备弹扩容', max: 2, gain: '备弹 +25%',            drawback: '武器更重',       price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.2 * (lv + 1)) },
 };
+
+/* ---------- 武器特性专属升级线（v11.11）：按 def 特征自动附加，各有上限 ---------- */
+const W_SPECIALS = {
+  pel: { name: '弹丸密度', max: 2, gain: '弹丸 +1',        drawback: '备弹 -10%',    price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.3 * (lv + 1)) },
+  psc: { name: '穿甲弹芯', max: 2, gain: '穿透 +1',        drawback: '移速 -1.5%',   price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.32 * (lv + 1)) },
+  rng: { name: '加长握柄', max: 2, gain: '范围 +0.25m',    drawback: '攻速 -4%',     price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.26 * (lv + 1)) },
+  knb: { name: '配重锤头', max: 2, gain: '击退 +18%',      drawback: '移速 -1%',     price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.24 * (lv + 1)) },
+  blk: { name: '高爆装药', max: 2, gain: '爆炸半径 +12%',  drawback: '自伤 +10%',    price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.3 * (lv + 1)) },
+  bur: { name: '稠化燃料', max: 2, gain: '灼烧 +25%/s',    drawback: '直伤 -4%',     price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.28 * (lv + 1)) },
+  hop: { name: '超导线圈', max: 2, gain: '链跳 +1',        drawback: '链电威力 -3%', price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.34 * (lv + 1)) },
+  frz: { name: '深寒制剂', max: 2, gain: '冻结 +1s',       drawback: '换弹 +5%',     price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.28 * (lv + 1)) },
+};
+
+// 按武器特征返回全部可用升级线（带id的配置对象数组）；近战剔除弹药概念线
+function getUpgradeLines(def) {
+  const mk = (id, ovr) => Object.assign({ id }, W_UPGRADES[id] || W_SPECIALS[id], ovr || {});
+  if (def.melee) return [
+    mk('dmg', { gain: '伤害 +8%', drawback: '攻速 -2%' }),
+    mk('rof', { name: '攻速' }),
+    mk('rng'), mk('knb'),
+  ];
+  const ids = ['dmg', 'mag', 'rel', 'rof', 'acc', 'res'];
+  if ((def.pellets || 1) > 1) ids.push('pel');
+  if (def.pierce || def.scope) ids.push('psc');
+  if (def.launcher) ids.push('blk');
+  if (def.flame) ids.push('bur');
+  if (def.chain) ids.push('hop');
+  if (def.frost) ids.push('frz');
+  return ids.map(id => mk(id));
+}
+function upgradeDef(id) { return W_UPGRADES[id] || W_SPECIALS[id]; }
 
 class WeaponInstance {
   constructor(def) {
@@ -38,11 +69,13 @@ class WeaponInstance {
     let r = 1;
     if (this.upgrades.rel) r *= 1 - 0.10 * this.upgrades.rel;
     if (this.upgrades.mag) r *= 1 + 0.06 * this.upgrades.mag;
+    if (this.upgrades.frz) r *= 1 + 0.05 * this.upgrades.frz;   // 深寒制剂代价（v11.11）
     return r;
   }
   get rpmMult() {
     let r = 1;
     if (this.upgrades.rof) r *= 1 + 0.07 * this.upgrades.rof;
+    if (this.def.melee) r *= 1 - 0.02 * (this.upgrades.dmg || 0) - 0.04 * (this.upgrades.rng || 0);   // 近战攻速代价（v11.11）
     return r;
   }
   get spreadMult() {
@@ -54,7 +87,20 @@ class WeaponInstance {
     let r = 1;
     if (this.upgrades.res) r *= 1 + 0.25 * this.upgrades.res;
     if (this.upgrades.rel) r *= 1 - 0.08 * this.upgrades.rel;
+    if (this.upgrades.pel) r *= 1 - 0.10 * this.upgrades.pel;   // 霰弹弹丸密度代价（v11.11）
     return r;
+  }
+  // 移速代价乘区（v11.11：精准/穿芯/锤头/备弹的重量代价）
+  get movePenalty() {
+    const u = this.upgrades;
+    return 1 - 0.015 * (u.acc || 0) - 0.015 * (u.psc || 0) - 0.01 * (u.knb || 0) - 0.008 * (u.res || 0);
+  }
+  // 灼烧 dps 乘区（稠化燃料）
+  get burnMult() { return 1 + 0.25 * ((this.upgrades && this.upgrades.bur) || 0); }
+  // 满级精通：全部可用升级线满级（v11.11）
+  get mastery() {
+    if (this._mastery) return true;
+    return getUpgradeLines(this.def).every(L => ((this.upgrades && this.upgrades[L.id]) || 0) >= L.max);
   }
   // 品质色阶（总等级=分项和+旧lvl）
   get tierLevel() { return this.lvl + Object.values(this.upgrades || {}).reduce((a, b) => a + b, 0); }
@@ -167,8 +213,8 @@ class WeaponSystem {
   /* ---------- 主更新 ---------- */
   update(dt, game) {
     const p = this.p;
-    // 武器重量移速（v6.3）：近战1.02最快，机枪0.82最慢
-    p.moveMult = (this.w && (this.w.def.weight || this.w.def.slowMove)) || 1;
+    // 武器重量移速（v6.3）：近战1.02最快，机枪0.82最慢；升级移速代价乘区（v11.11）
+    p.moveMult = ((this.w && (this.w.def.weight || this.w.def.slowMove)) || 1) * ((this.w && this.w.movePenalty) || 1);
 
     // 切换武器
     // 狙击开镜时滚轮保留给倍率切换（不切枪），否则滚轮切枪
@@ -278,9 +324,12 @@ class WeaponSystem {
           cam.getWorldPosition(origin);
           const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
           game._fragWindowT = 3;
+          // 高爆装药（v11.11）：半径+12%/级，自伤+10%/级
+          const blkLv = (w.upgrades && w.upgrades.blk) || 0;
           game.projectiles.push(new Projectile('gl',
             origin.x + dir.x * 0.5, origin.y - 0.08, origin.z + dir.z * 0.5,
-            dir.x * 16, dir.y * 16 + 1.5, dir.z * 16, { fuse: 3 }));
+            dir.x * 16, dir.y * 16 + 1.5, dir.z * 16,
+            { fuse: 3, radiusMult: 1 + 0.12 * blkLv, selfBonus: 0.1 * blkLv }));
         }
       }
     } else
@@ -302,7 +351,7 @@ class WeaponSystem {
           this._meleeHit(def, game, true);
           ENGINE.shake(0.1);
         } else if (wantFire) {
-          this.cooldown = 60 / (def.rpm * (this.p.rogueRof || 1));
+          this.cooldown = 60 / (def.rpm * (this.p.rogueRof || 1) * (this.w.rpmMult || 1));   // 近战攻速受升级代价影响（v11.11）
           this._swingDur = 0.3;
           this.swingT = 0;
           this._heavySwing = false;
@@ -313,7 +362,7 @@ class WeaponSystem {
     } else {
       const wantFire = def.auto ? INPUT.lmb : INPUT.consumeLmb();
       const galeBoost = this.p.synGale && this.p.moving ? 1.25 : 1;   // 飓风枪手（v10.9）
-      if (wantFire && this.switchT <= 0 && this.reloadT <= 0 && this.cooldown <= 60 / (def.rpm * (this.p.rogueRof || 1) * galeBoost)) {
+      if (wantFire && this.switchT <= 0 && this.reloadT <= 0 && this.cooldown <= 60 / (def.rpm * (this.p.rogueRof || 1) * (w.rpmMult || 1) * galeBoost)) {
         if (w.mag <= 0) {
           if (this._emptyCd <= 0) { AUDIO.emptyClick(); this._emptyCd = 0.3; if (SAVE.data.settings.autoReload !== false) this._startReload(); }
         } else {
@@ -340,7 +389,7 @@ class WeaponSystem {
   /* ---------- 开火与弹道（多弹丸聚合伤害 + 击退） ---------- */
   _fire(def, w, game) {
     w.mag--;
-    this.cooldown = 60 / (def.rpm * (this.p.rogueRof || 1));
+    this.cooldown = 60 / (def.rpm * (this.p.rogueRof || 1) * (w.rpmMult || 1));
     AUDIO.shot(def.sound.freq, def.sound.dur, def.sound.boom);
     this.recoilKick = Math.min(1, this.recoilKick + 0.55);
     const kick = def.recoil * rand(0.7, 1.3);
@@ -363,6 +412,7 @@ class WeaponSystem {
       { speed: 1.6, vy: 1.5, life: 0.5, color: [1, 0.85, 0.3], color2: [0.9, 0.6, 0.1] });
 
     const moving = this.p.moving || this.p.sprinting;
+    const pellets = (def.pellets || 1) + ((w.upgrades && w.upgrades.pel) || 0);   // 弹丸密度升级（v11.11）
     const spread = lerp(def.spread, def.adsSpread, this.adsT) * (w.spreadMult || 1)
       * (moving ? 1.45 : 1) * (this.p.onGround ? 1 : 1.8);
 
@@ -370,7 +420,7 @@ class WeaponSystem {
     const hits = new Map();   // zombie -> {dmg, head, pt}
     let anyHit = false;
 
-    for (let pi = 0; pi < def.pellets; pi++) {
+    for (let pi = 0; pi < pellets; pi++) {
       const dir = fwd.clone();
       if (spread > 0) {
         const a = Math.random() * TAU, r = Math.sqrt(Math.random()) * spread;
@@ -392,9 +442,10 @@ class WeaponSystem {
         const endT = res ? res.pt : origin.clone().addScaledVector(dir, def.range * 0.7);
         TRACERS.fire(mz, endT);
       }
-      // 命中点燃（v7.9 火焰DoT：3秒×25/s 固定值，可刷新）
+      // 命中点燃（v7.9 火焰DoT：3秒×25/s 固定值，可刷新；稠化燃料+25%/级 v11.11）
       if (res && def.flame) {
-        const ign = (z2) => { z2.burnT = 3; z2.burnDps = 25; };
+        const dps2 = 25 * (this.w.burnMult || 1);
+        const ign = (z2) => { z2.burnT = 3; z2.burnDps = dps2; };
         ign(res.zombie);
         if (res.pierced) for (const pe of res.pierced) ign(pe.zombie);
       }
@@ -424,10 +475,11 @@ class WeaponSystem {
     // 专属武器机制（v8.4）
     const exMult = (this.p.explodeMult !== undefined) ? 1 : 1;
     for (const [z, h] of hits) {
-      // 链式闪电（猎犬咆哮者）：跳跃至3m内下一只 ×0.6，最多3跳
+      // 链式闪电（猎犬咆哮者）：跳跃至3m内下一只 ×0.6；超导线圈+1跳/级（v11.11）
       if (def.chain && !isNetClient) {
-        let cur = z, dmg2 = h.dmg, jumped = new Set([z]);
-        for (let hop = 0; hop < def.chain; hop++) {
+        const hops = def.chain + ((w.upgrades && w.upgrades.hop) || 0);
+        let cur = z, dmg2 = h.dmg * (1 - 0.03 * ((w.upgrades && w.upgrades.hop) || 0)), jumped = new Set([z]);
+        for (let hop = 0; hop < hops; hop++) {
           let best = null, bd = 3;
           for (const z2 of game.zombies) {
             if (z2.dead || z2 === cur || jumped.has(z2) || z2.state === 'rise') continue;
@@ -442,15 +494,16 @@ class WeaponSystem {
           jumped.add(best); cur = best;
         }
       }
-      // 冰冻（冬霜之刺）：命中减速3秒
+      // 冰冻（冬霜之刺）：命中减速；深寒制剂+1s/级（v11.11）
       if (def.frost && !isNetClient) {
-        z.slowT = Math.max(z.slowT || 0, 3);
+        z.slowT = Math.max(z.slowT || 0, 3 + ((w.upgrades && w.upgrades.frz) || 0));
         PARTICLES.spawn('smoke', z.pos.x, 1.1 * z.group.scale.x, z.pos.z, 3,
           { speed: 0.5, vy: 0.4, life: 0.6, color: [0.7, 0.9, 1], color2: [0.3, 0.5, 0.8] });
       }
     }
-    // 三连齐射（九头蛇）：额外发射2枚小火箭
+    // 三连齐射（九头蛇）：额外发射2枚小火箭（高爆装药同步生效 v11.11）
     if (def.volley && !isNetClient) {
+      const blkLv = (w.upgrades && w.upgrades.blk) || 0;
       for (let vi = 1; vi < def.volley; vi++) {
         const sp = (vi - 1) * 0.05 - 0.025;
         const dirV = fwd.clone();
@@ -458,7 +511,7 @@ class WeaponSystem {
         game.projectiles.push(new Projectile('gl',
           origin.x + dirV.x * 0.5, origin.y - 0.05, origin.z + dirV.z * 0.5,
           dirV.x * 14, dirV.y * 14 + 2.2, dirV.z * 14,
-          { fuse: 4 }));
+          { fuse: 4, radiusMult: 1 + 0.12 * blkLv, selfBonus: 0.1 * blkLv }));
       }
     }
 
@@ -516,7 +569,7 @@ class WeaponSystem {
     }
     allHits.sort((a, b) => a.t - b.t);
 
-    const take = allHits.slice(0, (def.pierce || 0) + 1);
+    const take = allHits.slice(0, (def.pierce || 0) + 1 + ((this.w.upgrades && this.w.upgrades.psc) || 0));   // 穿甲弹芯（v11.11）
     if (take.length) {
       const first = take[0];
       hitZ = first.z; isHead = first.head; bestT = first.t;
@@ -536,6 +589,8 @@ class WeaponSystem {
         }
         // 背水一战（v8.4）：生命<25% 伤害加成
         if (this.p.laststandVal && this.p.hp <= this.p.maxHp * 0.25) d2 *= (1 + this.p.laststandVal);
+        // 稠化燃料代价：直伤 -4%/级（v11.11）
+        if (def.flame && this.w.upgrades.bur) d2 *= 1 - 0.04 * this.w.upgrades.bur;
         if (def.falloff) {
           const f = def.falloff;
           if (t2 > f.end) d2 *= f.min;
@@ -578,10 +633,12 @@ class WeaponSystem {
     AUDIO.melee(def.damage > 60 || heavy);
     if (heavy) AUDIO.impact();
     const p = this.p;
+    const wi = this.w;
     const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
-    const range = def.range + (heavy ? 0.4 : 0);
+    // 加长握柄（v11.11）：范围 +0.25m/级；配重锤头：击退 +18%/级
+    const range = def.range + ((wi.upgrades && wi.upgrades.rng) || 0) * 0.25 + (heavy ? 0.4 : 0);
     const dmg = def.damage * this.w.dmgMult * p.dmgMult * (heavy ? 2.2 : 1);
-    const kbPow = GAMECONFIG.feel.kbMelee * (heavy ? 2.2 : 1);
+    const kbPow = GAMECONFIG.feel.kbMelee * (heavy ? 2.2 : 1) * (1 + 0.18 * ((wi.upgrades && wi.upgrades.knb) || 0));
     let hitAny = false;
     game.stats.shots++;
     for (const z of game.zombies) {

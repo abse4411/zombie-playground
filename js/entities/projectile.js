@@ -65,7 +65,7 @@ class Projectile {
         const dx2 = zb.pos.x - p.x, dz2 = zb.pos.z - p.z;
         if (dx2 * dx2 + dz2 * dz2 < 0.42 && p.y < zb.pos.y + 1.9 * zb.group.scale.x) {
           this._finish(game);
-          if (this.kind === 'gl') explodeGrenade(game, p.x, p.y, p.z, { damage: 120, radius: 6, selfMult: 0.4 });
+          if (this.kind === 'gl') explodeGrenade(game, p.x, p.y, p.z, { damage: 120, radius: 6 * (this.opts.radiusMult || 1), selfMult: 0.4 * (1 + (this.opts.selfBonus || 0)) });
           else explodeGrenade(game, p.x, p.y, p.z, THROWABLES.frag);
           return;
         }
@@ -74,7 +74,7 @@ class Projectile {
     // M79榴弹：碰炸（墙/地/碰到即炸）
     if (this.kind === 'gl' && (this.wallHit || p.y <= this.r + 0.01 || this.fuse <= 0)) {
       this._finish(game);
-      explodeGrenade(game, p.x, p.y, p.z, { damage: 120, radius: 6, selfMult: 0.4 });
+      explodeGrenade(game, p.x, p.y, p.z, { damage: 120, radius: 6 * (this.opts.radiusMult || 1), selfMult: 0.4 * (1 + (this.opts.selfBonus || 0)) });
       return;
     }
 

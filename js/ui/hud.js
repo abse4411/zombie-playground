@@ -212,8 +212,13 @@ const HUD = {
         this.el.ammoMag.className = t.count === 0 ? 'empty' : '';
       }
     } else if (w) {
-      this.el.weaponName.textContent = w.def.name + (w.lvl ? ` Lv.${w.lvl}` : '');
-      this.el.weaponName.className = w.lvl ? ('wpn-lv' + w.lvl) : '';
+      if (w.mastery) {   // 满级精通（v11.11）：金色★名
+        this.el.weaponName.textContent = '★ ' + w.def.name;
+        this.el.weaponName.className = 'mastery';
+      } else {
+        this.el.weaponName.textContent = w.def.name + (w.lvl ? ` Lv.${w.lvl}` : '');
+        this.el.weaponName.className = w.lvl ? ('wpn-lv' + w.lvl) : '';
+      }
       if (w.def.melee) {
         this.el.ammoMag.textContent = '∞';
         this.el.ammoMag.className = '';

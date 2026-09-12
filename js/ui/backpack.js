@@ -56,7 +56,7 @@ const BACKPACK = {
         }
         const equipped = p.weapons[slot] === inst;
         row.className = 'bp-w equip-slot' + (equipped ? ' equipped' : '');
-        row.innerHTML = `<span class="bp-slot">${SLOT_NAMES[slot]}${i + 1}</span><b>${inst.def.name}${inst.lvl ? ` Lv.${inst.lvl}` : ''}</b>
+        row.innerHTML = `<span class="bp-slot">${SLOT_NAMES[slot]}${i + 1}</span><b>${inst.mastery ? '<i class="bp-star">★</i> ' : ''}${inst.def.name}${inst.mastery ? ' 精通' : inst.tierLevel ? ` · 强化${inst.tierLevel}` : ''}</b>
           <span class="bp-ammo">${inst.def.melee ? '∞' : `${inst.mag}/${inst.reserve}`}</span>`;
         const btn = document.createElement('button');
         if (equipped) {

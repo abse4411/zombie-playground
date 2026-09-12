@@ -46,24 +46,25 @@ const SHOP = {
       for (const slot of ['primary', 'secondary', 'melee']) {
         for (const inst of p.rack[slot]) {
           if (!inst || !inst.def) continue;
+          // 通用6线 + 按武器特征附加专属线（v11.11）
           const lines = [];
-          for (const upId in W_UPGRADES) {
-            const U = W_UPGRADES[upId];
-            const lv = (inst.upgrades && inst.upgrades[upId]) || 0;
-            const maxed = lv >= U.max;
+          for (const L of getUpgradeLines(inst.def)) {
+            const lv = (inst.upgrades && inst.upgrades[L.id]) || 0;
+            const maxed = lv >= L.max;
             lines.push({
-              upId, name: U.name, lv, max: U.max, gain: U.gain, drawback: U.drawback,
-              maxed, price: maxed ? 0 : U.price(inst.def.price, lv),
+              upId: L.id, name: L.name, lv, max: L.max, gain: L.gain, drawback: L.drawback,
+              maxed, price: maxed ? 0 : L.price(inst.def.price, lv),
             });
           }
+          const star = inst.mastery ? ' ★精通' : (inst.tierLevel ? ` · 强化${inst.tierLevel}级` : '');
           items.push({
             kind: 'upbench', id: 'bench_' + inst.def.id, def: inst.def, slot,
-            name: `${inst.def.name}${inst.tierLevel ? ` · 强化${inst.tierLevel}级` : ''}`,
+            name: `${inst.def.name}${star}`,
             desc: inst.def.desc,
             price: 0, state: 'bench', lines,
             stats: inst.def.melee
               ? [['伤害', Math.round(inst.def.damage * inst.dmgMult)], ['范围', (inst.def.range + ((inst.upgrades && inst.upgrades.rng) || 0) * 0.25).toFixed(1) + 'm']]
-              : [['伤害', Math.round(inst.def.damage * inst.dmgMult) * (inst.def.pellets || 1)], ['弹匣', inst.magSize], ['换弹', (inst.def.reloadTime * inst.reloadTimeMult).toFixed(1) + 's']],
+              : [['伤害', Math.round(inst.def.damage * inst.dmgMult) * ((inst.def.pellets || 1) + ((inst.upgrades && inst.upgrades.pel) || 0))], ['弹匣', inst.magSize], ['换弹', (inst.def.reloadTime * inst.reloadTimeMult).toFixed(1) + 's']],
           });
         }
       }
@@ -190,9 +191,16 @@ const SHOP = {
         if (inst && item.upId) {
           inst.upgrades = inst.upgrades || {};
           inst.upgrades[item.upId] = (inst.upgrades[item.upId] || 0) + 1;
-          inst.lvl = inst.tierLevel - (inst.lvl || 0) >= 0 ? inst.lvl : inst.lvl;   // 旧品质字段保留
           // 即时生效：满弹引用新弹容
           if (item.upId === 'mag' || item.upId === 'dmg') inst.mag = inst.magSize;
+          if (item.upId === 'pel' || item.upId === 'rel') inst.reserve = Math.min(inst.reserve, Math.floor(inst.def.reserve * p.reserveMult * (inst.reserveMaxMult || 1) * 1.2));
+          // 满级精通（v11.11）：全部可用线满级 → ★精通
+          if (inst.mastery && !inst._masteryToasted) {
+            inst._masteryToasted = true;
+            inst._mastery = true;
+            HUD.banner(`⭐ ${inst.def.name} 精通！`, '全部升级线已满级 —— 该武器已臻化境');
+            AUDIO.streak();
+          }
         }
         break;
       }

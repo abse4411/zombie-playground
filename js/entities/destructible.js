@@ -82,6 +82,11 @@ class Destructible {
 }
 
 const DESTRUCTIBLES = {
+  reactor: {
+    hp: 260, w: 2.4, h: 3.6, outline: true,
+    geo: new THREE.CylinderGeometry(1.1, 1.3, 3.6, 8),
+    mat: () => new THREE.MeshStandardMaterial({ color: 0x3a4248, roughness: 0.5, metalness: 0.7, emissive: 0xb03828, emissiveIntensity: 0.55 }),
+  },
   barrel: {
     hp: 1, w: 0.9, h: 1.15, outline: true, light: true,
     geo: new THREE.CylinderGeometry(0.42, 0.42, 1.15, 12),

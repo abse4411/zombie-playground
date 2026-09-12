@@ -13,6 +13,10 @@ class EncounterMode {
     this.brutePtr = 0;
     this.finaleSpawned = false;   // 幕末Boss（v6.9）
     this.finaleHordeSpawned = false;   // L4D finale尸潮（v9.9）
+    // CSOL大灾变式阶段制（v10.0）：defend→destroy→boss
+    this.phaseIdx = -1;
+    this.reactorSpawned = false;
+    this.bossPhaseSpawned = false;
     this.midPlayed = false;
     this.ended = false;
     this.earlyWin = false;
@@ -79,6 +83,8 @@ class EncounterMode {
       }
     }
 
+    // ---- CSOL大灾变阶段制（v10.0）----
+    if (m.phases) this._phaseTick(g);
     // L4D式finale尸潮（v9.9）：坦克+持续尸潮压阵
     if (m.finaleHorde && !this.finaleHordeSpawned && this.elapsed >= m.finaleHorde.at) {
       this.finaleHordeSpawned = true;
@@ -195,6 +201,48 @@ class EncounterMode {
     const finish = early ? '（提前清空全场！）' : '';
     STORY.play([{ s: '任务完成', t: `坚守目标达成${finish} · 评级 ${this.rating}` }, ...this.m.outro],
       () => GAME.showVictory(this.idx));
+  }
+
+  /* ---------- CSOL大灾变阶段系统（v10.0） ---------- */
+  _phaseTick(g) {
+    const phases = this.m.phases;
+    const cur = phases[this.phaseIdx];
+    // 推进条件
+    let advance = false;
+    if (this.phaseIdx === -1) advance = true;   // 进入第一阶段
+    else if (cur.type === 'defend' && this.elapsed >= cur.until) advance = true;
+    else if (cur.type === 'destroy' && g.destructibles.filter(d => d.kind === 'reactor' && !d.dead).length === 0 && this.reactorSpawned) advance = true;
+    if (advance) {
+      this.phaseIdx++;
+      const ph = phases[this.phaseIdx];
+      if (!ph) return;
+      // 转场演出（v10.2）
+      HUD.banner('▣ ' + ph.label, '阶段 ' + (this.phaseIdx + 1) + ' / ' + phases.length);
+      AUDIO.waveHorn();
+      ENGINE.shake(0.3);
+      if (ph.type === 'destroy' && !this.reactorSpawned) {
+        // 生成3座反应堆（围绕地图中心三角布置）
+        this.reactorSpawned = true;
+        const S = Math.min(30, ENGINE.mapDef.size - 10);
+        const spots = [[-S * 0.5, -S * 0.5], [S * 0.5, -S * 0.4], [0, S * 0.55]];
+        for (const [x, z] of spots) {
+          const d = new Destructible('reactor', x, z, rand(0, TAU));
+          g.destructibles.push(d);
+          PARTICLES.dust(x, 1, z, 10);
+        }
+        HUD.toast('💥 摧毁全部 3 座赤潮反应堆！');
+      }
+      if (ph.type === 'boss' && !this.bossPhaseSpawned) {
+        this.bossPhaseSpawned = true;
+        const b = g.spawner.spawnOne('brute', undefined, undefined, { boss: true, bossId: 'xt300' });
+        if (b) { g.onBossSpawned(b); HUD.killfeed('⚠ 钢铁哨兵 XT-300 启动！', 'big'); }
+      }
+    }
+    // defend 阶段提示
+    if (cur && cur.type === 'defend') {
+      const left = Math.max(0, Math.ceil(cur.until - this.elapsed));
+      if (left !== this._lastDefendLeft) { this._lastDefendLeft = left; }
+    }
   }
 
   getTopInfo() {

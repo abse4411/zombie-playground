@@ -25,3 +25,4 @@
 | (v9.1 无新调研——回归收尾版) | 回归总账 | v9.1 |
 | v9.2-backpack-architecture.md | 背包架构（装备栏/仓库双区/容量升级/掉落折现） | v9.2~v9.5 |
 | v9.7-l4d-mechanics.md | 求生之路机制移植（特感5型/导演三态/尸潮事件/安全屋） | v9.7~v9.9 |
+| v10.0-csol-cataclysm.md | CSOL大灾变移植（阶段关卡/机械Boss/Boss掉落） | v10.0~v10.2 |

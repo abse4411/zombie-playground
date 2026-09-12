@@ -98,7 +98,12 @@ const NESTS = {
     const bonus = 300;
     game.player.addMoney(bonus);
     HUD.banner('🔥 尸巢已焚毁！', `区域净化 · 赏金 +$${bonus}`);
-    if (typeof SAVE !== 'undefined' && SAVE.data) SAVE.data.nestsBurned = (SAVE.data.nestsBurned || 0) + 1;
+    if (typeof SAVE !== 'undefined' && SAVE.data) {
+      SAVE.data.nestsBurned = (SAVE.data.nestsBurned || 0) + 1;
+      SAVE.data.neroTech = (SAVE.data.neroTech || 0) + 1;
+      HUD.toast(`🔬 NERO科技碎片 +1（${SAVE.data.neroTech}/6）`);
+      if (SAVE.data.neroTech >= 6 && typeof ACHV !== 'undefined') ACHV.unlock('nero6');
+    }
     // 区域净化：清走巢附近游荡丧尸的30%概率（软性效果——通过 spawner 查询）
     setTimeout(() => ENGINE.scene.remove(nest.group), 1200);
     nest.group.traverse(o => { if (o.isMesh) o.visible = false; });

@@ -273,6 +273,14 @@ const WEAPONS = {
     sound: { whoosh: 1.6 },
     desc: '一斧头一个。命中宽广的扇面，专治贴脸包围。',
   },
+  stunbaton: {
+    id: 'stunbaton', name: 'IPCA 电击棍', slot: 'melee', price: 0, unlockBy: 'nero6',
+    weight: 1.0,
+    damage: 55, rpm: 160, range: 2.4, arc: 0.55, melee: true, shock: true,
+    color: 0x2a3a4a, len: 0.5,
+    sound: { freq: 380, dur: 0.12, boom: 0.5 },
+    desc: '【收集解锁】集齐6块NERO科技解锁——NERO研究员的秘密防身武器：高压电弧麻痹感染体（命中附加1.5秒麻痹）。小概率点燃目标。',
+  },
   chainsaw: {
     id: 'chainsaw', name: '电锯', slot: 'melee', price: 3200,
     weight: 0.90,

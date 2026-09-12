@@ -456,6 +456,17 @@ class WeaponSystem {
   }
 
   /* ---------- 近战：轻击(LMB)/重击(RMB) ---------- */
+  // 电击麻痹（v10.5 电击棍）
+  _applyShock(z, game) {
+    if (!z || z.dead || z.boss) return;
+    z.stagger = Math.max(z.stagger, 1.5);
+    z.slowT = Math.max(z.slowT || 0, 1.5);
+    if (Math.random() < 0.15) { z.burnT = 2; z.burnDps = 15; }   // 15%点燃
+    PARTICLES.spawn('spark', z.pos.x, 1.1 * z.group.scale.x, z.pos.z, 6,
+      { speed: 2.4, vy: 1.2, life: 0.3, color: [0.55, 0.85, 1], color2: [0.1, 0.3, 0.8] });
+    AUDIO.shot(420, 0.08, 0.3);
+  }
+
   _meleeHit(def, game, heavy) {
     AUDIO.melee(def.damage > 60 || heavy);
     if (heavy) AUDIO.impact();
@@ -473,6 +484,7 @@ class WeaponSystem {
       if (d > range + 0.35 * z.group.scale.x) continue;
       if ((dx * fx + dz * fz) / (d || 1) < Math.cos(def.arc + (heavy ? 0.85 : 0.55))) continue;
       z.stagger = Math.max(z.stagger, heavy ? 1.4 : GAMECONFIG.combat.staggerTime);
+      if (def.shock) this._applyShock(z, game);
       z.takeDamage(dmg, heavy, { x: z.pos.x, y: 1.25 * z.group.scale.x, z: z.pos.z }, game,
         { x: fx * kbPow, z: fz * kbPow });
       DMGNUM.spawn(z.pos.x, 1.5 * z.group.scale.x, z.pos.z, Math.round(dmg), heavy);

@@ -63,6 +63,8 @@ const ACHIEVEMENTS = [
   { id: 'upgrade3',    cat: 'collect', tier: 'silver', name: '紫色品质', desc: '任意武器强化至 Lv.3', goal: d => [d.weaponLv3 ? 1 : 0, 1] },
   { id: 'skin_all',    cat: 'collect', tier: 'gold',   name: '衣柜指挥官', desc: '解锁全部 4 款成就作战服', goal: d => [Math.min(d.unlockedSkins ? d.unlockedSkins.length - 1 : 0, 4), 4] },
   { id: 'throw_all',   cat: 'collect', tier: 'bronze', name: '扔个不停', desc: '单局投掷 8 个投掷物', goal: d => [Math.min(d.bestThrows || 0, 8), 8] },
+  { id: 'nero6',       cat: 'collect', tier: 'gold',   name: 'NERO研究员', desc: '收集 6 块 NERO 科技（尸巢/兽群掉落）', goal: d => [Math.min(d.neroTech || 0, 6), 6] },
+  { id: 'nest3',       cat: 'explore', tier: 'silver', name: '焚巢者', desc: '累计焚毁 3 个尸巢', goal: d => [Math.min(d.nestsBurned || 0, 3), 3] },
 ];
 
 /* 奖励表：达成即解锁（v8.3/v8.4 扩充角色/武器挂点） */
@@ -97,6 +99,8 @@ const ACHV = {
       const pk = Object.values(PERKS).find(x => x.unlockBy === id);
       if (pk) HUD.banner('🏆 强化解锁：' + pk.name, pk.desc);
     }
+    // NERO科技收集（v10.5）：达标自动解锁电击棍
+    if (id === 'nero6') { /* 电击棍unlockBy=nero6 由通用武器解锁钩处理 */ }
     // 解锁专属武器检测（v8.4）
     if (typeof WEAPONS !== 'undefined') {
       const w = Object.values(WEAPONS).find(x => x.unlockBy === id);

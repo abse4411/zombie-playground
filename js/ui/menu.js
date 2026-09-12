@@ -302,10 +302,16 @@ const MENU = {
   buildMissionCards() {
     const list = document.getElementById('mission-list');
     list.innerHTML = '';
-    const ACTS = { 1: '🎬 第一幕 · 滨港（初代）', 2: '🎬 第二幕 · 极夜回声（二代）', 0: '📞 番外篇 · 他们也曾是普通人' };
-    const groups = { 1: [], 2: [], 0: [] };
-    MISSIONS.forEach((m, i) => groups[m.act === undefined ? 1 : m.act].push({ m, i }));
-    for (const actKey of [1, 2, 0]) {
+    // 分组容错（v14.4）：按数据动态建组，未知幕次自动归入番外后追加，避免 groups[key] 未定义崩溃
+    const ACTS = { 1: '🎬 第一幕 · 滨港（初代）', 2: '🎬 第二幕 · 极夜回声（二代）', 3: '🎬 第三幕 · 泄源追迹（终局）', 0: '📞 番外篇 · 他们也曾是普通人' };
+    const groups = {};
+    MISSIONS.forEach((m, i) => {
+      const key = m.act === undefined ? 1 : m.act;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push({ m, i });
+    });
+    const actOrder = [1, 2, 3].filter(k => groups[k]).concat(Object.keys(groups).filter(k => !(k in ACTS) && k !== '1' && k !== '2' && k !== '3'));
+    for (const actKey of actOrder.concat([0])) {
       const items = groups[actKey];
       if (!items.length) continue;
       const head = document.createElement('div');
@@ -324,7 +330,7 @@ const MENU = {
           ${rating ? `<span class="card-rating rating-${rating}">${rating}</span>` : ''}
           ${done ? '<span class="card-done">✔ 已完成</span>' : locked ? '<span class="card-lock">🔒</span>' : ''}
           <h3>${m.name}${this.missionDiff !== 'normal' ? ` <span style="font-size:12px;color:${this.missionDiff === 'nightmare' ? '#ff5a5a' : '#ffb044'}">[${this.missionDiff === 'nightmare' ? '噩梦' : '困难'}]</span>` : ''}</h3>
-          <div class="card-map">📍 ${MAPS[m.map].name} · ⏱ ${fmtTime(m.duration)}${isSpin ? ' · 番外剧情' : ''}</div>
+          <div class="card-map">📍 ${(MAPS[m.map] || { name: m.map }).name} · ⏱ ${fmtTime(m.duration)}${isSpin ? ' · 番外剧情' : ''}</div>
           <p>${locked && isSpin ? `🔒 完成主战役第 ${m.reqDone} 章后解锁` : m.brief}</p>
         `;
         if (!locked) card.addEventListener('click', () => { AUDIO.uiClick(); GAME.startMission(i, false, this.missionDiff); });

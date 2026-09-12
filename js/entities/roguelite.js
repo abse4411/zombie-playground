@@ -156,3 +156,115 @@ const LEVELUP = {
     p.recomputeRogue();
   },
 };
+
+/* ---------- 宝箱轮盘（v10.7 VS式变率奖励） ---------- */
+const CHESTS = {
+  list: [],
+  _geo: null,
+
+  drop(x, z, tier) {   // tier: 1精英 2Boss
+    this._init();
+    const chest = {
+      x, z, tier, life: 30, dead: false,
+      group: new THREE.Group(),
+    };
+    const color = tier === 2 ? 0xffb044 : 0xb05cff;
+    const box = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.36, 0.36),
+      new THREE.MeshStandardMaterial({ color: 0x3a2e1e, roughness: 0.5, metalness: 0.5, emissive: color, emissiveIntensity: 0.45 })
+    );
+    box.position.y = 0.2;
+    const lid = new THREE.Mesh(
+      new THREE.BoxGeometry(0.52, 0.14, 0.38),
+      new THREE.MeshStandardMaterial({ color: 0x5a4628, metalness: 0.6, roughness: 0.4 })
+    );
+    lid.position.y = 0.42;
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.18, 3.6, 8, 1, true),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.32, side: THREE.DoubleSide, depthWrite: false })
+    );
+    beam.position.y = 1.8;
+    chest.group.add(box, lid, beam);
+    chest.group.position.set(x, 0, z);
+    chest.box = box; chest.lid = lid; chest.beam = beam;
+    ENGINE.scene.add(chest.group);
+    this.list.push(chest);
+    HUD.killfeed(tier === 2 ? '🎁 Boss掉落了黄金宝箱！' : '🎁 精英掉落了宝箱！', 'big');
+  },
+
+  _init() {
+    if (this._geo) return;
+    this._geo = true;
+  },
+
+  update(dt, game) {
+    const p = game.player;
+    for (const c of this.list) {
+      if (c.dead) continue;
+      c.life -= dt;
+      c.box.rotation.y += dt * 1.2;
+      c.lid.position.y = 0.42 + Math.sin(ENGINE.time * 3) * 0.04;   // 开合暗示
+      if (c.life < 5) c.group.visible = Math.sin(ENGINE.time * 8) > -0.3;
+      if (c.life <= 0) { this.remove(c); continue; }
+      const d = dist2d(c.x, c.z, p.pos.x, p.pos.z);
+      if (d < 1.7) { this.open(game, c); }
+    }
+  },
+
+  remove(c) {
+    c.dead = true;
+    ENGINE.scene.remove(c.group);
+  },
+
+  // 开箱：变率奖励（老虎机式逐条揭示）
+  open(game, c) {
+    this.remove(c);
+    AUDIO.streak();
+    const p = game.player;
+    const n = c.tier === 2 ? randi(2, 3) : 1;
+    const rewards = [];
+    for (let i = 0; i < n; i++) {
+      const roll = Math.random();
+      if (roll < 0.4) {
+        const cash = randi(300, 800) * c.tier;
+        rewards.push({ icon: '💰', text: `现金 +$${cash}`, apply: () => p.addMoney(cash) });
+      } else if (roll < 0.65) {
+        rewards.push({ icon: '❤', text: '生命全满', apply: () => { p.hp = p.maxHp; } });
+      } else if (roll < 0.85) {
+        rewards.push({ icon: '💣', text: '投掷物补满', apply: () => { for (const k in p.throwables) p.throwables[k].count = THROWABLES[k].max; } });
+      } else {
+        rewards.push({ icon: '⬆', text: '立即升级！', apply: () => LEVELUP.queue(game) });
+      }
+    }
+    // 逐条揭示（400ms间隔，老虎机节奏）
+    REEL.show(rewards);
+    for (let i = 0; i < rewards.length; i++) {
+      setTimeout(() => { if (window.GAME) { rewards[i].apply(); AUDIO.streak(); } }, 500 + i * 450);
+    }
+  },
+
+  clear() {
+    for (const c of this.list) ENGINE.scene.remove(c.group);
+    this.list = [];
+  },
+};
+
+/* ---------- 开箱揭示轮盘（v10.7） ---------- */
+const REEL = {
+  show(rewards) {
+    const panel = document.createElement('div');
+    panel.id = 'chest-reel';
+    panel.innerHTML = `<div class="cr-title">🎁 宝箱开启</div><div class="cr-items"></div>`;
+    const holder = panel.querySelector('.cr-items');
+    for (const r of rewards) {
+      const d = document.createElement('div');
+      d.className = 'cr-item';
+      d.innerHTML = `<span>${r.icon}</span><b>${r.text}</b>`;
+      d.style.opacity = '0';
+      holder.appendChild(d);
+      setTimeout(() => { d.style.opacity = '1'; d.style.transform = 'scale(1.15)'; }, 50);
+    }
+    document.body.appendChild(panel);
+    setTimeout(() => { panel.style.opacity = '0'; setTimeout(() => panel.remove(), 500); }, 600 + rewards.length * 450);
+  },
+};

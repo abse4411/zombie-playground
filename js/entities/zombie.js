@@ -1308,6 +1308,7 @@ class Zombie {
     PARTICLES.blood(this.pos.x, 1.1 * this.group.scale.x, this.pos.z, 14);
     this._gibDeath(headshot, overkill);
     if (typeof XPGEMS !== 'undefined' && !this.dummy) XPGEMS.drop(this.pos.x, 0.6, this.pos.z, this.boss ? 30 : this.type.cost >= 3 ? 8 : this.type.cost >= 2 ? 4 : 2);
+    if (!this.dummy && typeof CHESTS !== 'undefined' && (this.boss || this.affix)) CHESTS.drop(this.pos.x, this.pos.z, this.boss ? 2 : 1);
     if (typeof spawnLoot !== 'undefined' && !this.dummy) spawnLoot(game, this);
     if (this.type.deathPool) spawnAcidPool(game, this.pos.x, this.pos.z, { poolDps: 12, poolRadius: 2.6, poolTime: 5 });
     if (this.type.explode) explodeBloater(game, this);

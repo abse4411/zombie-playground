@@ -441,6 +441,8 @@ class Game {
     if (typeof NESTS !== 'undefined') NESTS.update(dt, this);
     // 经验宝石（v10.6）
     if (typeof XPGEMS !== 'undefined') XPGEMS.update(dt, this);
+    // 宝箱（v10.7）
+    if (typeof CHESTS !== 'undefined') CHESTS.update(dt, this);
     // 掉落物
     for (const l of this.loots) l.update(dt, this);
     this.loots = this.loots.filter(l => !l.dead);
@@ -751,6 +753,7 @@ class Game {
     if (this.playerBody) { ENGINE.scene.remove(this.playerBody.group); this.playerBody = null; }
     if (typeof NESTS !== 'undefined') NESTS.clear(this);
     if (typeof XPGEMS !== 'undefined') XPGEMS.clear();
+    if (typeof CHESTS !== 'undefined') CHESTS.clear();
     if (this.crates) for (const c of this.crates) c.dispose();
     this.crates = [];
     if (this.weapons) this.weapons._disposeViewmodel();

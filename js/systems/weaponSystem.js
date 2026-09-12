@@ -280,12 +280,25 @@ class WeaponSystem {
           .addScaledVector(up, Math.sin(a) * r).normalize();
       }
       const res = this._hitscan(game, origin, dir, def);
-      // 曳光：枪口 -> 命中/落点
-      if (typeof TRACERS !== 'undefined') {
+      // 火焰喷射器：沿弹道喷火粒子（替代曳光）
+      if (def.flame) {
+        const mz = this.muzzleSprite ? this.muzzleSprite.getWorldPosition(new THREE.Vector3()) : origin;
+        for (let fi = 1; fi <= 4; fi++) {
+          const t2 = (def.range * 0.9 * fi / 4) * rand(0.8, 1.1);
+          PARTICLES.flames(mz.x + dir.x * t2, mz.y + dir.y * t2, mz.z + dir.z * t2, 1);
+        }
+      } else if (typeof TRACERS !== 'undefined') {
+        // 曳光：枪口 -> 命中/落点
         const mz = this.muzzleSprite ? this.muzzleSprite.getWorldPosition(new THREE.Vector3())
           : origin.clone().addScaledVector(dir, 0.5);
         const endT = res ? res.pt : origin.clone().addScaledVector(dir, def.range * 0.7);
         TRACERS.fire(mz, endT);
+      }
+      // 命中点燃（v7.9 火焰DoT：3秒×25/s 固定值，可刷新）
+      if (res && def.flame) {
+        const ign = (z2) => { z2.burnT = 3; z2.burnDps = 25; };
+        ign(res.zombie);
+        if (res.pierced) for (const pe of res.pierced) ign(pe.zombie);
       }
       if (res) {
         anyHit = true;

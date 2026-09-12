@@ -400,6 +400,17 @@ class Zombie {
     const cfg = this.type;
     const p = game.player;
 
+    // 燃烧 DoT（v7.9 火焰喷射器）：固定值持续烧灼，可刷新；再生者燃烧时暂停再生
+    if (this.burnT > 0) {
+      this.burnT -= dt;
+      this.hp -= this.burnDps * dt;
+      if (this.type.regen) this._regenPause = Math.max(this._regenPause || 0, 0.5);
+      if (!this._burnP || Math.random() < dt * 14) {
+        this._burnP = 0.1;
+        PARTICLES.flames(this.pos.x + rand(-0.25, 0.25), rand(0.4, 1.5) * this.group.scale.x, this.pos.z + rand(-0.25, 0.25), 1);
+      } else this._burnP -= dt;
+      if (this.hp <= 0) { this.die(game, false); return; }
+    }
     if (this.flashT > 0) {
       this.flashT -= dt;
       if (this.flashT <= 0) { this.model.skin.emissive.setHex(this.auraColor); this.model.cloth.emissive.setHex(this.auraColor); }

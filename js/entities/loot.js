@@ -50,6 +50,11 @@ class LootDrop {
   update(dt, game) {
     this.life -= dt;
     if (this.life <= 0) { this._collect(game, false); return; }
+    // 远处隐藏光柱与箱体（GPU填充率优化，磁吸范围远小于此）
+    const p0 = game.player.pos;
+    const far = dist2d(this.group.position.x, this.group.position.z, p0.x, p0.z) > 32;
+    if (this.group.visible === far) this.group.visible = !far;
+    if (far) return;
     // 浮动旋转
     this.box.rotation.y += dt * 1.6;
     this.box.position.y = 0.14 + Math.sin(ENGINE.time * 2.4 + this.phase) * 0.06;

@@ -302,9 +302,14 @@ class Game {
         z.pos.x -= dx * 0.7; z.pos.z -= dz * 0.7;
       }
     }
-    // 清理尸体
+    // 清理尸体（上限12具，超过加速移除最老尸体降低draw call）
+    let corpseCount = 0;
     for (let i = zs.length - 1; i >= 0; i--) {
+      if (zs[i].dead) corpseCount++;
       if (zs[i].remove) { zs[i].dispose(); zs.splice(i, 1); }
+    }
+    if (corpseCount > 12) {
+      for (const z of zs) { if (z.dead && z.deadT < 1.2) z.deadT = 1.2; }
     }
 
     // 投掷物与区域
@@ -325,6 +330,7 @@ class Game {
       for (const c of this.crates) {
         if (c.opened) continue;
         const d = dist2d(c.x, c.z, p.pos.x, p.pos.z);
+        c.beam.visible = d < 36;   // 远处隐藏光柱（性能）
         if (d < 3) {
           this.interactText = INPUT.touch ? '走近补给箱自动开启' : '[E] 打开补给箱';
           if (INPUT.justPressed('KeyE') || d < 1.2) c.tryOpen(this);

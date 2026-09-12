@@ -242,12 +242,6 @@ class WeaponSystem {
     this.muzzleT = 0.045;
     if (this.muzzleLight) this.muzzleLight.intensity = 2.6;
     this._fireKick = Math.min(1.5, this._fireKick + 0.9);   // 准星扩散
-    // 弹壳抛出（右侧金色小粒子）
-    {
-      const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
-      PARTICLES.spawn('spark', origin.x + right.x * 0.3, origin.y - 0.1, origin.z + right.z * 0.3, 1,
-        { speed: 1.6, vy: 1.5, life: 0.5, color: [1, 0.85, 0.3], color2: [0.9, 0.6, 0.1] });
-    }
     ENGINE.shake(def.recoil * 1.1);
 
     const cam = ENGINE.camera;
@@ -256,6 +250,9 @@ class WeaponSystem {
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion);
+    // 弹壳抛出（右侧金色小粒子）
+    PARTICLES.spawn('spark', origin.x + right.x * 0.3, origin.y - 0.1, origin.z + right.z * 0.3, 1,
+      { speed: 1.6, vy: 1.5, life: 0.5, color: [1, 0.85, 0.3], color2: [0.9, 0.6, 0.1] });
 
     const moving = this.p.moving || this.p.sprinting;
     const spread = lerp(def.spread, def.adsSpread, this.adsT)
@@ -435,6 +432,7 @@ class WeaponSystem {
     if (this.p.weapons[slot] && this.p.current !== slot) {
       this.p.current = slot;
       this.switchT = 0.38; this.reloadT = 0; this.adsT = 0;
+      this.swingT = -1; this._fireKick = 0;
       this._buildViewmodel();
       AUDIO.weaponSwitch();
     }

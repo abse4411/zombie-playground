@@ -12,3 +12,4 @@
 | v7.5-new-weapons-batch1.md | 新武器批次1（Vector/M1014/VSS/M107+穿透机制） | v7.5 |
 | v7.6-new-zombies-batch1.md | 新丧尸批次1（舔食者/再生者/扎根植灵 机制+造型） | v7.6 |
 | v7.7-map-design.md | 地图设计语言（地标/三线/环形/视线/两新图设计案） | v7.7 |
+| v7.8-campaign-chapters.md | 战役章节设计（Act3 三章+番外 设计案） | v7.8 |

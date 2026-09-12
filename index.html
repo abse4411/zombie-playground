@@ -147,6 +147,7 @@
       <button id="btn-encounter">📻 遭遇战 · 剧情模式</button>
       <button id="btn-hunt">🎯 狩猎模式 · 无尽求生</button>
       <button id="btn-tutorial">🎓 新手教学 · 训练营</button>
+      <button id="btn-net">🌐 局域网联机 · 双人协战</button>
       <button id="btn-codex">📖 图鉴手册</button>
       <button id="btn-help">🎮 操作说明</button>
       <button id="btn-settings">⚙ 设置</button>
@@ -177,6 +178,40 @@
       <button class="diff-btn" data-diff="nightmare">噩梦</button>
     </div>
     <div id="map-list" class="card-list"></div>
+    <button class="btn-back" data-back="menu">◂ 返回主菜单</button>
+  </div>
+</div>
+
+<!-- ==================== 局域网联机 ==================== -->
+<div id="screen-net" class="screen hidden">
+  <div class="screen-inner net-inner">
+    <h2 class="screen-title">🌐 局域网联机</h2>
+    <div class="screen-sub">主机先运行 <b>node 服务器.js</b>，朋友浏览器打开 http://主机IP:8080</div>
+    <div id="net-setup" class="net-setup">
+      <label>服务器地址</label>
+      <input id="net-url" placeholder="ws://192.168.x.x:8080">
+      <label>昵称</label>
+      <input id="net-name" maxlength="10" placeholder="战士">
+      <div class="net-btns">
+        <button id="btn-net-host">🏠 创建房间（房主·权威模拟）</button>
+        <button id="btn-net-join">🤝 加入房间（队友）</button>
+      </div>
+    </div>
+    <div id="net-room" class="hidden">
+      <div id="net-room-list"></div>
+      <div id="net-host-ctrl" class="hidden">
+        <div class="net-selects">
+          <select id="net-map"></select>
+          <select id="net-diff">
+            <option value="normal">普通</option>
+            <option value="hard">困难</option>
+            <option value="nightmare">噩梦</option>
+          </select>
+        </div>
+        <button id="btn-net-start">▶ 开始协战（狩猎模式）</button>
+      </div>
+      <div id="net-wait" class="hidden">⏳ 等待房主开局…</div>
+    </div>
     <button class="btn-back" data-back="menu">◂ 返回主菜单</button>
   </div>
 </div>
@@ -313,45 +348,46 @@
 <div id="toast" class="hidden"></div>
 
 <!-- ==================== 脚本（按依赖顺序加载） ==================== -->
-<script src="js/lib/three.min.js?v=3.1"></script>
+<script src="js/lib/three.min.js?v=3.2"></script>
 <!-- 配置层 -->
-<script src="js/config/gameConfig.js?v=3.1"></script>
-<script src="js/config/weapons.js?v=3.1"></script>
-<script src="js/config/zombies.js?v=3.1"></script>
-<script src="js/config/perks.js?v=3.1"></script>
-<script src="js/config/achievements.js?v=3.1"></script>
-<script src="js/config/maps.js?v=3.1"></script>
-<script src="js/config/story.js?v=3.1"></script>
+<script src="js/config/gameConfig.js?v=3.2"></script>
+<script src="js/config/weapons.js?v=3.2"></script>
+<script src="js/config/zombies.js?v=3.2"></script>
+<script src="js/config/perks.js?v=3.2"></script>
+<script src="js/config/achievements.js?v=3.2"></script>
+<script src="js/config/maps.js?v=3.2"></script>
+<script src="js/config/story.js?v=3.2"></script>
 <!-- 核心层 -->
-<script src="js/core/utils.js?v=3.1"></script>
-<script src="js/core/artkit.js?v=3.1"></script>
-<script src="js/core/audio.js?v=3.1"></script>
-<script src="js/core/input.js?v=3.1"></script>
-<script src="js/core/touch.js?v=3.1"></script>
-<script src="js/core/particles.js?v=3.1"></script>
-<script src="js/core/collision.js?v=3.1"></script>
-<script src="js/core/engine.js?v=3.1"></script>
+<script src="js/core/utils.js?v=3.2"></script>
+<script src="js/core/artkit.js?v=3.2"></script>
+<script src="js/core/audio.js?v=3.2"></script>
+<script src="js/core/input.js?v=3.2"></script>
+<script src="js/core/touch.js?v=3.2"></script>
+<script src="js/core/particles.js?v=3.2"></script>
+<script src="js/core/collision.js?v=3.2"></script>
+<script src="js/core/engine.js?v=3.2"></script>
 <!-- 实体层 -->
-<script src="js/entities/player.js?v=3.1"></script>
-<script src="js/entities/zombie.js?v=3.1"></script>
-<script src="js/entities/projectile.js?v=3.1"></script>
+<script src="js/entities/player.js?v=3.2"></script>
+<script src="js/entities/zombie.js?v=3.2"></script>
+<script src="js/entities/projectile.js?v=3.2"></script>
 <!-- 系统层 -->
-<script src="js/systems/weaponSystem.js?v=3.1"></script>
-<script src="js/systems/spawnSystem.js?v=3.1"></script>
-<script src="js/systems/shopSystem.js?v=3.1"></script>
-<script src="js/systems/saveSystem.js?v=3.1"></script>
+<script src="js/systems/weaponSystem.js?v=3.2"></script>
+<script src="js/systems/spawnSystem.js?v=3.2"></script>
+<script src="js/systems/shopSystem.js?v=3.2"></script>
+<script src="js/systems/saveSystem.js?v=3.2"></script>
 <!-- UI层 -->
-<script src="js/ui/hud.js?v=3.1"></script>
-<script src="js/ui/damageNumbers.js?v=3.1"></script>
-<script src="js/ui/shopUI.js?v=3.1"></script>
-<script src="js/ui/storyUI.js?v=3.1"></script>
-<script src="js/ui/menu.js?v=3.1"></script>
+<script src="js/ui/hud.js?v=3.2"></script>
+<script src="js/ui/damageNumbers.js?v=3.2"></script>
+<script src="js/ui/shopUI.js?v=3.2"></script>
+<script src="js/ui/storyUI.js?v=3.2"></script>
+<script src="js/ui/menu.js?v=3.2"></script>
 <!-- 模式层 -->
-<script src="js/modes/huntMode.js?v=3.1"></script>
-<script src="js/modes/encounterMode.js?v=3.1"></script>
-<script src="js/modes/tutorialMode.js?v=3.1"></script>
+<script src="js/modes/huntMode.js?v=3.2"></script>
+<script src="js/modes/encounterMode.js?v=3.2"></script>
+<script src="js/modes/tutorialMode.js?v=3.2"></script>
 <!-- 主循环 -->
-<script src="js/core/game.js?v=3.1"></script>
-<script src="js/main.js?v=3.1"></script>
+<script src="js/net/net.js?v=3.2"></script>
+<script src="js/core/game.js?v=3.2"></script>
+<script src="js/main.js?v=3.2"></script>
 </body>
 </html>

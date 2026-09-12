@@ -71,6 +71,7 @@ class SpawnSystem {
 
   update(dt) {
     if (!this.active) return;
+    if (typeof NET !== 'undefined' && NET.role === 'client') return;   // 联机客户端不由本地刷怪
     this.timer -= dt;
     if (this.timer > 0) return;
     const cap = Math.max(3, Math.floor(this.cap * (this.game.capMult || 1)));
@@ -91,6 +92,7 @@ class SpawnSystem {
   }
 
   spawnOne(typeId, x, z, opts = {}) {
+    if (typeof NET !== 'undefined' && NET.role === 'client') return null;  // 客户端怪物由房主同步
     let sx = x, sz = z;
     if (sx === undefined) {
       const pts = ENGINE.mapDef.spawns;

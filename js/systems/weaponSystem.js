@@ -242,9 +242,17 @@ class WeaponSystem {
     }
     if (anyHit) game.stats.hits++;
 
-    // 一次性施加伤害与击退
+    // 一次性施加伤害与击退（联机客户端：只上报命中，伤害由房主结算）
+    const isNetClient = typeof NET !== 'undefined' && NET.role === 'client';
     const kbPow = def.pellets > 1 ? GAMECONFIG.feel.kbShotgun : 0;
     for (const [z, h] of hits) {
+      if (isNetClient) {
+        NET.reportHit(z, h.dmg, h.head, h.pt);
+        DMGNUM.spawn(h.pt.x, h.pt.y, h.pt.z, Math.round(h.dmg), h.head);
+        HUD.hitmarker(h.head);
+        if (h.head) AUDIO.headshot(); else AUDIO.hitFlesh(h.pt ? dist2d(h.pt.x, h.pt.z, this.p.pos.x, this.p.pos.z) : 0);
+        continue;
+      }
       z.takeDamage(h.dmg, h.head, h.pt, game, kbPow ? { x: h.dir.x * kbPow, z: h.dir.z * kbPow } : null);
       DMGNUM.spawn(h.pt.x, h.pt.y, h.pt.z, Math.round(h.dmg), h.head);
       HUD.hitmarker(h.head);

@@ -152,6 +152,7 @@ class Zombie {
     this.uid = ++ZOMBIE_SEQ;
     this.type = cfg; this.typeId = typeId;
     this.dummy = !!opts.dummy;              // 教学假人：不动手、不反击
+    this.net = !!opts.net;                  // 联机网络傀儡（客户端）
     this.boss = !!opts.boss;                // Boss：血条 + 超大
     this.affix = opts.affix || null;        // 精英词缀
     const affix = this.affix;
@@ -263,6 +264,23 @@ class Zombie {
     const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z;
     const dist = Math.sqrt(dx * dx + dz * dz) || 0.001;
     const nx = dx / dist, nz = dz / dist;
+
+    // ---- 网络傀儡（联机客户端）：仅插值到房主快照，不跑AI ----
+    if (this.net) {
+      if (this.netTarget) {
+        const mx = this.netTarget.x - this.pos.x, mz = this.netTarget.z - this.pos.z;
+        const md = Math.hypot(mx, mz);
+        if (md > 0.01) {
+          const step = Math.min(md, md * 9 * dt);
+          this.pos.x += mx / md * step;
+          this.pos.z += mz / md * step;
+          this.walkPhase += step * 2.4;
+        }
+        this.group.rotation.y = angleLerp(this.group.rotation.y, this.netTarget.yaw || 0, Math.min(1, 10 * dt));
+      }
+      this._animate();
+      return;
+    }
 
     // 远距离LOD：仅朝向与位移，跳过骨骼动画细节
     const lodSkip = dist > ENGINE.quality.lod;

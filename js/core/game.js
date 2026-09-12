@@ -112,6 +112,8 @@ class Game {
     this.runStats = { damageTaken: 0, fragKills: 0 };
     // 战役继承（在剧情对话前应用）
     if (this._pendingCarry) { this._applyCarry(this._pendingCarry); this._pendingCarry = null; }
+    // 联机：标记在局
+    if (typeof NET !== 'undefined' && NET.role !== 'off') NET.inGame = true;
     this.state = 'playing';
     MENU.hideAll();
     HUD.show();
@@ -298,6 +300,9 @@ class Game {
     AUDIO.setTension(tension);
     AUDIO.musicTick(tension);
 
+    // 联机同步
+    if (typeof NET !== 'undefined' && NET.active) NET.netTick(dt);
+
     // 终结镜头 FOV 冲击衰减
     if (this.player.fovPunch > 0) this.player.fovPunch = Math.max(0, this.player.fovPunch - dt * 2.2);
 
@@ -338,6 +343,15 @@ class Game {
   /* ================= 击杀 / 死亡 / 胜利 ================= */
   onZombieKilled(z, headshot) {
     const p = this.player;
+
+    // 联机：房主侧队友击杀 → 转发奖励与播报，不计入自己
+    if (typeof NET !== 'undefined' && NET.role === 'host' && z._lastHitBy) {
+      NET.send({ t: 'ev', k: 'kill', by: z._lastHitBy, name: z.displayName, reward: z.reward, head: !!headshot });
+      HUD.killfeed(`🤝 队友击杀 ${z.displayName}`);
+      if (z === this.boss) { this.boss = null; HUD.hideBossBar(); this.slowmo(1.0); }
+      return;
+    }
+
     p.kills++;
     if (headshot) p.headshots++;
     const total = z.reward + (headshot ? GAMECONFIG.economy.headshotBonus : 0);
@@ -391,7 +405,9 @@ class Game {
     AUDIO.stopAmbient();
     AUDIO.stopMusic();
     AUDIO.stopFireLoop();
+    AUDIO.stopRainLoop();
     INPUT.releaseLock();
+    if (typeof NET !== 'undefined') NET.reportDead();
     const mode = this.mode;
     const isMission = mode instanceof EncounterMode;
     setTimeout(() => {
@@ -473,8 +489,16 @@ class Game {
     AUDIO.stopFireLoop();
     AUDIO.stopRainLoop();
     INPUT.releaseLock();
+    if (typeof NET !== 'undefined' && NET.role !== 'off') { NET.inGame = false; MENU.refreshNetUI(); }
     MENU.show('screen-menu');
     MENU.refreshStats();
+  }
+
+  /* ---------- 联机开局（房主广播后双方调用） ---------- */
+  startNetGame(data) {
+    if (typeof NET !== 'undefined') NET.inGame = true;
+    if (data.mode === 'mission') this.startMission(data.missionIdx || 0, true);
+    else this.startHunt(data.map || 'park', data.diff || 'normal');
   }
 
   _cleanupWorld() {

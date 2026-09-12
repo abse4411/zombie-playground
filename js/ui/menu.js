@@ -13,6 +13,7 @@ const MENU = {
     $('btn-encounter').addEventListener('click', () => { AUDIO.uiClick(); this.buildMissionCards(); this.show('screen-missions'); });
     $('btn-hunt').addEventListener('click', () => { AUDIO.uiClick(); this.buildMapCards(); this.show('screen-maps'); });
     $('btn-tutorial').addEventListener('click', () => { AUDIO.uiClick(); GAME.startTutorial(); });
+    $('btn-net').addEventListener('click', () => { AUDIO.uiClick(); this.show('screen-net'); this.initNetUI(); });
     $('btn-codex').addEventListener('click', () => { AUDIO.uiClick(); this.buildCodex(); this.show('screen-codex'); });
     $('btn-help').addEventListener('click', () => { AUDIO.uiClick(); this.show('screen-help'); });
     $('btn-settings').addEventListener('click', () => { AUDIO.uiClick(); this.settingsFrom = 'menu'; this.show('screen-settings'); });
@@ -142,6 +143,60 @@ const MENU = {
   },
   hideAll() { for (const k in this.screens) this.screens[k].classList.add('hidden'); },
   showPause() { this.show('screen-pause'); },
+
+  /* ---------- 联机界面 ---------- */
+  initNetUI() {
+    const $ = id => document.getElementById(id);
+    const url = $('net-url');
+    if (!url.value) {
+      url.value = location.protocol === 'http:' || location.protocol === 'https:'
+        ? `ws://${location.host}` : `ws://localhost:8080`;
+    }
+    $('net-name').value = SAVE.data.playerName || '';
+    $('net-setup').classList.remove('hidden');
+    $('net-room').classList.add('hidden');
+
+    // 地图下拉
+    const sel = $('net-map');
+    if (!sel.options.length) {
+      for (const id in MAPS) {
+        const o = document.createElement('option');
+        o.value = id; o.textContent = MAPS[id].name;
+        sel.appendChild(o);
+      }
+    }
+
+    const doConnect = wantHost => {
+      const name = ($('net-name').value || '战士').slice(0, 10);
+      SAVE.data.playerName = name; SAVE.commit();
+      NET.connect(url.value.trim(), name, wantHost, err => {
+        if (err) { HUD.toast('✖ ' + err); AUDIO.denied(); return; }
+      });
+    };
+    $('btn-net-host').onclick = () => doConnect(true);
+    $('btn-net-join').onclick = () => doConnect(false);
+
+    if (!$('btn-net-start').dataset.bound) {
+      $('btn-net-start').dataset.bound = '1';
+      $('btn-net-start').addEventListener('click', () => {
+        NET.send({ t: 'start', mode: 'hunt', map: $('net-map').value, diff: $('net-diff').value });
+        AUDIO.uiClick();
+      });
+    }
+    this.refreshNetUI();
+  },
+
+  refreshNetUI() {
+    const room = document.getElementById('net-room');
+    if (!room || typeof NET === 'undefined' || NET.role === 'off') return;
+    room.classList.remove('hidden');
+    document.getElementById('net-setup').classList.add('hidden');
+    document.getElementById('net-room-list').innerHTML =
+      NET.room.map(c => `<div class="net-member">${c.host ? '🏠' : '🤝'} ${c.name}${c.id === NET.myId ? '（你）' : ''}</div>`).join('');
+    const isHost = NET.role === 'host';
+    document.getElementById('net-host-ctrl').classList.toggle('hidden', !isHost);
+    document.getElementById('net-wait').classList.toggle('hidden', isHost);
+  },
 
   /* ---------- 任务卡片 ---------- */
   buildMissionCards() {

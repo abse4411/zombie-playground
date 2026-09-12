@@ -491,6 +491,31 @@ button { font-family: var(--font); cursor: pointer; }
 }
 @keyframes bloodFade { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
 
+/* ---------- 局域网联机 ---------- */
+.net-inner { width: min(560px, 92vw); }
+.net-setup label, .setting-row label { display: block; text-align: left; color: var(--dim); margin: 12px 0 6px; font-size: 13px; }
+#net-url, #net-name {
+  width: 100%; padding: 10px 14px; background: rgba(0,0,0,.5);
+  border: 1px solid var(--line); color: #fff; font-size: 15px;
+}
+.net-btns { display: flex; gap: 10px; margin-top: 18px; }
+.net-btns button { flex: 1; padding: 12px 0; font-size: 15px; letter-spacing: 1px;
+  background: rgba(82,183,136,.12); border: 2px solid var(--line); color: var(--text); }
+.net-btns button:hover { border-color: var(--green); box-shadow: 0 0 12px rgba(82,183,136,.4); }
+#net-room-list { display: flex; flex-direction: column; gap: 8px; margin: 14px auto; width: min(320px, 80vw); }
+.net-member { padding: 9px 14px; background: var(--panel); border: 1px solid var(--line); color: #fff; font-size: 14px; text-align: left; }
+.net-selects { display: flex; gap: 10px; justify-content: center; margin-bottom: 14px; }
+.net-selects select {
+  padding: 8px 14px; background: #14171b; color: #fff; border: 1px solid var(--line); font-size: 14px;
+}
+#btn-net-start {
+  width: min(320px, 80vw); padding: 13px 0; font-size: 16px; letter-spacing: 2px;
+  background: rgba(82,183,136,.15); border: 2px solid var(--green); color: var(--green);
+}
+#btn-net-start:hover { box-shadow: 0 0 16px rgba(82,183,136,.5); color: #fff; }
+#net-wait { color: var(--dim); margin-top: 12px; letter-spacing: 2px; }
+.net-inner .btn-back { display: block; margin: 22px auto 0; }
+
 /* ---------- 章节评级徽章 ---------- */
 .card .card-rating {
   position: absolute; top: 6px; right: 10px;

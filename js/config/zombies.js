@@ -90,6 +90,28 @@ const ZOMBIE_TYPES = {
     attackRange: 1.7, attackRate: 1.15,
     desc: '二代定向进化的产物——皮肤渗出荧光腐蚀液，死亡时留下大片酸沼。方舟议会"合唱团"计划的第一批成品。',
   },
+  licker: {
+    id: 'licker', name: '舔食者', role: '二代特化 · 长舌猎杀',
+    hp: 190, speed: 3.4, damage: 22, reward: 95, cost: 3.4, minWave: 11, weight: 1.6,
+    scale: 1.02, skin: 0x9a4038, cloth: 0x6a2020, pants: 0x501a1a, crawl: true, immuneStagger: false,
+    attackRange: 1.8, attackRate: 1.2, tongue: { range: 5.5, dmg: 20, cd: 2.6 },
+    desc: 'T病毒二级变异体——大脑外露、皮肤尽失，凭借一条两米长舌在中距离猎杀。攻击前有明显的停顿蓄力，听到黏腻声立刻横移。',
+  },
+  regenerator: {
+    id: 'regenerator', name: '再生者', role: '二代特化 · 恶意增殖',
+    hp: 520, speed: 1.0, damage: 18, reward: 120, cost: 4.2, minWave: 13, weight: 1.2,
+    scale: 1.12, skin: 0x8a8a92, cloth: 0x6a6a72, pants: 0x52525a,
+    attackRange: 1.9, attackRate: 1.5, regen: 10,
+    desc: '体内寄生体不断增殖修复躯体——血条眼看着长回来。爆头可以打断它的再生几秒，犹豫就会败北。',
+  },
+  ivy: {
+    id: 'ivy', name: '扎根植灵', role: '二代特化 · 植物侵袭',
+    hp: 280, speed: 0, damage: 16, reward: 85, cost: 2.8, minWave: 12, weight: 1.5,
+    scale: 1.08, skin: 0x3e6a34, cloth: 0x2e5228, pants: 0x24401e, rooted: true, deathPool: true,
+    attackRange: 2.0, attackRate: 1.6,
+    seed: { dmg: 14, speed: 10, cd: 2.4, poolDps: 10, poolRadius: 1.8, poolTime: 3 },
+    desc: '方舟议会"绿化计划"的失败品——扎根原地无法移动，但会把带腐蚀汁液的种子吐得到处都是。死亡时化作一片酸沼。火焰和爆发伤害是它的克星。',
+  },
   hound: {
     id: 'hound', name: '地狱犬', role: '犬群突击单位',
     hp: 55, speed: 5.6, damage: 8, reward: 30, cost: 1.5, minWave: 3, weight: 4,

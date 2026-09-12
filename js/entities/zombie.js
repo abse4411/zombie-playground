@@ -140,6 +140,24 @@ function buildZombieModel(cfg, outlines) {
         P(new THREE.BoxGeometry(0.18, 0.5, 0.02), ART.mat(0x2a2e3e, 0x0a0c14), -0.08, 1.05, -0.18, 0.15);
         P(new THREE.BoxGeometry(0.14, 0.4, 0.02), ART.mat(0x2a2e3e, 0x0a0c14), 0.16, 1.0, -0.18, -0.2);
         break;
+      case 'licker': // 无皮肌理 + 长舌 + 脑露 + 巨爪
+        P(new THREE.BoxGeometry(0.2, 0.06, 0.34), ART.mat(0xd8a0a0, 0x301014), 0, head.position.y + 0.1, 0); // 外露脑块
+        P(new THREE.BoxGeometry(0.035, 0.5, 0.035), ART.mat(0xc05858, 0x2a0a0a), 0, head.position.y - 0.32, 0.16); // 垂落长舌
+        for (let i = 0; i < 3; i++) P(new THREE.BoxGeometry(0.02, 0.1, 0.02), flesh, 0.37 - i * 0.03, 1.2 - i * 0.06, 0.14 - i * 0.02); // 巨爪指
+        break;
+      case 'regenerator': // 臃肿孔洞
+        P(new THREE.BoxGeometry(0.5, 0.42, 0.34), ART.mat(0x9a9aa2, 0x18181e), 0, 0.95, 0.03);
+        for (let i = 0; i < 5; i++) P(new THREE.BoxGeometry(0.06, 0.06, 0.03), ART.mat(0x101014, 0x000000), Math.sin(i * 2.4) * 0.18, 1.0 + Math.cos(i * 1.7) * 0.16, 0.18);
+        break;
+      case 'ivy': // 花冠头 + 茎裙 + 藤臂
+        for (let i = 0; i < 5; i++) {
+          const a2 = (i / 5) * TAU;
+          P(new THREE.BoxGeometry(0.1, 0.22, 0.04), ART.mat(0x7ab04a, 0x1a3a10), Math.cos(a2) * 0.2, head.position.y + 0.08, Math.sin(a2) * 0.2, 0.3 * Math.cos(a2));
+        }
+        P(new THREE.CylinderGeometry(0.16, 0.34, 0.8, 7), ART.mat(0x3e6a34, 0x12240e), 0, 0.42, 0); // 茎干裙
+        P(new THREE.BoxGeometry(0.05, 0.6, 0.05), ART.mat(0x2e5228), 0.34, 1.15, 0.06, 0.4);        // 藤臂右
+        P(new THREE.BoxGeometry(0.05, 0.55, 0.05), ART.mat(0x2e5228), -0.34, 1.2, 0.06, -0.4);      // 藤臂左
+        break;
       case 'brute': // 外露心脏 + 不对称巨右臂 + 装甲残片
         P(new THREE.BoxGeometry(0.16, 0.16, 0.1), ART.mat(0xa82020, 0x400808), 0.12, 1.28, 0.17);
         P(new THREE.BoxGeometry(0.22, 0.7, 0.22), ART.mat(0x8a4a42, 0x200606), 0.52, 1.15, 0);
@@ -503,6 +521,36 @@ class Zombie {
       }
     }
 
+    // 舔食者（v7.6）：中距离长舌抽击
+    if (cfg.tongue) {
+      const T = cfg.tongue;
+      this.tongueCd = (this.tongueCd === undefined ? rand(1, 2) : this.tongueCd) - dt;
+      if (this.tongueCd <= 0 && dist < T.range && dist > cfg.attackRange * 0.8 && p.alive) {
+        this.tongueCd = T.cd * rand(0.9, 1.15);
+        this.windup = GAMECONFIG.combat.attackWindup * 0.8;
+        this._tongueHit = { dmg: T.dmg, range: T.range };
+      } else this._tongueHit = null;
+    }
+    // 再生者（v7.6）：持续回血，被爆头打断3秒
+    if (cfg.regen) {
+      this._regenPause = Math.max(0, (this._regenPause || 0) - dt);
+      if (this.hp < this.maxHp && this._regenPause <= 0) {
+        this.hp = Math.min(this.maxHp, this.hp + cfg.regen * dt);
+        if (!lodSkip && Math.random() < dt * 6) PARTICLES.spawn('smoke', this.pos.x, rand(0.4, 1.4) * this.group.scale.x, this.pos.z, 1,
+          { speed: 0.2, vy: 0.6, life: 0.5, color: [0.75, 0.75, 0.85], color2: [0.3, 0.3, 0.4] });
+      }
+    }
+    // 扎根植灵（v7.6）：中距投射种子
+    if (cfg.seed) {
+      const S = cfg.seed;
+      this.seedCd = (this.seedCd === undefined ? rand(1, 2) : this.seedCd) - dt;
+      if (this.seedCd <= 0 && dist < 12 && dist > 2.2 && p.alive) {
+        this.seedCd = S.cd * rand(0.9, 1.2);
+        spawnAcid(game, this, S);
+        AUDIO.acidSpit(dist);
+      }
+    }
+
     // 吐酸者：保持距离、环绕、吐酸
     if (cfg.ranged) {
       const R = cfg.ranged;
@@ -686,7 +734,8 @@ class Zombie {
     // 硬直
     if (this.stagger > 0) { this.stagger -= dt; mvx = 0; mvz = 0; spd = 0; }
 
-    // ---- 移动（含击退冲量衰减 + 立体地形踏步，v4.1） ----
+    // ---- 移动（含击退冲量衰减 + 立体地形踏步，v4.1；扎根植灵定身 v7.6） ----
+    if (cfg.rooted) { mvx = 0; mvz = 0; spd = 0; }
     this.pos.x += mvx * spd * dt + this.kvx * dt;
     this.pos.z += mvz * spd * dt + this.kvz * dt;
     const kd = Math.exp(-7 * dt);
@@ -735,6 +784,13 @@ class Zombie {
         if (this.affixHeal > 0) this.hp = Math.min(this.maxHp, this.hp + this.maxHp * this.affixHeal);
         // 抓挠减速（游荡者/潜行者）：咬中附带短暂减速
         if (cfg.grabSlow) p.slowT = Math.max(p.slowT, cfg.grabSlow);
+        // 舔食者长舌抽击（中距离判定）
+        if (this._tongueHit && p.alive && dist < this._tongueHit.range + 0.4) {
+          p.takeDamage(this._tongueHit.dmg, game, this.pos);
+          PARTICLES.blood(p.pos.x, 1.4, p.pos.z, 6);
+          AUDIO.impact();
+        }
+        this._tongueHit = null;
         // 连击（奔跑者/小丑/地狱犬/暴君）：概率立即补一记快速二连
         if (cfg.combo && Math.random() < cfg.combo && p.alive && dist < cfg.attackRange + 0.55) {
           this.windup = GAMECONFIG.combat.attackWindup * 0.55;
@@ -878,6 +934,8 @@ class Zombie {
     this._flash();
     // 头顶血条（首次受伤时懒创建）
     if (typeof HPBARS !== 'undefined' && !this.dummy && this.hp < this.maxHp && !this.hpbar) HPBARS.create(this);
+    // 再生者：爆头打断再生3秒（v7.6）
+    if (cfg.regen && isHead) this._regenPause = 3;
     // 血量阶段断肢（v6.8）
     this._updateDismember();
     if (kb) this.addKnockback(kb.x, kb.z);

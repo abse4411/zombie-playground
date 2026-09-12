@@ -25,6 +25,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
   GAME.start();
 
+  // 主菜单 3D 场景（v9.0）
+  if (typeof MENUSCENE !== 'undefined') {
+    MENUSCENE.init(document.getElementById('menu-bg'));
+  }
+
   // 首次交互时激活 WebAudio（浏览器策略要求）
   const kick = () => {
     AUDIO.init();

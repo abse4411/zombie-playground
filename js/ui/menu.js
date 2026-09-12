@@ -184,6 +184,9 @@ const MENU = {
   },
 
   show(id) {
+    if (id === 'screen-menu' && typeof MENUSCENE !== 'undefined') {
+      requestAnimationFrame(() => { MENUSCENE.init(document.getElementById('menu-bg')); MENUSCENE.syncHero(); });
+    }
     this.hideAll();
     if (this.screens[id]) this.screens[id].classList.remove('hidden');
   },

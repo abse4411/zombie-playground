@@ -61,6 +61,13 @@ const ZOMBIE_TYPES = {
     attackRange: 1.7, attackRate: 0.9,
     desc: '游乐园人偶服里长出的东西。之字形乱窜还间歇性狂奔，枪法不好的猎人最怕它。',
   },
+  radiant: {
+    id: 'radiant', name: '辐射变种', role: '二代特化 · 腐蚀光环',
+    hp: 260, speed: 2.2, damage: 14, reward: 90, cost: 3.4, minWave: 11, weight: 1.6,
+    scale: 1.02, skin: 0x4a6a3a, cloth: 0x2e3a2c, pants: 0x242a22, aura: true, deathPool: true,
+    attackRange: 1.7, attackRate: 1.15,
+    desc: '二代定向进化的产物——皮肤渗出荧光腐蚀液，死亡时留下大片酸沼。方舟议会"合唱团"计划的第一批成品。',
+  },
   hound: {
     id: 'hound', name: '地狱犬', role: '犬群突击单位',
     hp: 55, speed: 5.6, damage: 8, reward: 30, cost: 1.5, minWave: 3, weight: 4,

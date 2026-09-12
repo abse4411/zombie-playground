@@ -426,6 +426,16 @@ class Zombie {
       }
     }
 
+    // 辐射变种：荧光光环粒子（二代特化视觉）
+    if (cfg.aura && !lodSkip) {
+      this.auraT = (this.auraT || 0) - dt;
+      if (this.auraT <= 0) {
+        this.auraT = 0.12;
+        const a = Math.random() * TAU;
+        PARTICLES.spawn('smoke', this.pos.x + Math.cos(a) * 0.4, rand(0.2, 1.2) * this.group.scale.x, this.pos.z + Math.sin(a) * 0.4, 1,
+          { speed: 0.3, vy: 0.8, life: 0.7, color: [0.35, 0.9, 0.3], color2: [0.1, 0.5, 0.15] });
+      }
+    }
     // 幽影：耳语声预警 + 距离显形
     if (cfg.cloak && this.cloakMats) {
       const target = dist < 10 ? lerp(0.85, 0.28, clamp((dist - 2) / 8, 0, 1)) : 0.28;
@@ -574,6 +584,7 @@ class Zombie {
     AUDIO.zombieDie(d, this.growlPitch);
     PARTICLES.blood(this.pos.x, 1.1 * this.group.scale.x, this.pos.z, 14);
     if (typeof spawnLoot !== 'undefined' && !this.dummy) spawnLoot(game, this);
+    if (this.type.deathPool) spawnAcidPool(game, this.pos.x, this.pos.z, { poolDps: 12, poolRadius: 2.6, poolTime: 5 });
     if (this.type.explode) explodeBloater(game, this);
     game.onZombieKilled(this, headshot);
   }

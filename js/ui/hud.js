@@ -227,9 +227,11 @@ const HUD = {
       this.el.interact.classList.remove('hidden');
     } else this.el.interact.classList.add('hidden');
 
-    // FPS + GPU draw call 统计
+    // FPS + 帧耗时 + draw call（帧时间反映真实负载：vsync下FPS恒定，超载时ms上升）
     const gs = ENGINE.gpuStats();
-    this.el.fps.textContent = `${Math.round(ENGINE._fpsEma)} FPS · ${gs.calls}dc`;
+    const ft = ENGINE._frameMsAvg || 0;
+    this.el.fps.textContent = `${Math.round(ENGINE._fpsEma)} FPS · ${ft.toFixed(1)}ms · ${gs.calls}dc`;
+    this.el.fps.style.color = ft > 24 ? '#ff7766' : ft > 17 ? '#ffd23f' : 'rgba(255,255,255,.5)';
 
     // 队友列表（联机）
     if (typeof NET !== 'undefined' && NET.role !== 'off') {

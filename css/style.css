@@ -427,6 +427,44 @@ button { font-family: var(--font); cursor: pointer; }
   transition: width .1s;
 }
 
+/* ---------- 背包面板 ---------- */
+#backpack {
+  position: fixed; inset: 0; z-index: 56; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.7); backdrop-filter: blur(3px);
+}
+#bp-panel {
+  width: min(760px, 94vw); max-height: 86vh; overflow-y: auto;
+  background: var(--panel); border: 2px solid var(--line); box-shadow: 8px 8px 0 rgba(0,0,0,.6);
+}
+#bp-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; border-bottom: 1px solid var(--line);
+}
+#bp-close { padding: 7px 16px; background: transparent; border: 1px solid var(--line); color: var(--text); }
+#bp-close:hover { border-color: var(--red); color: #fff; }
+#bp-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 14px; padding: 16px 20px 20px; }
+.bp-sec { background: rgba(255,255,255,.03); border: 1px solid var(--line); padding: 12px 14px; }
+.bp-sec:nth-child(3) { grid-column: 1 / -1; }
+.bp-sec-title { color: var(--gold); font-weight: 800; letter-spacing: 2px; margin-bottom: 10px; font-size: 13px; }
+.bp-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13.5px; color: var(--text); border-bottom: 1px dashed rgba(255,255,255,.08); }
+.bp-row:last-child { border-bottom: none; }
+.bp-row i { font-style: normal; color: var(--dim); font-size: 11px; }
+.bp-row b { color: var(--gold); }
+.bp-w {
+  display: flex; align-items: center; gap: 10px; padding: 7px 8px; margin-bottom: 6px;
+  border: 1px solid var(--line); font-size: 13px; color: var(--text);
+}
+.bp-w.equipped { border-color: var(--green); background: rgba(82,183,136,.1); }
+.bp-w .bp-slot { color: var(--dim); font-size: 11px; width: 34px; }
+.bp-w .bp-ammo { color: var(--dim); font-size: 11px; margin-left: auto; }
+.bp-w button {
+  padding: 4px 12px; font-size: 12px; border: 1px solid var(--green); color: var(--green);
+  background: transparent;
+}
+.bp-w button:disabled { border-color: #3a4148; color: #5a6068; }
+.bp-stats-grid { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--dim); }
+.bp-stats-grid b { color: #fff; margin-left: 4px; }
+
 /* ---------- 掉落物拾取播报 ---------- */
 #medkit-row { margin-top: 5px; font-size: 13px; color: rgba(255,255,255,.85); text-shadow: 0 1px 3px #000; }
 #medkit-row i { font-style: normal; color: var(--dim); font-size: 11px; }

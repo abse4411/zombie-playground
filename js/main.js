@@ -13,6 +13,7 @@ window.addEventListener('DOMContentLoaded', () => {
   DMGNUM.init();
   SHOPUI.init();
   STORY.init();
+  BACKPACK.init();
   MENU.init(GAME);
   TOUCH.init();
 

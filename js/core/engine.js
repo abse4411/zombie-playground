@@ -62,6 +62,8 @@ const ENGINE = {
     if (rawDt <= 0) return;
     const fps = 1 / rawDt;
     this._fpsEma = this._fpsEma * 0.92 + fps * 0.08;
+    // 帧耗时（CPU+GPU实际开销的近似：更新逻辑耗时另计在 _logicMs）
+    this._frameMsAvg = (this._frameMsAvg || rawDt * 1000) * 0.9 + rawDt * 1000 * 0.1;
     this._qTimer += rawDt;
     if (this._qTimer < GAMECONFIG.autoQuality.checkEvery) return;
     this._qTimer = 0;

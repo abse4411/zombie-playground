@@ -158,7 +158,9 @@ class Game {
   requestLock() { if (!INPUT.touch) INPUT.requestLock(); }
 
   onPointerLockChange(locked) {
-    if (!locked && this.state === 'playing' && !SHOPUI.isOpen && !STORY.active) {
+    // UI面板（商店/背包/剧情）打开时的解锁不视为暂停
+    const uiOpen = SHOPUI.isOpen || STORY.active || (typeof BACKPACK !== 'undefined' && BACKPACK.isOpen);
+    if (!locked && !uiOpen && this.state === 'playing') {
       this.pause();
     }
   }
@@ -242,8 +244,12 @@ class Game {
     ENGINE.update(sdt);
     STORY.update(dt);
 
-    if (this.state === 'playing' && !STORY.active && !SHOPUI.isOpen) {
+    if (this.state === 'playing' && !STORY.active && !SHOPUI.isOpen && !(typeof BACKPACK !== 'undefined' && BACKPACK.isOpen)) {
       this._update(sdt);
+    }
+    // Tab 背包开关
+    if (this.state === 'playing' && !SHOPUI.isOpen && !STORY.active && typeof BACKPACK !== 'undefined' && INPUT.justPressed('Tab')) {
+      BACKPACK.toggle(this);
     }
     ENGINE.render();
     if (typeof TOUCH !== 'undefined') TOUCH.sync();

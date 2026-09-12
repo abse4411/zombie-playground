@@ -268,6 +268,7 @@ const MENU = {
           ${c.armorStart ? `<span>🛡 初始护甲 <b>${c.armorStart}</b></span>` : ''}
           ${c.medkits !== 2 ? `<span>🧪 医疗包 <b>${c.medkits}</b></span>` : ''}
           <span>💢 伤害 <b>×${c.dmg.toFixed(2)}</b></span>
+          ${c.staminaMax !== undefined ? `<span>💨 体力 <b>${c.staminaMax}</b></span><span>⚡ 回复 <b>×${(c.staminaRegen || 1).toFixed(2)}</b></span>` : ''}
         </div>
         ${locked
           ? `<p style="color:#ff8f9f">🔒 成就解锁：${achv ? achv.name + ' — ' + achv.desc : '???'}</p>`

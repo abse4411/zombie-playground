@@ -215,6 +215,7 @@ const SHOP = {
         p.recomputePerks();
         if (item.id === 'hp') p.hp += p.maxHp - oldMax;
         if (item.id === 'armor') p.armor = p.maxArmor;
+        if (item.id === 'stamina') p.stamina = p.maxStamina;   // 耐力针剂：购买即回满（v13.2）
         break;
       }
       case 'heal': p.hp = p.maxHp; break;

@@ -64,6 +64,18 @@ const PERKS = {
     valName: v => `连杀≥8时换弹速度 +${Math.round(v * 100)}%`,
     desc: '【成就专属】千人斩解锁——肾上腺素上瘾：杀红了眼（连杀≥8）时换弹快如本能。',
   },
+  stamina: {
+    id: 'stamina', name: '耐力针剂', icon: '🏃',
+    tiers: [{ price: 800, val: 30 }, { price: 1600, val: 60 }, { price: 3000, val: 90 }],
+    valName: v => `体力上限 +${v}`,
+    desc: '心肺强化合剂：大幅提升体力上限，冲刺更持久、闪避更从容。',
+  },
+  adrenaline: {
+    id: 'adrenaline', name: '肾上腺素', icon: '⚡',
+    tiers: [{ price: 1200, val: 0.25 }, { price: 2400, val: 0.5 }],
+    valName: v => `体力回复速度 +${Math.round(v * 100)}%`,
+    desc: '战斗focus激素疗法：站定喘息与移动中回复的体力速度全面提升。',
+  },
   laststand: {
     id: 'laststand', name: '背水一战', icon: '🔥', unlockBy: 'flawless3',
     tiers: [{ price: 2600, val: 0.3 }],

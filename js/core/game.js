@@ -249,6 +249,8 @@ class Game {
     if (ch.armorStart > 0) { this.player.maxArmor = Math.max(this.player.maxArmor, ch.armorStart); this.player.armor = ch.armorStart; }
     this.player.medkits = ch.medkits;
     this.player.medkitHeal = ch.medkitHeal || GAMECONFIG.inventory.medkitHeal;
+    // 角色差异化体力（v13.2）：recomputePerks 已按 charStats 计算，出生回满
+    this.player.stamina = this.player.maxStamina;
     // 解锁角色被动（v8.3）
     if (ch.passive) {
       const pv = ch.passive;

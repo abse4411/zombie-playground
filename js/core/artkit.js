@@ -209,5 +209,173 @@ const ART = (() => {
     });
   }
 
-  return { mat, toon, gradientMap, outline, setOutlines, resetOutlines, ground, windows, stripes, panel, sky };
+  /* ---------- PBR 派生贴图（v3.4：从反照率生成法线/粗糙度） ---------- */
+  // 高度→法线（Sobel）
+  function _heightToNormal(srcCanvas, strength = 2.2) {
+    const S = srcCanvas.width;
+    const sctx = srcCanvas.getContext('2d');
+    const src = sctx.getImageData(0, 0, S, S).data;
+    const out = document.createElement('canvas');
+    out.width = out.height = S;
+    const octx = out.getContext('2d');
+    const dst = octx.createImageData(S, S);
+    const hAt = (x, y) => {
+      x = (x + S) % S; y = (y + S) % S;
+      const i = (y * S + x) * 4;
+      return (src[i] + src[i + 1] + src[i + 2]) / 765;
+    };
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      const dx = (hAt(x - 1, y) - hAt(x + 1, y)) * strength;
+      const dy = (hAt(x, y - 1) - hAt(x, y + 1)) * strength;
+      const len = Math.sqrt(dx * dx + dy * dy + 1);
+      const i = (y * S + x) * 4;
+      dst.data[i] = ((dx / len) * 0.5 + 0.5) * 255;
+      dst.data[i + 1] = ((dy / len) * 0.5 + 0.5) * 255;
+      dst.data[i + 2] = ((1 / len) * 0.5 + 0.5) * 255;
+      dst.data[i + 3] = 255;
+    }
+    octx.putImageData(dst, 0, 0);
+    return out;
+  }
+
+  const _pbr = {};   // key -> {map, normalMap, roughnessMap}
+  function pbr(baseKey, baseCanvas, roughness) {
+    if (_pbr[baseKey]) return _pbr[baseKey];
+    const map = new THREE.CanvasTexture(baseCanvas);
+    map.wrapS = map.wrapT = THREE.RepeatWrapping;
+    const normal = new THREE.CanvasTexture(_heightToNormal(baseCanvas));
+    normal.wrapS = normal.wrapT = THREE.RepeatWrapping;
+    // 粗糙度图：灰度 = 基础粗糙度 ± 亮度扰动
+    const S = baseCanvas.width;
+    const rc = document.createElement('canvas');
+    rc.width = rc.height = S;
+    const rctx = rc.getContext('2d');
+    rctx.drawImage(baseCanvas, 0, 0);
+    const rd = rctx.getImageData(0, 0, S, S);
+    for (let i = 0; i < rd.data.length; i += 4) {
+      const lum = (rd.data[i] + rd.data[i + 1] + rd.data[i + 2]) / 765;
+      const g = Math.round(clamp(roughness + (lum - 0.5) * 0.25, 0.05, 1) * 255);
+      rd.data[i] = rd.data[i + 1] = rd.data[i + 2] = g;
+    }
+    rctx.putImageData(rd, 0, 0);
+    const rough = new THREE.CanvasTexture(rc);
+    rough.wrapS = rough.wrapT = THREE.RepeatWrapping;
+    return _pbr[baseKey] = { map, normalMap: normal, roughnessMap: rough };
+  }
+
+  // 地面（PBR 三件套：手绘沥青，无主之地式）
+  function groundPBR(hex) {
+    const c = handPaint(_makeCanvas('g' + hex, 512, (ctx, S) => {
+      ctx.fillStyle = '#' + hex.toString(16).padStart(6, '0');
+      ctx.fillRect(0, 0, S, S);
+      for (let i = 0; i < 4200; i++) {
+        const v = Math.random();
+        ctx.fillStyle = v > 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.12)';
+        ctx.fillRect(Math.random() * S, Math.random() * S, Math.random() * 2.5 + 1, Math.random() * 2.5 + 1);
+      }
+      // 碎石颗粒（法线会凸起）
+      for (let i = 0; i < 260; i++) {
+        const g = randi(60, 150);
+        ctx.fillStyle = `rgb(${g},${g},${g})`;
+        ctx.beginPath();
+        ctx.arc(Math.random() * S, Math.random() * S, rand(1, 3.2), 0, 7);
+        ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+      for (let i = 0; i < 16; i++) {
+        ctx.lineWidth = Math.random() * 2 + 0.5;
+        ctx.beginPath();
+        let x = Math.random() * S, y = Math.random() * S;
+        ctx.moveTo(x, y);
+        for (let k = 0; k < 6; k++) { x += rand(-52, 52); y += rand(-52, 52); ctx.lineTo(x, y); }
+        ctx.stroke();
+      }
+      for (let i = 0; i < 10; i++) {
+        ctx.fillStyle = `rgba(${randi(8,36)},${randi(8,36)},${randi(8,36)},0.2)`;
+        ctx.beginPath();
+        ctx.arc(Math.random() * S, Math.random() * S, rand(20, 70), 0, 7);
+        ctx.fill();
+      }
+    }));
+    return pbr('gp' + hex, c, 0.82);
+  }
+
+  // 建筑外墙 PBR（手绘混凝土）
+  function concretePBR(hex) {
+    const c = handPaint(_makeCanvas('cw' + hex, 512, (ctx, S) => {
+      ctx.fillStyle = '#' + hex.toString(16).padStart(6, '0');
+      ctx.fillRect(0, 0, S, S);
+      for (let i = 0; i < 3600; i++) {
+        const v = Math.random();
+        ctx.fillStyle = v > 0.5 ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.08)';
+        ctx.fillRect(Math.random() * S, Math.random() * S, rand(1, 3), rand(1, 3));
+      }
+      // 模板接缝
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.lineWidth = 2;
+      for (let y = 0; y < S; y += S / 4) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(S, y); ctx.stroke(); }
+      // 水渍流痕
+      for (let i = 0; i < 26; i++) {
+        const x = Math.random() * S;
+        const grad = ctx.createLinearGradient(x, 0, x, rand(60, 240));
+        grad.addColorStop(0, 'rgba(20,22,25,0.35)');
+        grad.addColorStop(1, 'rgba(20,22,25,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, 0, rand(6, 20), 240);
+      }
+      // 裂缝
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+      for (let i = 0; i < 8; i++) {
+        ctx.lineWidth = rand(0.5, 1.8);
+        ctx.beginPath();
+        let x = Math.random() * S, y = Math.random() * S;
+        ctx.moveTo(x, y);
+        for (let k = 0; k < 5; k++) { x += rand(-40, 40); y += rand(20, 60); ctx.lineTo(x, y); }
+        ctx.stroke();
+      }
+    }));
+    return pbr('cw' + hex, c, 0.9);
+  }
+
+  function _makeCanvas(key, size, fn) {
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    fn(c.getContext('2d'), size);
+    return c;
+  }
+
+  // 手绘笔触层（无主之地式：albedo带方向性笔触与色彩抖动，保留PBR光照）
+  function handPaint(srcCanvas, hueJitter = 14, strokes = 260) {
+    const S = srcCanvas.width;
+    const out = document.createElement('canvas');
+    out.width = out.height = S;
+    const ctx = out.getContext('2d');
+    ctx.drawImage(srcCanvas, 0, 0);
+    const src = ctx.getImageData(0, 0, S, S);
+    // 色彩抖动（按块调色，模拟手绘上色）
+    for (let i = 0; i < src.data.length; i += 4) {
+      const j = ((i >> 2) % 7 === 0) ? rand(-hueJitter, hueJitter) : 0;
+      src.data[i] = clamp(src.data[i] + j, 0, 255);
+      src.data[i + 1] = clamp(src.data[i + 1] + j * 0.6, 0, 255);
+      src.data[i + 2] = clamp(src.data[i + 2] + j * 0.4, 0, 255);
+    }
+    ctx.putImageData(src, 0, 0);
+    // 方向性笔触
+    ctx.globalAlpha = 0.10;
+    for (let i = 0; i < strokes; i++) {
+      const x = Math.random() * S, y = Math.random() * S;
+      const w = rand(10, 34), h = rand(2, 5);
+      const light = Math.random() > 0.5;
+      ctx.fillStyle = light ? '#ffffff' : '#000000';
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rand(-0.5, 0.5));
+      ctx.fillRect(-w / 2, -h / 2, w, h);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+    return out;
+  }
+
+  return { mat, toon, gradientMap, outline, setOutlines, resetOutlines, ground, windows, stripes, panel, sky, groundPBR, concretePBR, pbr, handPaint };
 })();

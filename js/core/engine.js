@@ -14,6 +14,17 @@ const ENGINE = {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     if (THREE.sRGBEncoding) this.renderer.outputEncoding = THREE.sRGBEncoding;
+    // 写实渲染：ACES 色调映射 + 物理光照单位（v3.4）
+    if (THREE.ACESFilmicToneMapping) {
+      this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      this.renderer.toneMappingExposure = 0.92;
+    }
+    if (this.renderer.physicallyCorrectLights !== undefined) this.renderer.physicallyCorrectLights = false;
+    if (this.renderer.shadowMap !== undefined) {
+      // 写实档位开启阴影
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.08, 400);
     this.camera.rotation.order = 'YXZ';
     this.scene = new THREE.Scene();
@@ -88,7 +99,7 @@ const ENGINE = {
   },
 
   // 纹理克隆登记（场地专属资源，换图即释放）
-  trackTex(t) { if (t) { t.__tracked = true; this._trackedTex.add(t); } return t; },
+  trackTex(t) { if (t) { t.__tracked = true; t.needsUpdate = true; this._trackedTex.add(t); } return t; },
 
   // GPU 资源统计（draw call / 几何体 / 纹理数量）
   gpuStats() {
@@ -115,15 +126,21 @@ const ENGINE = {
     skyDome.userData.noOutline = true;
     g.add(skyDome);
 
-    // 地面（程序化沥青纹理）
-    const gTex = this.trackTex(ART.ground(def.groundColor).clone());
-    gTex.needsUpdate = true;
+    // 地面（PBR 写实：反照率+法线+粗糙度三件套，v3.4）
+    const gp = ART.groundPBR(def.groundColor);
     const rep = Math.max(10, Math.round((def.size * 2 + 80) / 9));
-    gTex.repeat.set(rep, rep);
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(def.size * 2 + 80, def.size * 2 + 80),
-      new THREE.MeshLambertMaterial({ map: gTex })
+      new THREE.MeshStandardMaterial({
+        map: this.trackTex(gp.map.clone()), normalMap: this.trackTex(gp.normalMap.clone()),
+        roughnessMap: this.trackTex(gp.roughnessMap.clone()),
+        normalScale: new THREE.Vector2(1.4, 1.4),
+        roughness: 1, metalness: 0.02,
+      })
     );
+    ground.material.map.repeat.set(rep, rep);
+    ground.material.normalMap.repeat.set(rep, rep);
+    ground.material.roughnessMap.repeat.set(rep, rep);
     ground.rotation.x = -Math.PI / 2;
     ground.userData.noOutline = true;
     g.add(ground);
@@ -156,11 +173,20 @@ const ENGINE = {
       return geo;
     };
     for (const p of def.props) {
-      const useWin = !p.e && p.h >= 10;   // 窗格建筑保持独立（每栋独立UV重复度）
+      const useWin = !p.e && p.h >= 10;   // 高层建筑 → 写实混凝土PBR立面
       if (useWin) {
-        const t = this.trackTex(ART.windows(p.c).clone()); t.needsUpdate = true;
-        t.repeat.set(Math.max(1, Math.round(p.w / 6)), Math.max(1, Math.round(p.h / 5)));
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(p.w, p.h, p.d), new THREE.MeshLambertMaterial({ map: t }));
+        const cw = ART.concretePBR(0x8a8f96);
+        const mat = new THREE.MeshStandardMaterial({
+          map: this.trackTex(cw.map.clone()), normalMap: this.trackTex(cw.normalMap.clone()),
+          roughnessMap: this.trackTex(cw.roughnessMap.clone()),
+          normalScale: new THREE.Vector2(1.1, 1.1), roughness: 1, metalness: 0,
+          color: new THREE.Color(p.c).multiplyScalar(1.0),
+        });
+        const repX = Math.max(1, Math.round(p.w / 7)), repY = Math.max(1, Math.round(p.h / 7));
+        mat.map.repeat.set(repX, repY);
+        mat.normalMap.repeat.set(repX, repY);
+        mat.roughnessMap.repeat.set(repX, repY);
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(p.w, p.h, p.d), mat);
         put(mesh, p.x, (p.y || 0) + p.h / 2, p.z, p.ry);
         g.add(mesh);
         continue;

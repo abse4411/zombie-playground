@@ -291,6 +291,16 @@ const HUD = {
         ctx.arc(c + zx, c + zz, size, 0, TAU);
         ctx.fill();
       }
+      // 补给箱雷达标记（引导探索）
+      if (game.crates) {
+        for (const c of game.crates) {
+          if (c.opened) continue;
+          const cx = (c.x - p.pos.x) * scale, cz = (c.z - p.pos.z) * scale;
+          if (Math.abs(cx) > c - 5 || Math.abs(cz) > c - 5) continue;
+          ctx.fillStyle = c.tier === 'elite' ? '#b05cff' : '#3aa0ff';
+          ctx.fillRect(c + cx - 2.5, c + cz - 2.5, 5, 5);
+        }
+      }
       const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 1.5;

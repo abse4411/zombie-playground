@@ -3,14 +3,35 @@
  * 调研依据: 加权表含显式空掉落; 色阶白绿蓝紫橙; 光柱引导+音效反馈
  * ============================================================ */
 const LOOT_TABLE = [
-  { id: 'cash',   weight: 32, rarity: 0 },   // 现金包
-  { id: 'ammo',   weight: 24, rarity: 0 },   // 弹药盒（当前武器备弹+35%）
-  { id: 'medkit', weight: 13, rarity: 1 },   // 医疗包（入背包，按H使用）
+  { id: 'cash',   weight: 30, rarity: 0 },   // 现金包
+  { id: 'ammo',   weight: 22, rarity: 0 },   // 弹药盒（当前武器备弹+35%）
+  { id: 'medkit', weight: 12, rarity: 1 },   // 医疗包（入背包，按H使用）
   { id: 'frag',   weight: 8,  rarity: 1 },   // 手雷×2
   { id: 'molo',   weight: 6,  rarity: 1 },   // 燃烧瓶×2
   { id: 'big',    weight: 4,  rarity: 3 },   // 大奖：现金×5
-  { id: 'none',   weight: 13, rarity: -1 },  // 显式空掉落
+  { id: 'weapon', weight: 6,  rarity: 2 },   // 稀有武器掉落（v9.5）
+  { id: 'none',   weight: 12, rarity: -1 },  // 显式空掉落
 ];
+/* 武器掉落稀有度池（v9.5）：白60/绿25/蓝10/紫5 → 对应商城价格档 */
+const WEAPON_DROP_TIERS = [
+  { rarity: 0, priceRange: [0, 1600], chance: 0.60, lvl: 0 },
+  { rarity: 1, priceRange: [1600, 3000], chance: 0.25, lvl: 1 },
+  { rarity: 2, priceRange: [3000, 4500], chance: 0.10, lvl: 1 },
+  { rarity: 3, priceRange: [4500, 99999], chance: 0.05, lvl: 2 },
+];
+function rollWeaponDrop() {
+  const pool = Object.values(WEAPONS).filter(w => !w.melee && !w.unlockBy && w.price > 0);
+  const r = Math.random();
+  let acc = 0, tier = WEAPON_DROP_TIERS[0];
+  for (const t of WEAPON_DROP_TIERS) { acc += t.chance; if (r <= acc) { tier = t; break; } }
+  const inRange = pool.filter(w => w.price >= tier.priceRange[0] && w.price < tier.priceRange[1]);
+  const def = (inRange.length ? inRange : pool)[randi(0, (inRange.length ? inRange : pool).length - 1)];
+  const inst = new WeaponInstance(def);
+  inst.lvl = tier.lvl;
+  inst.mag = inst.magSize;
+  inst.reserve = inst.def.reserve;
+  return { inst, rarity: tier.rarity, def };
+}
 const LOOT_RARITY_COLORS = [0xb8c0cc, 0x52d273, 0x3aa0ff, 0xb05cff];
 const LOOT_RARITY_NAMES = ['普通', '优秀', '稀有', '史诗'];
 /* 掉落物专属模型构建器 + 名称（v8.9）：不再是无差别方块 */
@@ -89,7 +110,14 @@ class LootDrop {
     // 专属模型（v8.9）：现金捆/弹药盒/医疗箱/手雷/燃烧瓶/大奖袋
     const modelHolder = new THREE.Group();
     const buildModel = LOOT_MODELS[kind];
-    if (buildModel) modelHolder.add(buildModel());
+    if (this.weaponInst) {
+      const gun = buildGunModel(this.weaponInst.def, { outlines: false, tint: 0xffffff });
+      const gb = new THREE.Box3().setFromObject(gun);
+      const gs = 0.85 / (Math.max(gb.getSize(new THREE.Vector3()).x, 0.5) || 1);
+      gun.scale.setScalar(gs);
+      gun.position.y = -gb.getCenter(new THREE.Vector3()).y * gs;
+      modelHolder.add(gun);
+    } else if (buildModel) modelHolder.add(buildModel());
     else modelHolder.add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.24, 0.3), new THREE.MeshStandardMaterial({ color: 0x2a2d33 })));
     modelHolder.position.y = 0.3;
     // 稀有度光圈底座
@@ -105,7 +133,8 @@ class LootDrop {
     const lctx = labelCanvas.getContext('2d', { willReadFrequently: true });
     lctx.font = 'bold 30px "Microsoft YaHei", "PingFang SC", sans-serif';
     lctx.textAlign = 'center'; lctx.textBaseline = 'middle';
-    const label = LOOT_LABELS[kind] || (kind === 'ammo' ? '🔸 弹药盒' : '📦 物资');
+    let label = LOOT_LABELS[kind] || (kind === 'ammo' ? '🔸 弹药盒' : '📦 物资');
+    if (this.weaponInst) label = `${['◆', '◆◆', '◆◆◆', '◆◆◆◆'][this.rarity]} ${this.weaponInst.def.name}${this.weaponInst.lvl ? ' Lv.' + this.weaponInst.lvl : ''}`;
     const tw2 = Math.min(240, lctx.measureText(label).width + 28);
     lctx.fillStyle = 'rgba(6,8,12,0.72)';
     lctx.fillRect((256 - tw2) / 2, 6, tw2, 44);
@@ -201,6 +230,26 @@ class LootDrop {
         HUD.pickup(`⭐ 大奖现金 +$${this.value}！`, this.rarity);
         AUDIO.streak();
         break;
+      case 'weapon': {
+        const inst = this.weaponInst;
+        const slot = inst.def.slot;
+        if (p.rack[slot].length < p.EQUIP_MAX) {
+          p.rack[slot].push(inst);
+          p.weapons[slot] = inst;
+          p.current = slot;
+          if (game.weapons) game.weapons._buildViewmodel();
+          HUD.pickup(`🔫 ${inst.def.name} 已装备！`, this.rarity);
+          AUDIO.streak();
+        } else if (p.storageAdd({ kind: 'weapon', inst })) {
+          HUD.pickup(`🎒 ${inst.def.name} 已入背包（Tab 换装）`, this.rarity);
+          AUDIO.streak();
+        } else {
+          const salvage = Math.round(inst.def.price * 0.35);
+          p.addMoney(salvage);
+          HUD.pickup(`⚠ 背包已满 → ${inst.def.name} 折现 +$${salvage}`, this.rarity);
+        }
+        break;
+      }
     }
     AUDIO.purchase();
   }
@@ -221,8 +270,8 @@ function rollLoot(z, game) {
     table = table.map(l => ({ ...l, weight: l.id === 'none' ? l.weight * (1 - cut) : l.weight }));
   }
   if (z.affix || z.boss) {
-    // 精英/Boss：提升大奖与医疗权重
-    table = LOOT_TABLE.map(l => ({ ...l, weight: l.id === 'big' ? l.weight * 4 : l.id === 'none' ? l.weight * 0.4 : l.weight }));
+    // 精英/Boss：提升大奖/武器/医疗权重
+    table = LOOT_TABLE.map(l => ({ ...l, weight: l.id === 'big' ? l.weight * 4 : l.id === 'weapon' ? l.weight * 2.5 : l.id === 'none' ? l.weight * 0.4 : l.weight }));
   }
   const drop = weightedPick(table);
   if (drop.id === 'none') return null;
@@ -237,5 +286,11 @@ function spawnLoot(game, z) {
   const a = rand(0, TAU), r = rand(0.4, 1.1);
   const x = clamp(z.pos.x + Math.cos(a) * r, -ENGINE.mapDef.size + 1, ENGINE.mapDef.size - 1);
   const zz = clamp(z.pos.z + Math.sin(a) * r, -ENGINE.mapDef.size + 1, ENGINE.mapDef.size - 1);
-  game.loots.push(new LootDrop(roll.id, x, zz, roll.value));
+  const drop = new LootDrop(roll.id, x, zz, roll.value);
+  if (roll.id === 'weapon') {
+    const wd = rollWeaponDrop();
+    drop.weaponInst = wd.inst;
+    drop.rarity = wd.rarity;
+  }
+  game.loots.push(drop);
 }

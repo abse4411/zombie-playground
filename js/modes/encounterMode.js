@@ -216,10 +216,15 @@ class EncounterMode {
       this.phaseIdx++;
       const ph = phases[this.phaseIdx];
       if (!ph) return;
-      // 转场演出（v10.2）
+      // 转场演出（v10.2）：闪白+慢镜+横幅
       HUD.banner('▣ ' + ph.label, '阶段 ' + (this.phaseIdx + 1) + ' / ' + phases.length);
       AUDIO.waveHorn();
       ENGINE.shake(0.3);
+      this.game.slowmo(0.6);
+      const flash = document.createElement('div');
+      flash.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:200;pointer-events:none;opacity:.85;transition:opacity .5s';
+      document.body.appendChild(flash);
+      requestAnimationFrame(() => { flash.style.opacity = '0'; setTimeout(() => flash.remove(), 600); });
       if (ph.type === 'destroy' && !this.reactorSpawned) {
         // 生成3座反应堆（围绕地图中心三角布置）
         this.reactorSpawned = true;

@@ -537,6 +537,28 @@ class Game {
   /* ================= 击杀 / 死亡 / 胜利 ================= */
   onZombieKilled(z, headshot) {
     const p = this.player;
+    // Boss 专属补给箱（v10.2 CSOL式：Boss掉物品）
+    if (z.boss && z.bossCfg) {
+      const roll = Math.random();
+      if (roll < 0.4) {
+        const cash = randi(1500, 3000);
+        this.loots.push(new LootDrop('big', z.pos.x, z.pos.z, cash));
+      } else if (roll < 0.7) {
+        // 满弹药补给
+        for (const slot of ['primary', 'secondary']) {
+          for (const inst of p.rack[slot]) { inst.reserve = Math.floor(inst.def.reserve * p.reserveMult); inst.mag = inst.magSize; }
+        }
+        HUD.toast('📦 Boss补给：全弹药补满！');
+      } else {
+        const wd = rollWeaponDrop ? rollWeaponDrop() : null;
+        if (wd) {
+          const drop = new LootDrop('weapon', z.pos.x + 1, z.pos.z, 0);
+          drop.weaponInst = wd.inst; drop.rarity = Math.min(3, wd.rarity + 1);
+          this.loots.push(drop);
+          HUD.toast('🎁 Boss掉落了稀有武器！');
+        }
+      }
+    }
 
     // 联机：房主侧队友击杀 → 转发奖励与播报，不计入自己
     if (typeof NET !== 'undefined' && NET.role === 'host' && z._lastHitBy) {

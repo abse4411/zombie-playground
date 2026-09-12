@@ -4,6 +4,7 @@
 const PROJ_CFG = {
   bile:    { r: 0.14, c: 0x7a9a3a, e: 0x3a5a10, g: 10 },
   rock:    { r: 0.32, c: 0x5a5248, e: 0x000000, g: 13 },
+  missile: { r: 0.12, c: 0x8a8f96, e: 0xff5010, g: 10 },
   frag:    { r: 0.11, c: 0x3d5a3d, e: 0x000000, g: 13 },
   molotov: { r: 0.12, c: 0x8a4b1f, e: 0x552200, g: 13 },
   acid:    { r: 0.15, c: 0x66cc33, e: 0x2a6600, g: 9 },
@@ -88,6 +89,16 @@ class Projectile {
       spawnFireZone(game, p.x, p.z, THROWABLES.molotov);
       AUDIO.fireIgnite();
       return;
+    }
+    // 导弹：命中/落地→爆炸伤害（无酸洼）
+    if (this.kind === 'missile') {
+      const hitP = pd < 1.3 && p.y < 2.4;
+      if (hitP || this.landed) {
+        this._finish(game);
+        explodeGrenade(game, p.x, p.y, p.z, { damage: (this.opts.R && this.opts.R.dmg) || 30, radius: 2.6, selfMult: 1 });
+        PARTICLES.explosion(p.x, p.y, p.z);
+        return;
+      }
     }
     // 巨石：命中/落地→小范围爆炸伤害+击飞
     if (this.kind === 'rock') {

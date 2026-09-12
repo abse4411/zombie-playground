@@ -220,6 +220,67 @@ function buildZombieModel(cfg, outlines) {
   return { group: g, skin, cloth, head, arms, legs, headBits, tilt: cfg.crawl ? 1.0 : 0 };
 }
 
+/* ---------- 机械机甲模型（v10.1 XT-300） ---------- */
+function buildMechModel(cfg, outlines) {
+  const g = new THREE.Group();
+  g.rotation.order = 'YXZ';
+  const steel = ART.mat(0x4a525a, {}).clone ? ART.mat(0x4a525a) : new THREE.MeshStandardMaterial({ color: 0x4a525a });
+  const dark = ART.mat(0x22262c);
+  const red = new THREE.MeshStandardMaterial({ color: 0xb03828, emissive: 0x901010, emissiveIntensity: 0.8 });
+  const B = (w, h, d, mat, x, y, z) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z); g.add(m); return m;
+  };
+  const C = (r, h, mat, x, y, z, axis) => {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 10), mat);
+    if (axis === 'z') m.rotation.x = Math.PI / 2;
+    m.position.set(x, y, z); g.add(m); return m;
+  };
+  // 主躯干（装甲盒）
+  B(1.0, 0.9, 0.7, steel, 0, 1.5, 0);
+  B(0.7, 0.3, 0.5, dark, 0, 2.05, 0);                  // 传感桅杆座
+  C(0.05, 0.5, dark, 0, 2.4, 0, 'y');                  // 天线
+  // 炮塔（可破坏弱点——存引用）
+  const turret = new THREE.Group();
+  turret.position.set(0, 2.0, 0.25);
+  const tBase = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 0.3, 10), dark);
+  const tGun = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.7), steel);
+  tGun.position.set(0, 0.08, 0.35);
+  const tBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.5, 8), dark);
+  tBarrel.rotation.x = Math.PI / 2; tBarrel.position.set(0, 0.08, 0.75);
+  const tEye = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 0.05), red);
+  tEye.position.set(0, 0.16, 0.2);
+  turret.add(tBase, tGun, tBarrel, tEye);
+  g.add(turret);
+  // 导弹巢（肩部）
+  for (const sx of [-1, 1]) {
+    const pod = B(0.3, 0.4, 0.4, dark, sx * 0.65, 1.75, 0);
+    for (let i = 0; i < 4; i++) {
+      const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.3, 8), red.clone());
+      tube.rotation.x = Math.PI / 2;
+      tube.position.set(sx * 0.65 + (i % 2 ? 0.08 : -0.08), 1.85 - Math.floor(i / 2) * 0.16, 0.22);
+      g.add(tube);
+    }
+  }
+  // 双臂（液压爪）
+  for (const sx of [-1, 1]) {
+    B(0.28, 0.7, 0.28, steel, sx * 0.7, 1.2, 0);
+    B(0.34, 0.3, 0.34, dark, sx * 0.72, 0.75, 0.05);
+  }
+  // 双足（反关节）
+  for (const sx of [-1, 1]) {
+    B(0.3, 0.55, 0.34, steel, sx * 0.32, 0.55, 0);
+    B(0.36, 0.16, 0.55, dark, sx * 0.32, 0.1, 0.08);
+  }
+  // 胸口核心（发光弱点点缀）
+  const core = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.26, 0.08), red);
+  core.position.set(0, 1.55, 0.37);
+  g.add(core);
+  if (outlines) { }
+  g.scale.setScalar(cfg.scale);
+  return { group: g, skin: steel, cloth: dark, head: tEye, arms: [], legs: [], headBits: [tEye], tilt: 0, mech: true, turret };
+}
+
 /* ---------- 四足模型（地狱犬） ---------- */
 function buildQuadrupedModel(cfg, outlines) {
   const g = new THREE.Group();
@@ -365,7 +426,8 @@ class Zombie {
       const wantOutline = ENGINE.quality.outlines && !this.dummy;
       this.group.traverse(o => { if (o.userData.isOutline) o.visible = wantOutline; else o.visible = true; });
     } else {
-      const model = cfg.quadruped ? buildQuadrupedModel(cfg, ENGINE.quality.outlines && !this.dummy) : buildZombieModel(cfg, ENGINE.quality.outlines && !this.dummy);
+      const model = this.bossCfg && this.bossCfg.mech ? buildMechModel(cfg, false)
+        : cfg.quadruped ? buildQuadrupedModel(cfg, ENGINE.quality.outlines && !this.dummy) : buildZombieModel(cfg, ENGINE.quality.outlines && !this.dummy);
       this.model = model;
       this.group = model.group;
       this.group.userData.model = model;   // 供对象池复用
@@ -793,6 +855,70 @@ class Zombie {
           }
         }
       }
+      // 机枪扫射（XT-300 v10.1）：扇形10连弹幕（炮塔被破坏后禁用）
+      if (A.gatlingEvery) {
+        const turretOk = !this.model.turret || this.model.turret.visible;
+        this.gatCd = (this.gatCd === undefined ? rand(2, 4) : this.gatCd) - dt;
+        if (this.gatCd <= 0 && turretOk && dist > 3 && dist < 22 && p.alive) {
+          this.gatCd = A.gatlingEvery;
+          const N = A.gatlingN || 10;
+          for (let i = 0; i < N; i++) {
+            setTimeout(() => {
+              if (this.dead || !window.GAME || window.GAME.state !== 'playing' || !this.model.turret.visible) return;
+              const g3 = window.GAME;
+              const p3 = g3.player;
+              const base = Math.atan2(p3.pos.x - this.pos.x, p3.pos.z - this.pos.z);
+              const spread = (i - N / 2) * 0.07;
+              const dir = { x: Math.sin(base + spread), z: Math.cos(base + spread) };
+              // 曳光弹：直线快速弹（简化为射线伤害判定+曳光视觉）
+              const hit = Math.abs(spread) < 0.05 && Math.random() < 0.4;   // 中心弹40%命中
+              const oy = 2.1 * this.group.scale.x;
+              const start = { x: this.pos.x + dir.x * 1.2, y: oy, z: this.pos.z + dir.z * 1.2 };
+              const end = { x: start.x + dir.x * 24, y: start.y, z: start.z + dir.z * 24 };
+              if (typeof TRACERS !== 'undefined') TRACERS.fire(start, end);
+              if (hit && p3.alive) p3.takeDamage(A.gatlingDmg || 7, g3, this.pos);
+              AUDIO.shot(220, 0.05, 0.4);
+            }, i * 70);
+          }
+          HUD.toast('⚡ XT-300 机枪扫射——找掩体！');
+        }
+      }
+      // 导弹齐射（XT-300 v10.1）：3枚追踪导弹
+      if (A.missileEvery) {
+        this.mslCd = (this.mslCd === undefined ? rand(4, 6) : this.mslCd) - dt;
+        if (this.mslCd <= 0 && dist > 4 && p.alive) {
+          this.mslCd = A.missileEvery;
+          for (let i = 0; i < (A.missileN || 3); i++) {
+            setTimeout(() => {
+              if (this.dead || !window.GAME || window.GAME.state !== 'playing') return;
+              const g3 = window.GAME;
+              const p3 = g3.player;
+              // 追踪弹：发射时锁定当前位置+预判
+              const ox = this.pos.x, oz = this.pos.z, oy = 1.9 * this.group.scale.x;
+              const tx = p3.pos.x + p3.vel.x * 0.5, tz = p3.pos.z + p3.vel.z * 0.5;
+              const d2 = dist2d(ox, oz, tx, tz);
+              const t2 = clamp(d2 / 11, 0.3, 1.6);
+              const vx = (tx - ox) / t2, vz = (tz - oz) / t2;
+              const vy = (1.2 - oy + 0.5 * 10 * t2 * t2) / t2;
+              g3.projectiles.push(new Projectile('missile', ox, oy, oz, vx, vy, vz, { fuse: 4, R: { dmg: A.missileDmg || 30, poolDps: 0, poolRadius: 0, poolTime: 0 } }));
+              AUDIO.acidSpit(d2);
+            }, i * 260);
+          }
+          HUD.toast('🚀 导弹齐射——保持移动！');
+        }
+      }
+      // 踩踏（XT-300 v10.1）：AOE+震屏（复用slam字段渲染红圈提示则简化为直接伤害）
+      if (A.stompEvery) {
+        this.stompCd = (this.stompCd === undefined ? rand(3, 5) : this.stompCd) - dt;
+        if (this.stompCd <= 0 && dist < (A.stompRadius || 6) + 1.5) {
+          this.stompCd = A.stompEvery;
+          ENGINE.shake(0.5);
+          PARTICLES.dust(this.pos.x, 0.3, this.pos.z, 18);
+          AUDIO.impact();
+          if (p.alive && dist < (A.stompRadius || 6)) p.takeDamage(A.stompDmg || 44, game, this.pos);
+          HUD.toast('💥 XT-300 践踏——离开红色区域！');
+        }
+      }
       // 触须横扫（母体泵守护者 v8.0）：12m直线扇形击飞，前摇1s
       if (A.tentacleEvery) {
         this.tentCd = (this.tentCd === undefined ? rand(3, 5) : this.tentCd) - dt;
@@ -997,6 +1123,21 @@ class Zombie {
   _animate() {
     const m = this.model, cfg = this.type;
     const sw = Math.sin(this.walkPhase);
+    // 机甲（v10.1 XT-300）：腿部液压摆动+炮塔微转+待机浮沉
+    if (m.mech) {
+      const legsM = m.group.children.filter(c => c.geometry && c.geometry.parameters && c.geometry.parameters.width === 0.3);
+      if (m.group.children[0]) { /* 躯干呼吸微浮 */ }
+      m.group.position.y = Math.sin(ENGINE.time * 1.4 + this.walkPhase) * 0.04;
+      // 炮塔朝向玩家微转
+      if (m.turret && m.turret.visible) {
+        const p = GAME && GAME.player;
+        if (p) {
+          const want = Math.atan2(p.pos.x - this.pos.x, p.pos.z - this.pos.z) - this.group.rotation.y;
+          m.turret.rotation.y += (want - m.turret.rotation.y) * Math.min(1, 3 * 0.016);
+        }
+      }
+      return;
+    }
     // 四足（地狱犬）：对角步态
     if (m.quadruped) {
       m.legs[0].rotation.x = sw * 0.7;
@@ -1118,8 +1259,21 @@ class Zombie {
     this._flash();
     // 头顶血条（首次受伤时懒创建）
     if (typeof HPBARS !== 'undefined' && !this.dummy && this.hp < this.maxHp && !this.hpbar) HPBARS.create(this);
+    // XT-300 炮塔弱点（v10.1）：爆头3次破坏炮塔（禁用扫射）
     // 女巫：受击触发狂暴（v9.9）
     if (cfg.witch) this._provoked = true;
+    // XT-300 炮塔破坏（v10.1）：爆头累计3次
+    if (isHead && this.bossCfg && this.bossCfg.mech && this.model.turret && this.model.turret.visible) {
+      this._turretHits = (this._turretHits || 0) + 1;
+      if (this._turretHits >= 3) {
+        this.model.turret.visible = false;
+        PARTICLES.explosion(this.pos.x, 2.2 * this.group.scale.x, this.pos.z);
+        AUDIO.explode(0);
+        HUD.banner('🎯 炮塔已摧毁！', '它的扫射哑火了');
+      } else {
+        HUD.toast(`🎯 命中炮塔（${this._turretHits}/3）`);
+      }
+    }
     // 呛尸：受击打断拖拽（v9.7）
     if (cfg.drag && this.dragActive > 0) {
       this.dragActive = 0;

@@ -148,7 +148,18 @@ const GAMECONFIG = {
       hp: 2400, speed: 3.1, dmg: 40, reward: 2400,
       attacks: { lungeEvery: 7, lungeSpeed: 12, summonEvery: 11, summonN: 3, frenzy: true },
     },
-     pumpWarden: {
+     xt300: {
+      name: '钢铁哨兵 XT-300', type: 'brute', scale: 1.8,
+      hp: 5000, speed: 1.7, dmg: 36, reward: 7000,
+      mech: true,
+      attacks: {
+        gatlingEvery: 5, gatlingDmg: 7, gatlingN: 10,    // 机枪扫射：扇形10连
+        missileEvery: 8, missileDmg: 30, missileN: 3,    // 导弹齐射：3枚追踪
+        stompEvery: 9, stompDmg: 44, stompRadius: 6.5,   // 踩踏
+        turretWeak: true,                                 // 炮塔弱点：破坏后无法扫射
+      },
+    },
+    pumpWarden: {
       name: '母体泵守护者', type: 'brute', scale: 2.5,
       hp: 4800, speed: 2.0, dmg: 50, reward: 6000,
       weakFire: true,

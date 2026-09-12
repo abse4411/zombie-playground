@@ -733,3 +733,8 @@ body.touch #ammo-mag { font-size: 30px; }
   #radar-box { transform: scale(.75); transform-origin: top right; }
   #hud-top #wave-label { font-size: 17px; }
 }
+
+.bp-w.equip-slot { border-left: 3px solid var(--red); }
+.bp-w.in-storage { border-left: 3px solid #3aa0ff; }
+.bp-cap-full { color: #ff8f9f !important; }
+.bp-empty-slot { opacity: .35; font-style: italic; }

@@ -208,7 +208,7 @@ class WeaponSystem {
     if (def.launcher) {
       if (INPUT.consumeLmb() && this.cooldown <= 0 && this.switchT <= 0 && this.reloadT <= 0) {
         if (w.mag <= 0) {
-          if (this._emptyCd <= 0) { AUDIO.emptyClick(); this._emptyCd = 0.3; this._startReload(); }
+          if (this._emptyCd <= 0) { AUDIO.emptyClick(); this._emptyCd = 0.3; if (SAVE.data.settings.autoReload !== false) this._startReload(); }
         } else {
           w.mag--;
           this.cooldown = 60 / def.rpm;
@@ -254,7 +254,7 @@ class WeaponSystem {
       const wantFire = def.auto ? INPUT.lmb : INPUT.consumeLmb();
       if (wantFire && this.switchT <= 0 && this.reloadT <= 0 && this.cooldown <= 0) {
         if (w.mag <= 0) {
-          if (this._emptyCd <= 0) { AUDIO.emptyClick(); this._emptyCd = 0.3; this._startReload(); }
+          if (this._emptyCd <= 0) { AUDIO.emptyClick(); this._emptyCd = 0.3; if (SAVE.data.settings.autoReload !== false) this._startReload(); }
         } else {
           this._fire(def, w, game);
         }

@@ -7,7 +7,7 @@ const SAVE = {
 
   defaults() {
     return {
-      settings: { sens: 1, volume: 0.8, quality: 'auto', touchSens: 1, fpsCap: 0 },
+      settings: { sens: 1, volume: 0.8, quality: 'auto', touchSens: 1, fpsCap: 0, autoReload: true },
       missionsDone: 0,
       totalKills: 0,
       totalRuns: 0,

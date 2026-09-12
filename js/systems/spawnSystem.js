@@ -102,11 +102,12 @@ class SpawnSystem {
       sx = use.x + rand(-2.5, 2.5);
       sz = use.z + rand(-2.5, 2.5);
     }
-    // 精英词缀判定（Diablo 式：波次足够且非Boss）
+    // 变异感染体判定（v6.9）：概率随章节进度与波次递增（14%基础 → 上限45%）
     const wv = this.game.mode.wave !== undefined ? this.game.mode.wave : (this.game.mode.wavePtr || 0);
-    if (!opts.boss && !opts.dummy && ZOMBIE_TYPES[typeId].cost < 10
-      && wv >= 6 && Math.random() < GAMECONFIG.elites.chance) {
-      opts.affix = choice(GAMECONFIG.elites.list);
+    const chapter = this.game.mode.idx || 0;
+    if (!opts.boss && !opts.dummy && ZOMBIE_TYPES[typeId].cost < 10 && wv >= 4) {
+      const mutChance = Math.min(0.45, GAMECONFIG.elites.chance + wv * 0.012 + chapter * 0.03);
+      if (Math.random() < mutChance) opts.affix = choice(GAMECONFIG.elites.list);
     }
     const zb = new Zombie(typeId, sx, sz, this.mults, opts);
     // 血月强化

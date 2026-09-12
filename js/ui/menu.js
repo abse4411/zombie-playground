@@ -96,6 +96,16 @@ const MENU = {
       setFcapActive();
       AUDIO.uiClick();
     }));
+    // 自动装填开关
+    const arBtns = document.querySelectorAll('.ar-btn');
+    const setArActive = () => arBtns.forEach(b => b.classList.toggle('active', (b.dataset.ar === '1') !== (SAVE.data.settings.autoReload === false)));
+    setArActive();
+    arBtns.forEach(b => b.addEventListener('click', () => {
+      SAVE.data.settings.autoReload = b.dataset.ar === '1';
+      SAVE.commit();
+      setArActive();
+      AUDIO.uiClick();
+    }));
     // 外观系统
     const cBtns = document.querySelectorAll('.cmo-btn');
     const setCam = () => cBtns.forEach(b => b.classList.toggle('active', b.dataset.c === (SAVE.data.camo || 'default')));

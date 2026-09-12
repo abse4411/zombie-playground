@@ -11,6 +11,7 @@ class EncounterMode {
     this.elapsed = 0;
     this.wavePtr = 0;
     this.brutePtr = 0;
+    this.finaleSpawned = false;   // 幕末Boss（v6.9）
     this.midPlayed = false;
     this.ended = false;
     this.earlyWin = false;
@@ -75,6 +76,19 @@ class EncounterMode {
       }
     }
 
+    // 幕末Boss战（v6.9）：到点召唤专属Boss，击杀是胜利前提
+    if (m.finaleBoss && !this.finaleSpawned && this.elapsed >= m.finaleBoss.at) {
+      this.finaleSpawned = true;
+      const b = g.spawner.spawnOne('brute', undefined, undefined, { boss: true, bossId: m.finaleBoss.id });
+      if (b) {
+        g.onBossSpawned(b);
+        STORY.cancel();
+        HUD.banner('☠ ' + b.displayName, '消灭它才能完成任务');
+        AUDIO.hordeHorn();
+        ENGINE.shake(0.5);
+      }
+    }
+
     // 中段剧情
     if (!this.midPlayed && this.elapsed > m.duration * 0.5) {
       this.midPlayed = true;
@@ -95,9 +109,15 @@ class EncounterMode {
     }
 
     // ---- 胜利判定 ----
-    if (this.elapsed >= m.duration) { this.win(false); return; }
+    if (this.elapsed >= m.duration && (!m.finaleBoss || this.finaleSpawned)) {
+      if (m.finaleBoss && g.boss && !g.boss.dead) {
+        // Boss未死：拖延至击杀（时间到后Boss仍在场则继续坚守）
+        if (this.elapsed >= m.duration && !this._otShown) { this._otShown = true; HUD.toast('☠ ' + (g.boss.displayName || 'Boss') + ' 仍在场——击杀它完成任务！'); }
+      } else { this.win(false); return; }
+    }
     const allSpawned = this.wavePtr >= m.waves.length
-      && (!m.eliteBrutes || this.brutePtr >= m.eliteBrutes.length);
+      && (!m.eliteBrutes || this.brutePtr >= m.eliteBrutes.length)
+      && (!m.finaleBoss || (this.finaleSpawned && !g.boss));
     if (allSpawned && g.spawner.exhausted() && g.aliveZombies() === 0 && this.elapsed > 12) {
       this.win(true);
     }

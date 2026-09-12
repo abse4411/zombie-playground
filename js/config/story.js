@@ -147,6 +147,7 @@ const MISSIONS = [
       { at: 430, comp: { walker: 14, runner: 14 } },
     ],
     eliteBrutes: [{ at: 150, count: 1 }, { at: 330, count: 1 }, { at: 420, count: 2 }],
+    finaleBoss: { id: 'tyrant', at: 400 },   // 幕末Boss：暴君Ω（v6.9）
     intro: [
       { s: '老周', t: '基地电网被我黑进去了，但地下实验室的防爆门只认林博士的虹膜。渡鸦，你负责让她的脑袋完好无损。' },
       { s: '林晚', t: '数据下载需要八分钟——这八分钟里，培养舱里的东西会全部苏醒。包括……“守门人”。' },
@@ -211,6 +212,7 @@ const MISSIONS = [
       { at: 450, comp: { armored: 6, phantom: 3, bloater: 5 } },
     ],
     eliteBrutes: [{ at: 200, count: 2 }, { at: 380, count: 2 }, { at: 470, count: 3 }],
+    finaleBoss: { id: 'colossus', at: 460 },   // 幕末Boss：灯塔巨像（v6.9）
     intro: [
       { s: '灯塔', t: '欢迎来到起点，也是终点。主脑每九十秒唤醒一批“合唱团”——它们共享视觉，杀死一只，全体都会知道你的位置。' },
       { s: '林晚', t: '渡鸦，炸药我改装成了三段延时——但引信必须手动逐段激活。你会一直处在它们的风暴中心。' },
@@ -270,6 +272,7 @@ const MISSIONS = [
       { at: 320, comp: { phantom: 2, armored: 4, walker: 12 } },
     ],
     eliteBrutes: [{ at: 300, count: 1 }],
+    finaleBoss: { id: 'executioner', at: 290 },   // 幕末Boss：方舟刽子手（v6.9）
     intro: [
       { s: '艾伦', t: '“收割效率：城区样本 91.4%……实验符合预期。”——他们管这三万人的死叫“样本”。' },
       { s: '艾伦', t: '我把七座种子园的坐标加密进医院中继器。任何一个还在用短波的人都会收到——比如那个叫“黎明会”的疯子电台。' },

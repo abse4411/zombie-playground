@@ -39,7 +39,11 @@ const CHARPREVIEW = {
     const ch = getCharacter(charId);
     const colors = CHARACTER_BODY_COLORS[charId] || CHARACTER_BODY_COLORS.raven;
     const body = buildPlayerBody(colors);
-    // 完整形象：头+手臂（静态持枪姿）
+    // 完整形象：胸+头+手臂（静态持枪姿）——胸腔仅预览用，第一人称身体不含（避免挡视线）
+    const chest = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.4, 0.24), ART.mat(colors.shirt));
+    chest.position.y = 1.28;
+    const vest = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.26, 0.28), ART.mat(colors.vest));
+    vest.position.y = 1.3;
     const head = new THREE.Group();
     const skull = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 12), ART.mat(0xc9a084));
     skull.scale.set(1, 1.1, 1.05);
@@ -55,7 +59,7 @@ const CHARPREVIEW = {
       new THREE.Vector3(-0.26, 1.32, 0.1), new THREE.Vector3(-0.1, 1.0, 0.32), 0.06);
     const gun = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 0.62), ART.mat(0x1c1e22));
     gun.position.set(0.12, 1.0, 0.4);
-    body.group.add(head, armR, armL, gun);
+    body.group.add(chest, vest, head, armR, armL, gun);
     body.group.position.y = 0;
     this.model = body;
     this.scene.add(body.group);

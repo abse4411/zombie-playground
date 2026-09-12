@@ -293,8 +293,12 @@ class Game {
     }
 
     // 相机跟随 + 镜头抖动
+    // 相机Y独立平滑：上台阶时物理Y瞬跳会造成镜头猛抖（v6.9修复），
+    // 大幅位移（跳跃/坠落/重生）直接跟随，台阶小幅变化快速收敛
     const cam = ENGINE.camera;
-    cam.position.set(p.pos.x, p.pos.y + GAMECONFIG.player.eyeHeight, p.pos.z);
+    if (this._camY === undefined || !p.onGround || Math.abs(p.pos.y - this._camY) > 1.2) this._camY = p.pos.y;
+    else this._camY += (p.pos.y - this._camY) * Math.min(1, 13 * dt);
+    cam.position.set(p.pos.x, this._camY + GAMECONFIG.player.eyeHeight, p.pos.z);
     cam.rotation.set(p.pitch, p.yaw, 0);
     if (ENGINE.shakeAmt > 0) {
       cam.position.x += rand(-1, 1) * ENGINE.shakeAmt * 0.25;

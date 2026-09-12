@@ -158,6 +158,7 @@ class Zombie {
     this.dummy = !!opts.dummy;              // 教学假人：不动手、不反击
     this.net = !!opts.net;                  // 联机网络傀儡（客户端）
     this.boss = !!opts.boss;                // Boss：血条 + 超大
+    this.bossCfg = (this.boss && opts.bossId && GAMECONFIG.bosses) ? GAMECONFIG.bosses[opts.bossId] : null;
     this.affix = opts.affix || null;        // 精英词缀
     const affix = this.affix;
     this.maxHp = Math.round(cfg.hp * mults.hp * (affix ? affix.hp : 1) * (this.boss ? GAMECONFIG.boss.hpMult : 1));
@@ -168,7 +169,22 @@ class Zombie {
       * (GAMECONFIG.economy.rewardGlobalMult || 1)
       * (affix ? GAMECONFIG.elites.rewardMult : 1)
       * (this.boss ? GAMECONFIG.boss.rewardMult : 1));
-    if (affix && affix.explode) this.type = Object.assign({}, cfg, { explode: affix.explode, attackRange: cfg.attackRange });
+    // 幕末专属Boss（v6.9）：独立数值（暴君Ω/灯塔巨像/方舟刽子手）
+    if (this.bossCfg) {
+      const B = this.bossCfg;
+      this.maxHp = Math.round(B.hp * mults.hp);
+      this.hp = this.maxHp;
+      this.speed = B.speed * mults.speed;
+      this.damage = B.dmg * mults.dmg;
+      this.reward = Math.round(B.reward * (GAMECONFIG.economy.rewardGlobalMult || 1));
+    }
+    // 变异特性合并进实例类型（v6.9）：易爆/长爪/铁甲
+    if (affix && (affix.explode || affix.reach || affix.frontArmor)) {
+      this.type = Object.assign({}, cfg);
+      if (affix.explode) this.type.explode = affix.explode;
+      if (affix.reach) this.type.attackRange = cfg.attackRange * affix.reach;
+      if (affix.frontArmor) this.type.frontArmor = affix.frontArmor;
+    }
 
     this.state = 'rise'; this.riseT = 0.9;
     this.dead = false; this.deadT = 0; this.remove = false;
@@ -218,8 +234,27 @@ class Zombie {
       this.auraColor = affix.color;
       this.model.skin.emissive.setHex(affix.color);
       this.group.scale.multiplyScalar(GAMECONFIG.elites.scaleMult);
+      if (affix.scale) this.group.scale.multiplyScalar(affix.scale);
+      // 变异登场播报（限频防尸潮刷屏）
+      if (!this.net && !this.dummy && ENGINE.time - (Zombie._lastMutAnn || -99) > 6) {
+        Zombie._lastMutAnn = ENGINE.time;
+        HUD.killfeed('⚠ 检测到变异感染体：「' + affix.name + '」', 'big');
+        AUDIO.growl(12, 0.75);
+      }
     }
-    if (this.boss) this.group.scale.multiplyScalar(GAMECONFIG.boss.scale / cfg.scale);
+    // 变异体脚下光环（v6.9 专属显示特效：颜色随变异类型）
+    let ring = this.group.userData.mutRing;
+    if (!ring) {
+      ring = new THREE.Mesh(new THREE.RingGeometry(0.46, 0.58, 22),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide }));
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.05;
+      this.group.add(ring);
+      this.group.userData.mutRing = ring;
+    }
+    ring.visible = !!affix;
+    if (affix) ring.material.color.setHex(affix.color);
+    if (this.boss) this.group.scale.multiplyScalar(this.bossCfg ? this.bossCfg.scale / cfg.scale : GAMECONFIG.boss.scale / cfg.scale);
 
     // 幽影：半透明材质（接近时显形）
     this.cloakMats = null;
@@ -398,9 +433,10 @@ class Zombie {
       if (this.lungeActive > 0) { this.lungeActive -= dt; spd = cfg.lungeSpeed * (this.buffT > 0 ? 1.3 : 1); }
     }
 
-    // Boss 机制（v6.5）：二阶段狂暴 / 周期召唤 / 跺地AOE
+    // ---- Boss 机制（v6.9：幕末专属Boss攻击组 + 狩猎通用Boss） ----
     if (this.boss) {
       const M = GAMECONFIG.bossMech;
+      const A = this.bossCfg ? this.bossCfg.attacks : M;
       const phase2 = this.hp < this.maxHp * M.phase2At;
       if (phase2 && !this.phase2Done) {
         this.phase2Done = true;
@@ -409,20 +445,99 @@ class Zombie {
         AUDIO.hordeHorn();
         ENGINE.shake(0.3);
       }
-      this.summonT = (this.summonT === undefined ? M.summonEvery : this.summonT) - dt;
-      if (this.summonT <= 0) {
-        this.summonT = M.summonEvery;
-        for (let i = 0; i < M.summonN; i++) game.spawner.spawnOne('runner');
-        HUD.killfeed('⚠ ' + this.displayName + ' 召唤了增援！', 'big');
+      // 召唤增援
+      if (A.summonEvery) {
+        this.summonT = (this.summonT === undefined ? A.summonEvery : this.summonT) - dt;
+        if (this.summonT <= 0) {
+          this.summonT = A.summonEvery * (phase2 ? 0.75 : 1);
+          const n = (A.summonN || M.summonN) + (phase2 ? 1 : 0);
+          for (let i = 0; i < n; i++) game.spawner.spawnOne('runner');
+          HUD.killfeed('⚠ ' + this.displayName + ' 召唤了增援！', 'big');
+        }
       }
-      this.slamT = (this.slamT === undefined ? M.slamEvery : this.slamT) - dt;
-      if (this.slamT <= 0 && dist < M.slamRadius + 2) {
-        this.slamT = M.slamEvery;
-        ENGINE.shake(0.45);
-        PARTICLES.dust(this.pos.x, 0.3, this.pos.z, 16);
-        AUDIO.impact();
-        if (p.alive && dist < M.slamRadius) p.takeDamage(M.slamDmg, game, this.pos);
-        HUD.toast('💥 跺地冲击！远离 Boss 脚下红圈');
+      // 跺地 AOE
+      if (A.slamEvery) {
+        const sRad = A.slamRadius || M.slamRadius;
+        this.slamT = (this.slamT === undefined ? A.slamEvery : this.slamT) - dt;
+        if (this.slamT <= 0 && dist < sRad + 2.5) {
+          this.slamT = A.slamEvery;
+          ENGINE.shake(0.45);
+          PARTICLES.dust(this.pos.x, 0.3, this.pos.z, 16);
+          AUDIO.impact();
+          if (p.alive && dist < sRad) p.takeDamage(A.slamDmg || M.slamDmg, game, this.pos);
+          HUD.toast('💥 跺地冲击！快离开 Boss 脚下');
+        }
+      }
+      // 冲锋（暴君Ω）：锁定直线狂冲+撞飞
+      if (A.chargeEvery) {
+        this.bChargeCd = (this.bChargeCd === undefined ? rand(2.5, 4) : this.bChargeCd) - dt;
+        if (this.bCharge > 0) {
+          this.bCharge -= dt;
+          spd = 10; mvx = this.bChargeDx; mvz = this.bChargeDz;
+          if (dist < cfg.attackRange + 0.8 && this.attackCd <= 0) {
+            if (p.alive) { p.takeDamage(this.damage * 1.5, game, this.pos); p.vel.x += this.bChargeDx * 9; p.vel.z += this.bChargeDz * 9; p.vel.y += 4; }
+            this.bCharge = 0; this.attackCd = cfg.attackRate;
+          }
+        } else if (this.bChargeCd <= 0 && dist < 16 && dist > 4) {
+          this.bChargeDx = nx; this.bChargeDz = nz;
+          this.bCharge = 1.0;
+          this.bChargeCd = A.chargeEvery;
+          AUDIO.growl(dist, 0.6);
+          HUD.toast('⚠ 暴君冲锋——侧向闪避！');
+        }
+      }
+      // 酸弹幕（灯塔巨像）：扇形三连吐
+      if (A.barrageEvery) {
+        this.barrT = (this.barrT === undefined ? rand(3, 5) : this.barrT) - dt;
+        if (this.barrT <= 0 && dist > 3.5 && dist < 32) {
+          this.barrT = A.barrageEvery * (phase2 ? 0.7 : 1);
+          const n2 = A.barrageN || 3;
+          const R = { speed: 11, dmg: 14, poolDps: 8, poolRadius: 1.9, poolTime: 3 };
+          for (let i = 0; i < n2; i++) {
+            const sp = (i - (n2 - 1) / 2) * 0.2;
+            const dxc = nx * Math.cos(sp) - nz * Math.sin(sp);
+            const dzc = nx * Math.sin(sp) + nz * Math.cos(sp);
+            const oy = 1.55 * this.group.scale.x;
+            const t2 = clamp(dist / R.speed, 0.25, 2.2);
+            const vy2 = (1.2 - oy + 0.5 * 9 * t2 * t2) / t2;
+            game.projectiles.push(new Projectile('acid', this.pos.x + dxc * 0.6, oy, this.pos.z + dzc * 0.6,
+              dxc * R.speed, vy2, dzc * R.speed, { fuse: 4, R }));
+          }
+          AUDIO.acidSpit(dist);
+          HUD.toast('⚠ 巨像酸液弹幕——横向走位躲避！');
+        }
+      }
+      // 震地波（灯塔巨像）：周期性全场冲击波掀翻玩家
+      if (A.quakeEvery) {
+        this.quakeT = (this.quakeT === undefined ? A.quakeEvery : this.quakeT) - dt;
+        if (this.quakeT <= 0 && dist < 16) {
+          this.quakeT = A.quakeEvery;
+          ENGINE.shake(0.6);
+          AUDIO.impact();
+          PARTICLES.dust(this.pos.x, 0.3, this.pos.z, 24);
+          if (p.alive && this.pos.y - p.pos.y < 2) {
+            p.vel.x += nx * 8.5; p.vel.z += nz * 8.5; p.vel.y += 3.5;
+            p.takeDamage(12, game, this.pos);
+            HUD.toast('🌀 震地冲击波——被掀翻了！');
+          }
+        }
+      }
+      // 猛扑（方舟刽子手）：短促高速扑杀
+      if (A.lungeEvery) {
+        this.bLungeCd = (this.bLungeCd === undefined ? rand(2, 3.5) : this.bLungeCd) - dt;
+        if (this.bLunge > 0) {
+          this.bLunge -= dt;
+          spd = A.lungeSpeed; mvx = this.lungeDx; mvz = this.lungeDz;
+          if (dist < cfg.attackRange + 0.6 && this.attackCd <= 0) {
+            if (p.alive) { p.takeDamage(this.damage * 1.6, game, this.pos); p.vel.x += this.lungeDx * 6; p.vel.z += this.lungeDz * 6; }
+            this.bLunge = 0; this.attackCd = cfg.attackRate;
+          }
+        } else if (this.bLungeCd <= 0 && dist < 13 && dist > 2.5) {
+          this.lungeDx = nx; this.lungeDz = nz;
+          this.bLunge = 0.5;
+          this.bLungeCd = A.lungeEvery * (phase2 ? 0.7 : 1);
+          AUDIO.growl(dist, 1.35);
+        }
       }
     }
 
@@ -443,6 +558,17 @@ class Zombie {
         const a = Math.random() * TAU;
         PARTICLES.spawn('smoke', this.pos.x + Math.cos(a) * 0.4, rand(0.2, 1.2) * this.group.scale.x, this.pos.z + Math.sin(a) * 0.4, 1,
           { speed: 0.3, vy: 0.8, life: 0.7, color: [0.35, 0.9, 0.3], color2: [0.1, 0.5, 0.15] });
+      }
+    }
+    // 变异体专属粒子（v6.9）：按变异类型颜色的雾气持续上升标识
+    if (this.affix && !lodSkip) {
+      this.mutPT = (this.mutPT || 0) - dt;
+      if (this.mutPT <= 0) {
+        this.mutPT = 0.15;
+        const mc = this.affix.color;
+        const a = Math.random() * TAU;
+        PARTICLES.spawn('smoke', this.pos.x + Math.cos(a) * 0.44, rand(0.15, 1.5) * this.group.scale.x, this.pos.z + Math.sin(a) * 0.44, 1,
+          { speed: 0.25, vy: 0.9, life: 0.65, color: [((mc >> 16) & 255) / 255, ((mc >> 8) & 255) / 255, (mc & 255) / 255], color2: [0.08, 0.08, 0.1] });
       }
     }
     // 幽影：耳语声预警 + 距离显形
@@ -466,9 +592,30 @@ class Zombie {
     this.pos.x = clamp(this.pos.x, -S + 1, S - 1);
     this.pos.z = clamp(this.pos.z, -S + 1, S - 1);
     if (spd > 0) this.walkPhase += spd * dt * 2.4;
-    // 贴合支撑面高度（台阶平滑爬升，可上站台追杀）
+    // 贴合支撑面高度：上台阶平滑爬升；高出支撑面则重力坠落（v6.9 高处摔伤）
     const gh = groundHeightAt(this.pos.x, this.pos.z, 0.42 * cfg.scale, this.pos.y, 0.6);
-    this.pos.y = Math.abs(gh - this.pos.y) > 0.01 ? lerp(this.pos.y, gh, Math.min(1, 12 * dt)) : gh;
+    if (this.pos.y > gh + 0.06) {
+      // 腾空坠落
+      this._vy = (this._vy || 0) - 22 * dt;
+      this.pos.y += this._vy * dt;
+      if (this.pos.y <= gh) {
+        const fall = -this._vy;
+        this.pos.y = gh; this._vy = 0;
+        if (fall > 10) {
+          // 高处坠落摔伤：随下落速度放大（上限50%最大生命）+ 着地硬直
+          this.stagger = Math.max(this.stagger, 0.8);
+          PARTICLES.dust(this.pos.x, 0.2, this.pos.z, 10);
+          AUDIO.impact();
+          this.takeDamage(this.maxHp * Math.min(0.5, (fall - 10) * 0.035), false, null, game);
+        }
+      }
+    } else if (this.pos.y < gh - 0.01) {
+      this._vy = 0;
+      this.pos.y = Math.min(gh, this.pos.y + Math.max(1.5, (gh - this.pos.y) * 8) * dt * 4);
+    } else {
+      this._vy = 0;
+      this.pos.y = gh;
+    }
 
     // ---- 攻击 ----
     this.attackCd -= dt;
@@ -479,10 +626,13 @@ class Zombie {
         if (cfg.knockback) {
           p.vel.x += nx * cfg.knockback; p.vel.z += nz * cfg.knockback; p.vel.y += 3.2;
         }
+        // 巨力变异：重击退；嗜血变异：攻击吸血
+        if (this.affix && this.affix.kb) { p.vel.x += nx * this.affix.kb; p.vel.z += nz * this.affix.kb; p.vel.y += 2.6; }
+        if (this.affix && this.affix.heal) this.hp = Math.min(this.maxHp, this.hp + this.maxHp * this.affix.heal);
       }
     } else if (cfg.damage > 0 && dist < cfg.attackRange && this.attackCd <= 0 && this.stagger <= 0) {
       this.windup = GAMECONFIG.combat.attackWindup;
-      this.attackCd = cfg.attackRate;
+      this.attackCd = cfg.attackRate * (this.boss && this.phase2Done ? GAMECONFIG.bossMech.rageRate : 1);
     }
 
     // 膨胀者近身自爆
@@ -525,7 +675,7 @@ class Zombie {
   }
 
   get displayName() {
-    if (this.boss) return '暴君 Ω';
+    if (this.boss) return this.bossCfg ? this.bossCfg.name : '暴君 Ω';
     return (this.affix ? this.affix.name + '·' : '') + this.type.name;
   }
 

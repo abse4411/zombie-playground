@@ -78,23 +78,70 @@ function buildPlayerBody(colors) {
     ART.outline(hips, 1.12); ART.outline(belt, 1.12);
   }
   g.traverse(o => { if (o.isMesh) { o.castShadow = false; } });
-  return { group: g, legL, legR, walkPhase: 0, _last: new THREE.Vector3() };
+  return { group: g, legL, legR, walkPhase: 0, _last: new THREE.Vector3(), action: null, actT: 0, actDur: 0.3, actDir: 1 };
 }
 
-// 每帧同步：位置/朝向/行走摆腿
+// 每帧同步：位置/朝向/行走摆腿 + 动作姿态（v8.7 肢体动作强化）
+// action: null / 'kick' / 'dash' / 'throw' / 'swing'
 function syncPlayerBody(body, player, dt) {
   body.group.position.set(player.pos.x, player.pos.y, player.pos.z);
   body.group.rotation.y = player.yaw + Math.PI;
   const moved = Math.hypot(player.pos.x - body._last.x, player.pos.z - body._last.z);
   body._last.copy(player.pos);
+  // 行走摆腿
   if (player.moving && moved > 0.0005) {
-    body.walkPhase += moved * 5.2;
+    body.walkPhase += moved * 5.2 * (player.sprinting ? 1.35 : 1);
     body.legL.rotation.x = Math.sin(body.walkPhase) * 0.55;
     body.legR.rotation.x = -Math.sin(body.walkPhase) * 0.55;
   } else {
     body.legL.rotation.x *= 0.85;
     body.legR.rotation.x *= 0.85;
   }
+  // 冲刺前倾 + 行走基线
+  let lean = player.sprinting ? -0.12 : 0;
+  let rollZ = 0, crouch = 1;
+  // 动作姿态（预备→爆发→回弹 三段插值）
+  if (body.actT > 0) {
+    body.actT -= dt;
+    const D = body.actDur || 0.3;
+    const k = 1 - body.actT / D;          // 0→1
+    const pulse = Math.sin(clamp(k, 0, 1) * Math.PI);          // 单峰
+    const thrust = clamp((k - 0.25) / 0.3, 0, 1);              // 爆发段
+    switch (body.action) {
+      case 'kick':   // 右腿弹踢：预备收腿(-0.4) → 前踢(-1.5) → 过冲回弹
+        body.legR.rotation.x = -0.4 - thrust * 1.15 + pulse * 0.5;
+        body.legR.position.z = 0.16 + thrust * 0.28;
+        lean = -0.06 - pulse * 0.1;   // 上身后仰
+        break;
+      case 'dash':   // 侧倾+蹲低
+        rollZ = (body.actDir || 1) * 0.35 * pulse;
+        crouch = 1 - 0.14 * pulse;
+        lean = 0.14 * pulse;
+        break;
+      case 'throw':  // 右臂前挥由视图模型承担；身体右转带肩
+        lean = 0.08 * pulse;
+        rollZ = -0.18 * thrust;
+        break;
+      case 'swing':  // 近战挥击：左腿跨步+转肩
+        body.legL.rotation.x = -0.5 * thrust;
+        lean = -0.05 * pulse;
+        rollZ = -0.12 * thrust;
+        break;
+    }
+    if (body.actT <= 0) { body.action = null; body.legR.position.z = 0.16; }
+  }
+  body.group.rotation.x = lean;
+  body.group.rotation.z = rollZ;
+  body.group.scale.y = crouch;
+}
+
+// 触发动作姿态
+function bodyAct(body, action, dur, dir) {
+  if (!body) return;
+  body.action = action;
+  body.actT = dur || 0.3;
+  body.actDur = dur || 0.3;
+  body.actDir = dir || 1;
 }
 
 // 角色基础配色（v6.2 角色选择共用）

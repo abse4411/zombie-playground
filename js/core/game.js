@@ -354,6 +354,15 @@ class Game {
     else this._camY += (p.pos.y - this._camY) * Math.min(1, 13 * dt);
     cam.position.set(p.pos.x, this._camY + GAMECONFIG.player.eyeHeight, p.pos.z);
     cam.rotation.set(p.pitch, p.yaw, 0);
+    // 动作相机语言（v8.7）：踢腿后仰下沉/翻滚侧倾/近战横摆
+    const pb = this.playerBody;
+    if (pb && pb.actT > 0) {
+      const D = pb.actDur || 0.3, k = 1 - pb.actT / D, pulse = Math.sin(clamp(k, 0, 1) * Math.PI);
+      if (pb.action === 'kick') { cam.position.y -= 0.06 * pulse; cam.rotation.x -= 0.05 * pulse; }
+      else if (pb.action === 'dash') cam.rotation.z += (pb.actDir || 1) * 0.06 * pulse;
+      else if (pb.action === 'swing') { cam.position.x += Math.sin(p.yaw + Math.PI / 2) * 0.05 * pulse; cam.position.z += Math.cos(p.yaw + Math.PI / 2) * 0.05 * pulse; }
+      else if (pb.action === 'throw') cam.rotation.x += 0.04 * pulse;
+    }
     if (ENGINE.shakeAmt > 0) {
       cam.position.x += rand(-1, 1) * ENGINE.shakeAmt * 0.25;
       cam.position.y += rand(-1, 1) * ENGINE.shakeAmt * 0.25;

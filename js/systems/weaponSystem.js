@@ -203,6 +203,7 @@ class WeaponSystem {
           this._swingDur = 0.55;
           this.swingT = 0;
           this._heavySwing = true;
+          if (typeof GAME !== 'undefined' && GAME.playerBody) bodyAct(GAME.playerBody, 'swing', 0.5);
           this._meleeHit(def, game, true);
           ENGINE.shake(0.1);
         } else if (wantFire) {
@@ -210,6 +211,7 @@ class WeaponSystem {
           this._swingDur = 0.3;
           this.swingT = 0;
           this._heavySwing = false;
+          if (typeof GAME !== 'undefined' && GAME.playerBody) bodyAct(GAME.playerBody, 'swing', 0.32);
           this._meleeHit(def, game, false);
         }
       }
@@ -492,6 +494,7 @@ class WeaponSystem {
     this.kickCd = K.cooldown;
     AUDIO.kick();
     this.kickAnimT = 0.22;
+    if (typeof GAME !== 'undefined' && GAME.playerBody) bodyAct(GAME.playerBody, 'kick', 0.34);
     const p = this.p;
     const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
     let hitAny = false;
@@ -608,6 +611,8 @@ class WeaponSystem {
     const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
     const cfg = THROWABLES[kind];
     game._fragWindowT = 3;   // 手雷击杀归因窗口（教学用）
+    if (typeof GAME !== 'undefined' && GAME.playerBody) bodyAct(GAME.playerBody, 'throw', 0.5);
+    this.throwAnimT = 0.5;   // 视图模型抬臂投掷
     game.projectiles.push(new Projectile(kind,
       origin.x + dir.x * 0.5, origin.y - 0.08, origin.z + dir.z * 0.5,
       dir.x * cfg.speed, dir.y * cfg.speed + 2.6, dir.z * cfg.speed,
@@ -656,7 +661,15 @@ class WeaponSystem {
     }
     // 冲刺摆臂 / 脚踢前蹬
     if (p.dashT > 0) { ox -= 0.06; rz += 0.2; }
-    if (this.kickAnimT > 0) { ox -= 0.1 * Math.sin((0.22 - this.kickAnimT) / 0.22 * Math.PI); oy += 0.04; }
+    if (this.kickAnimT > 0) { ox -= 0.16 * Math.sin((0.22 - this.kickAnimT) / 0.22 * Math.PI); oy -= 0.07 * Math.sin((0.22 - this.kickAnimT) / 0.22 * Math.PI); rx += 0.35 * Math.sin((0.22 - this.kickAnimT) / 0.22 * Math.PI); }
+    // 投掷臂摆（v8.7）：抬臂过肩→前甩
+    if (this.throwAnimT > 0) {
+      this.throwAnimT -= dt;
+      const tk = 1 - this.throwAnimT / 0.5;
+      const sw = Math.sin(clamp(tk, 0, 1) * Math.PI);
+      oy += 0.1 * sw; rx -= 0.5 * sw; rz -= 0.35 * sw;
+      ox -= 0.12 * Math.sin(clamp((tk - 0.5) / 0.5, 0, 1) * Math.PI);   // 后半段前甩
+    }
 
     vm.position.set(tx + bobX + ox, ty + bobY + oy, tz + this.recoilKick * 0.07);
     vm.rotation.set(-this.recoilKick * 0.2 + rx, 0, (def.melee ? 0.35 : 0) + rz);

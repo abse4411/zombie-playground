@@ -136,6 +136,11 @@ class Player {
       this.iframesT = GAMECONFIG.dash.iframes;
       this._dashDir = hasInput ? { x: wx, z: wz } : { x: -Math.sin(this.yaw), z: -Math.cos(this.yaw) };
       AUDIO.dash();
+      if (typeof GAME !== 'undefined' && GAME.playerBody) {
+        // 侧向分量决定倾倒方向（相对面向）
+        const sideX = this._dashDir.x * Math.cos(this.yaw) - this._dashDir.z * Math.sin(this.yaw);
+        bodyAct(GAME.playerBody, 'dash', GAMECONFIG.dash.time + 0.1, sideX >= 0 ? 1 : -1);
+      }
     }
 
     if (this.dashT > 0) {

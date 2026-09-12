@@ -17,6 +17,13 @@ const INPUT = {
       this.keys[e.code] = true;
       this._pressed[e.code] = true;
       if (e.code === 'Space' || e.code === 'Tab') e.preventDefault();
+      // 对局中拦截刷新/关闭快捷键（v7.1）：F5/Ctrl+R 可真正拦截；Ctrl+W 是浏览器保留键尽力拦截
+      if (typeof GAME !== 'undefined' && GAME && (GAME.state === 'playing' || GAME.state === 'paused')) {
+        if (e.code === 'F5' || ((e.ctrlKey || e.metaKey) && (e.code === 'KeyR' || e.code === 'KeyW'))) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
     });
     document.addEventListener('keyup', e => { this.keys[e.code] = false; });
     window.addEventListener('blur', () => { this.keys = {}; this.lmb = false; this.rmb = false; });

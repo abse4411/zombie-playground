@@ -40,6 +40,16 @@ class Game {
       }
     });
 
+    // 防误触关闭（v7.1）：对局中按 Ctrl+W 关闭标签页前弹出确认，避免整局丢失。
+    // 注：浏览器保留级快捷键（Ctrl+W）页面无法完全拦截，此确认弹窗是可靠兜底。
+    window.addEventListener('beforeunload', (e) => {
+      if (this.state === 'playing' || this.state === 'paused') {
+        e.preventDefault();
+        e.returnValue = '对局进行中，离开将丢失本局进度！';
+        return e.returnValue;
+      }
+    });
+
     this._loop = this._loop.bind(this);
   }
 

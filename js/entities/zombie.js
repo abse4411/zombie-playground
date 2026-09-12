@@ -140,6 +140,21 @@ function buildZombieModel(cfg, outlines) {
         P(new THREE.BoxGeometry(0.18, 0.5, 0.02), ART.mat(0x2a2e3e, 0x0a0c14), -0.08, 1.05, -0.18, 0.15);
         P(new THREE.BoxGeometry(0.14, 0.4, 0.02), ART.mat(0x2a2e3e, 0x0a0c14), 0.16, 1.0, -0.18, -0.2);
         break;
+      case 'boomer': // 巨腹胆囊 + 胆汁渍 + 溃烂斑
+        P(new THREE.BoxGeometry(0.52, 0.44, 0.38), ART.mat(0x9aa878, 0x2a3418), 0, 0.92, 0.04);
+        P(new THREE.BoxGeometry(0.14, 0.1, 0.03), ART.mat(0x7a9a3a, 0x2a3a10), 0, 1.1, 0.2);
+        P(new THREE.BoxGeometry(0.1, 0.08, 0.03), ART.mat(0x6a8a32, 0x2a3a10), -0.15, 0.85, 0.2, 0.3);
+        break;
+      case 'smoker': // 长舌垂须 + 咳嗽雾
+        P(new THREE.BoxGeometry(0.03, 0.6, 0.03), ART.mat(0xb0a080, 0x2a2418), 0.06, head.position.y - 0.34, 0.12);
+        P(new THREE.BoxGeometry(0.03, 0.45, 0.03), ART.mat(0xb0a080, 0x2a2418), -0.05, head.position.y - 0.28, 0.1, 0.15);
+        P(new THREE.BoxGeometry(0.12, 0.08, 0.03), ART.mat(0x8a9a7a, 0x1a2418), 0, 1.5, 0.16);
+        break;
+      case 'hunter': // 兜帽衫 + 缠布护腕
+        P(new THREE.BoxGeometry(0.56, 0.2, 0.32), ART.mat(0x2a2a32, 0x0a0a10), 0, 1.38, 0);
+        P(new THREE.BoxGeometry(0.13, 0.1, 0.13), ART.mat(0x8a3040, 0x1a0a0e), 0.38, 1.2, 0);
+        P(new THREE.BoxGeometry(0.13, 0.1, 0.13), ART.mat(0x8a3040, 0x1a0a0e), -0.38, 1.2, 0);
+        break;
       case 'licker': // 无皮肌理 + 长舌 + 脑露 + 巨爪
         P(new THREE.BoxGeometry(0.2, 0.06, 0.34), ART.mat(0xd8a0a0, 0x301014), 0, head.position.y + 0.1, 0); // 外露脑块
         P(new THREE.BoxGeometry(0.035, 0.5, 0.035), ART.mat(0xc05858, 0x2a0a0a), 0, head.position.y - 0.32, 0.16); // 垂落长舌
@@ -532,6 +547,48 @@ class Zombie {
       }
     }
 
+    // 胆汁鬼（v9.7 L4D）：呕吐胆汁标记玩家→引尸潮；死亡爆炸溅胆汁
+    if (cfg.bile) {
+      const B = cfg.bile;
+      this.bileCd = (this.bileCd === undefined ? rand(1.5, 2.5) : this.bileCd) - dt;
+      if (this.bileCd <= 0 && dist < B.range && dist > 2.2 && p.alive) {
+        this.bileCd = B.cd * rand(0.9, 1.15);
+        spawnBile(game, this, B);
+        AUDIO.acidSpit(dist);
+        HUD.toast('🤢 被胆汁标记——尸潮正在涌来！');
+      }
+      // 玩家被标记时持续吸引普通尸（加速+转向玩家）
+      if (p.bileT > 0) {
+        p.bileT -= dt;
+        for (const z2 of game.zombies) {
+          if (z2 === this || z2.dead || z2.boss || z2.type.cost >= 3) continue;
+          z2.buffT = Math.max(z2.buffT || 0, 0.5);   // 狂化加速
+        }
+      }
+    }
+    // 呛尸（v9.7 L4D）：舌须拖拽
+    if (cfg.drag) {
+      const D = cfg.drag;
+      this.dragCd = (this.dragCd === undefined ? rand(2, 3.5) : this.dragCd) - dt;
+      if (this.dragActive > 0) {
+        // 拖拽中：把玩家拉向自己+持续伤害
+        this.dragActive -= dt;
+        const ddx = this.pos.x - p.pos.x, ddz = this.pos.z - p.pos.z;
+        const dl = Math.hypot(ddx, ddz) || 1;
+        p.pos.x += (ddx / dl) * D.pullSpeed * dt;
+        p.pos.z += (ddz / dl) * D.pullSpeed * dt;
+        p.slowT = Math.max(p.slowT, 0.3);
+        p.takeDamage(D.dmg * dt * 2, game, this.pos);
+        if (dist < 2.2 || this.dead) { this.dragActive = 0; p.draggedBy = null; }
+      } else if (this.dragCd <= 0 && dist < D.range && dist > 3 && p.alive && !p.draggedBy) {
+        this.dragCd = D.cd * rand(0.9, 1.2);
+        this.dragActive = 2.4;
+        p.draggedBy = this;
+        AUDIO.growl(dist, 0.8);
+        HUD.toast(' tongues 被舌须拖住——对它造成伤害打断！');
+      }
+    }
+    // 猎人（v9.7 L4D）：扑杀重击（在lunge命中后处理, 见下方attack段）
     // 舔食者（v7.6）：中距离长舌抽击
     if (cfg.tongue) {
       const T = cfg.tongue;
@@ -854,6 +911,13 @@ class Zombie {
         if (this.affixHeal > 0) this.hp = Math.min(this.maxHp, this.hp + this.maxHp * this.affixHeal);
         // 抓挠减速（游荡者/潜行者）：咬中附带短暂减速
         if (cfg.grabSlow) p.slowT = Math.max(p.slowT, cfg.grabSlow);
+        // 猎人扑杀重击（v9.7）：额外伤害+1.2s玩家硬直
+        if (cfg.pounce && this.lungeActive > 0) {
+          p.takeDamage(cfg.pounce.dmg, game, this.pos);
+          p.slowT = Math.max(p.slowT, cfg.pounce.stun);
+          this.lungeActive = 0;
+          HUD.toast('⚡ 被扑倒撕咬！');
+        }
         // 舔食者长舌抽击（中距离判定）
         if (this._tongueHit && p.alive && dist < this._tongueHit.range + 0.4) {
           p.takeDamage(this._tongueHit.dmg, game, this.pos);
@@ -1004,6 +1068,12 @@ class Zombie {
     this._flash();
     // 头顶血条（首次受伤时懒创建）
     if (typeof HPBARS !== 'undefined' && !this.dummy && this.hp < this.maxHp && !this.hpbar) HPBARS.create(this);
+    // 呛尸：受击打断拖拽（v9.7）
+    if (cfg.drag && this.dragActive > 0) {
+      this.dragActive = 0;
+      if (game.player) game.player.draggedBy = null;
+      HUD.toast('✂ 舌须被打断！');
+    }
     // 再生者：爆头打断再生3秒（v7.6）
     if (cfg.regen && isHead) this._regenPause = 3;
     // 血量阶段断肢（v6.8）

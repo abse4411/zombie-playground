@@ -12,6 +12,7 @@ class EncounterMode {
     this.wavePtr = 0;
     this.brutePtr = 0;
     this.finaleSpawned = false;   // 幕末Boss（v6.9）
+    this.finaleHordeSpawned = false;   // L4D finale尸潮（v9.9）
     this.midPlayed = false;
     this.ended = false;
     this.earlyWin = false;
@@ -78,6 +79,17 @@ class EncounterMode {
       }
     }
 
+    // L4D式finale尸潮（v9.9）：坦克+持续尸潮压阵
+    if (m.finaleHorde && !this.finaleHordeSpawned && this.elapsed >= m.finaleHorde.at) {
+      this.finaleHordeSpawned = true;
+      for (let i = 0; i < m.finaleHorde.tanks; i++) {
+        const tk = g.spawner.spawnOne('tank');
+        if (tk) HUD.killfeed('⚠ TANK 出现了！！', 'big');
+      }
+      AUDIO.hordeHorn();
+      ENGINE.shake(0.4);
+      HUD.banner('🚨 FINALE', '坦克 + 尸潮——守住！');
+    }
     // 幕末Boss战（v6.9）：到点召唤专属Boss，击杀是胜利前提
     if (m.finaleBoss && !this.finaleSpawned && this.elapsed >= m.finaleBoss.at) {
       this.finaleSpawned = true;

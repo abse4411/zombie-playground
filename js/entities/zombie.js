@@ -140,6 +140,17 @@ function buildZombieModel(cfg, outlines) {
         P(new THREE.BoxGeometry(0.18, 0.5, 0.02), ART.mat(0x2a2e3e, 0x0a0c14), -0.08, 1.05, -0.18, 0.15);
         P(new THREE.BoxGeometry(0.14, 0.4, 0.02), ART.mat(0x2a2e3e, 0x0a0c14), 0.16, 1.0, -0.18, -0.2);
         break;
+      case 'witch': // 蓬乱长发 + 爪手 + 泪痕
+        P(new THREE.BoxGeometry(0.3, 0.5, 0.06), ART.mat(0xd8c8d8, 0x2a1a22), 0, head.position.y + 0.05, -0.12);
+        P(new THREE.BoxGeometry(0.05, 0.22, 0.05), ART.mat(0xe8e0e8, 0x2a1a22), 0.16, 1.15, 0.12);
+        P(new THREE.BoxGeometry(0.05, 0.22, 0.05), ART.mat(0xe8e0e8, 0x2a1a22), -0.16, 1.15, 0.12);
+        P(new THREE.BoxGeometry(0.08, 0.03, 0.02), ART.mat(0x8a3040, 0x2a0a0e), 0, head.position.y - 0.02, 0.16);
+        break;
+      case 'tank': // 巨石手持 + 脊背隆起 + 撕裂衣
+        P(new THREE.BoxGeometry(0.34, 0.3, 0.34), ART.mat(0x5a5248, 0x14100c), 0.55, 1.35, 0.1);
+        P(new THREE.ConeGeometry(0.3, 0.4, 5), ART.mat(0x8a5a42, 0x1a0e08), 0, 1.72, -0.05);
+        P(new THREE.BoxGeometry(0.2, 0.4, 0.03), ART.mat(0x3a2a22, 0x0e0806), -0.1, 1.2, 0.17, 0.3);
+        break;
       case 'boomer': // 巨腹胆囊 + 胆汁渍 + 溃烂斑
         P(new THREE.BoxGeometry(0.52, 0.44, 0.38), ART.mat(0x9aa878, 0x2a3418), 0, 0.92, 0.04);
         P(new THREE.BoxGeometry(0.14, 0.1, 0.03), ART.mat(0x7a9a3a, 0x2a3a10), 0, 1.1, 0.2);
@@ -547,6 +558,45 @@ class Zombie {
       }
     }
 
+    // 女巫（v9.9 L4D）：蹲坐不攻击；靠近/受击→狂暴冲锋
+    if (cfg.witch) {
+      const W = cfg.witch;
+      if (!this.raged) {
+        // 蹲坐：不移动不攻击，哭泣粒子
+        mvx = 0; mvz = 0; spd = 0;
+        if (!lodSkip && Math.random() < dt * 2) PARTICLES.spawn('smoke', this.pos.x, 0.4, this.pos.z, 1,
+          { speed: 0.2, vy: 0.3, life: 1.2, color: [0.9, 0.85, 0.95], color2: [0.5, 0.4, 0.55] });
+        if (dist < W.triggerRange || this._provoked) {
+          this.raged = true;
+          this.speed = W.speedBoost;
+          this.state = 'chase';
+          AUDIO.hordeHorn();
+          ENGINE.shake(0.35);
+          HUD.banner('😡 你惊扰了女巫！', '跑！');
+        }
+      } else {
+        // 狂暴：限时高移速冲锋
+        this.rageT = (this.rageT === undefined ? W.rageTime : this.rageT) - dt;
+        if (!lodSkip && Math.random() < dt * 8) PARTICLES.spawn('smoke', this.pos.x, rand(0.5, 1.5), this.pos.z, 1,
+          { speed: 0.4, vy: 0.5, life: 0.5, color: [1, 0.5, 0.4], color2: [0.5, 0.1, 0.1] });
+      }
+    }
+    // 坦克（v9.9 L4D）：巨石投掷 + 被点燃狂暴
+    if (cfg.rock) {
+      const R = cfg.rock;
+      this.rockCd = (this.rockCd === undefined ? rand(2, 4) : this.rockCd) - dt;
+      if (this.rockCd <= 0 && dist > 4 && dist < 26 && p.alive) {
+        this.rockCd = R.cd * rand(0.9, 1.2);
+        spawnRock(game, this, R);
+        HUD.toast('🪨 坦克掷出巨石——横向闪避！');
+      }
+      // 燃烧狂暴：hp < 50% 加速
+      if (cfg.burning && this.hp < this.maxHp * 0.5 && !this._enraged) {
+        this._enraged = true;
+        this.speed *= 1.45;
+        HUD.toast('🔥 坦克被激怒了——它烧起来了！');
+      }
+    }
     // 胆汁鬼（v9.7 L4D）：呕吐胆汁标记玩家→引尸潮；死亡爆炸溅胆汁
     if (cfg.bile) {
       const B = cfg.bile;
@@ -1068,6 +1118,8 @@ class Zombie {
     this._flash();
     // 头顶血条（首次受伤时懒创建）
     if (typeof HPBARS !== 'undefined' && !this.dummy && this.hp < this.maxHp && !this.hpbar) HPBARS.create(this);
+    // 女巫：受击触发狂暴（v9.9）
+    if (cfg.witch) this._provoked = true;
     // 呛尸：受击打断拖拽（v9.7）
     if (cfg.drag && this.dragActive > 0) {
       this.dragActive = 0;

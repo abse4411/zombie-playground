@@ -148,6 +148,7 @@ const MISSIONS = [
     ],
     eliteBrutes: [{ at: 150, count: 1 }, { at: 330, count: 1 }, { at: 420, count: 2 }],
     finaleBoss: { id: 'tyrant', at: 400 },   // 幕末Boss：暴君Ω（v6.9）
+    finaleHorde: { at: 300, tanks: 1 },   // L4D式finale尸潮：坦克压阵（v9.9）
     intro: [
       { s: '老周', t: '基地电网被我黑进去了，但地下实验室的防爆门只认林博士的虹膜。渡鸦，你负责让她的脑袋完好无损。' },
       { s: '林晚', t: '数据下载需要八分钟——这八分钟里，培养舱里的东西会全部苏醒。包括……“守门人”。' },
@@ -213,6 +214,7 @@ const MISSIONS = [
     ],
     eliteBrutes: [{ at: 200, count: 2 }, { at: 380, count: 2 }, { at: 470, count: 3 }],
     finaleBoss: { id: 'colossus', at: 460 },   // 幕末Boss：灯塔巨像（v6.9）
+    finaleHorde: { at: 380, tanks: 1 },
     intro: [
       { s: '灯塔', t: '欢迎来到起点，也是终点。主脑每九十秒唤醒一批“合唱团”——它们共享视觉，杀死一只，全体都会知道你的位置。' },
       { s: '林晚', t: '渡鸦，炸药我改装成了三段延时——但引信必须手动逐段激活。你会一直处在它们的风暴中心。' },
@@ -362,6 +364,7 @@ const MISSIONS = [
     ],
     eliteBrutes: [{ at: 220, count: 2 }, { at: 420, count: 2 }],
     finaleBoss: { id: 'pumpWarden', at: 460 },   // 终章Boss：母体泵守护者（v8.0）
+    finaleHorde: { at: 390, tanks: 2 },
     intro: [
       { s: '灯塔', t: '欢迎回家，样本七号。你走过的每一条管道，都是我们铺好的路。' },
       { s: '林晚', t: '母体泵就在闸门后。炸掉它，赤潮就是无根之水。' },

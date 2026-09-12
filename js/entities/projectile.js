@@ -3,6 +3,7 @@
  * ============================================================ */
 const PROJ_CFG = {
   bile:    { r: 0.14, c: 0x7a9a3a, e: 0x3a5a10, g: 10 },
+  rock:    { r: 0.32, c: 0x5a5248, e: 0x000000, g: 13 },
   frag:    { r: 0.11, c: 0x3d5a3d, e: 0x000000, g: 13 },
   molotov: { r: 0.12, c: 0x8a4b1f, e: 0x552200, g: 13 },
   acid:    { r: 0.15, c: 0x66cc33, e: 0x2a6600, g: 9 },
@@ -88,6 +89,18 @@ class Projectile {
       AUDIO.fireIgnite();
       return;
     }
+    // 巨石：命中/落地→小范围爆炸伤害+击飞
+    if (this.kind === 'rock') {
+      const hitP = pd < 1.4 && p.y < 2.6;
+      if (hitP || this.landed) {
+        this._finish(game);
+        explodeGrenade(game, p.x, p.y, p.z, { damage: this.opts.R.dmg, radius: 3, selfMult: 1 });
+        if (game.player.alive && dist2d(p.x, p.z, game.player.pos.x, game.player.pos.z) < 3) {
+          game.player.vel.y += 3.5;
+        }
+        return;
+      }
+    }
     // 胆汁弹：命中玩家→标记8秒；落地→胆汁洼（视觉 acid pool 绿色）
     if (this.kind === 'bile') {
       if (pd < 1.1 && p.y < 2.2 && game.player.alive) {
@@ -126,6 +139,18 @@ class Projectile {
     ENGINE.scene.remove(this.mesh);
     this.mesh.geometry.dispose(); this.mesh.material.dispose();
   }
+}
+
+/* ---------- 坦克巨石（v9.9 L4D Tank） ---------- */
+function spawnRock(game, zombie, R) {
+  const p = game.player;
+  const ox = zombie.pos.x, oy = 1.9 * zombie.group.scale.x, oz = zombie.pos.z;
+  const d = dist2d(ox, oz, p.pos.x, p.pos.z);
+  const t = clamp(d / R.speed, 0.3, 2);
+  const vx = (p.pos.x + p.vel.x * t * 0.4 - ox) / t, vz = (p.pos.z + p.vel.z * t * 0.4 - oz) / t;
+  const vy = (1.2 - oy + 0.5 * 13 * t * t) / t;
+  game.projectiles.push(new Projectile('rock', ox, oy, oz, vx, vy, vz, { fuse: 4, R }));
+  AUDIO.impact();
 }
 
 /* ---------- 胆汁弹（v9.7 L4D Boomer） ---------- */

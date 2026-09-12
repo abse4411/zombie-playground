@@ -90,6 +90,23 @@ const ZOMBIE_TYPES = {
     attackRange: 1.7, attackRate: 1.15,
     desc: '二代定向进化的产物——皮肤渗出荧光腐蚀液，死亡时留下大片酸沼。方舟议会"合唱团"计划的第一批成品。',
   },
+  witch: {
+    id: 'witch', name: '女巫', role: 'L4D特感 · 勿扰',
+    hp: 1000, speed: 0, damage: 90, reward: 400, cost: 6, minWave: 12, weight: 0.7,
+    scale: 0.92, skin: 0xd8c8d8, cloth: 0x8a4a6a, pants: 0x5a3a4a, rooted: true, immuneStagger: true,
+    attackRange: 2.2, attackRate: 1.0,
+    witch: { triggerRange: 3.2, hpMult: 1, speedBoost: 9, rageTime: 6 },
+    desc: '蜷缩哭泣的变异体——不主动攻击，靠太近（3.2米）或攻击她将触发狂暴冲锋（90伤害/高速）。绕行是智慧，击杀是财富（$400）。黑暗里留意哭声。',
+  },
+  tank: {
+    id: 'tank', name: '坦克', role: 'L4D特感 · 纯粹暴力',
+    hp: 3200, speed: 2.3, damage: 42, reward: 800, cost: 12, minWave: 14, weight: 0.5,
+    scale: 1.75, skin: 0x8a5a42, cloth: 0x5a3a2c, pants: 0x46302a, big: true, immuneStagger: true, knockback: 8,
+    attackRange: 2.6, attackRate: 1.4,
+    rock: { dmg: 34, cd: 6, speed: 13 },
+    burning: true,
+    desc: '纯粹的暴力化身——追击你、掀翻你、用巨石砸你。健康时你可以比它跑得快一点；被点燃后会狂暴加速。永远保持移动，永远优先集火。',
+  },
   boomer: {
     id: 'boomer', name: '胆汁鬼', role: 'L4D特感 · 尸潮引信',
     hp: 260, speed: 1.6, damage: 0, reward: 95, cost: 3.2, minWave: 8, weight: 1.6,

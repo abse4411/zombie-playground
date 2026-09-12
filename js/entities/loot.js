@@ -13,6 +13,70 @@ const LOOT_TABLE = [
 ];
 const LOOT_RARITY_COLORS = [0xb8c0cc, 0x52d273, 0x3aa0ff, 0xb05cff];
 const LOOT_RARITY_NAMES = ['普通', '优秀', '稀有', '史诗'];
+/* 掉落物专属模型构建器 + 名称（v8.9）：不再是无差别方块 */
+const LOOT_MODELS = {
+  cash: () => {
+    const g = new THREE.Group();
+    const bill = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.03, 0.16), new THREE.MeshStandardMaterial({ color: 0x3fae5a, roughness: 0.6, emissive: 0x1a5a2a, emissiveIntensity: 0.4 }));
+    const bill2 = bill.clone(); bill2.position.y = 0.035; bill2.rotation.y = 0.3;
+    const band = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.05, 0.18), new THREE.MeshStandardMaterial({ color: 0xe8e4c8 }));
+    g.add(bill, bill2, band);
+    return g;
+  },
+  ammo: () => {
+    const g = new THREE.Group();
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.16, 0.2), new THREE.MeshStandardMaterial({ color: 0x4a5238, roughness: 0.55 }));
+    for (let i = 0; i < 4; i++) {
+      const bullet = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.12, 8), new THREE.MeshStandardMaterial({ color: 0xd8b048, metalness: 0.8, roughness: 0.3 }));
+      bullet.position.set(-0.09 + i * 0.06, 0.12, 0);
+      g.add(bullet);
+    }
+    g.add(box);
+    return g;
+  },
+  medkit: () => {
+    const g = new THREE.Group();
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.18), new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.5 }));
+    const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 0.02), new THREE.MeshStandardMaterial({ color: 0xd83030, emissive: 0x901010, emissiveIntensity: 0.5 }));
+    crossV.position.set(0, 0, 0.095);
+    const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.06, 0.02), new THREE.MeshStandardMaterial({ color: 0xd83030, emissive: 0x901010, emissiveIntensity: 0.5 }));
+    crossH.position.set(0, 0, 0.095);
+    g.add(box, crossV, crossH);
+    return g;
+  },
+  frag: () => {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), new THREE.MeshStandardMaterial({ color: 0x3d5a3d, roughness: 0.5 }));
+    body.scale.y = 1.25;
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.06, 8), new THREE.MeshStandardMaterial({ color: 0x8a8f96, metalness: 0.8 }));
+    neck.position.y = 0.14;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.012, 6, 12), new THREE.MeshStandardMaterial({ color: 0x8a8f96, metalness: 0.8 }));
+    ring.position.set(0.06, 0.17, 0);
+    g.add(body, neck, ring);
+    return g;
+  },
+  molo: () => {
+    const g = new THREE.Group();
+    const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.09, 0.24, 10), new THREE.MeshStandardMaterial({ color: 0x7a5a2a, roughness: 0.4, transparent: true, opacity: 0.85, emissive: 0x502800, emissiveIntensity: 0.3 }));
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.08, 8), new THREE.MeshStandardMaterial({ color: 0x3a3a3a }));
+    neck.position.y = 0.16;
+    const rag = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.12, 0.03), new THREE.MeshStandardMaterial({ color: 0xd8c8a0 }));
+    rag.position.set(0.03, 0.22, 0); rag.rotation.z = 0.5;
+    g.add(bottle, neck, rag);
+    return g;
+  },
+  big: () => {
+    const g = new THREE.Group();
+    const bag = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.22, 0.16), new THREE.MeshStandardMaterial({ color: 0xc8a030, roughness: 0.35, metalness: 0.5, emissive: 0x6a4a08, emissiveIntensity: 0.5 }));
+    const seal = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.24, 8), new THREE.MeshStandardMaterial({ color: 0xe8d090, metalness: 0.9 }));
+    seal.rotation.z = Math.PI / 2;
+    const sym = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.02), new THREE.MeshStandardMaterial({ color: 0xfff0c0, emissive: 0xc0a040, emissiveIntensity: 0.8 }));
+    sym.position.z = 0.09;
+    g.add(bag, seal, sym);
+    return g;
+  },
+};
+const LOOT_LABELS = { cash: '💵 现金', ammo: '🔸 弹药盒', medkit: '🧪 医疗包', frag: '💣 手雷×2', molo: '🔥 燃烧瓶×2', big: '⭐ 大奖奖金' };
 
 class LootDrop {
   constructor(kind, x, z, value) {
@@ -22,27 +86,49 @@ class LootDrop {
     const rarity = LOOT_TABLE.find(l => l.id === kind)?.rarity ?? 0;
     const color = LOOT_RARITY_COLORS[rarity];
     this.group = new THREE.Group();
-    // 主体：发光小箱
-    const box = new THREE.Mesh(
-      new THREE.BoxGeometry(0.34, 0.26, 0.34),
-      new THREE.MeshStandardMaterial({ color: 0x2a2d33, roughness: 0.5, metalness: 0.4, emissive: color, emissiveIntensity: 0.25 })
+    // 专属模型（v8.9）：现金捆/弹药盒/医疗箱/手雷/燃烧瓶/大奖袋
+    const modelHolder = new THREE.Group();
+    const buildModel = LOOT_MODELS[kind];
+    if (buildModel) modelHolder.add(buildModel());
+    else modelHolder.add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.24, 0.3), new THREE.MeshStandardMaterial({ color: 0x2a2d33 })));
+    modelHolder.position.y = 0.3;
+    // 稀有度光圈底座
+    const ringM = new THREE.Mesh(
+      new THREE.RingGeometry(0.22, 0.3, 20),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false })
     );
-    box.position.y = 0.14;
-    // 类型图标色条
-    const band = new THREE.Mesh(
-      new THREE.BoxGeometry(0.36, 0.08, 0.36),
-      new THREE.MeshBasicMaterial({ color })
-    );
-    band.position.y = 0.14;
+    ringM.rotation.x = -Math.PI / 2;
+    ringM.position.y = 0.02;
+    // 文字标牌（v8.9）：canvas sprite 常显名称
+    const labelCanvas = document.createElement('canvas');
+    labelCanvas.width = 256; labelCanvas.height = 56;
+    const lctx = labelCanvas.getContext('2d', { willReadFrequently: true });
+    lctx.font = 'bold 30px "Microsoft YaHei", "PingFang SC", sans-serif';
+    lctx.textAlign = 'center'; lctx.textBaseline = 'middle';
+    const label = LOOT_LABELS[kind] || (kind === 'ammo' ? '🔸 弹药盒' : '📦 物资');
+    const tw2 = Math.min(240, lctx.measureText(label).width + 28);
+    lctx.fillStyle = 'rgba(6,8,12,0.72)';
+    lctx.fillRect((256 - tw2) / 2, 6, tw2, 44);
+    lctx.strokeStyle = '#' + color.toString(16).padStart(6, '0');
+    lctx.lineWidth = 3;
+    lctx.strokeRect((256 - tw2) / 2, 6, tw2, 44);
+    lctx.fillStyle = '#fff';
+    lctx.fillText(label, 128, 30, 226);
+    const labelTex = new THREE.CanvasTexture(labelCanvas);
+    if (THREE.sRGBEncoding) labelTex.encoding = THREE.sRGBEncoding;
+    const labelSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex, transparent: true, depthTest: false }));
+    labelSprite.scale.set(1.15, 0.25, 1);
+    labelSprite.position.y = 0.78;
+    labelSprite.renderOrder = 990;
     // 光柱（稀有度引导）
     const beam = new THREE.Mesh(
       new THREE.CylinderGeometry(0.05, 0.14, 3.2, 8, 1, true),
       new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false })
     );
     beam.position.y = 1.7;
-    this.group.add(box, band, beam);
+    this.group.add(modelHolder, ringM, labelSprite, beam);
     this.group.position.set(x, 0, z);
-    this.box = box; this.beam = beam; this.rarity = rarity;
+    this.box = modelHolder; this.beam = beam; this.rarity = rarity; this.labelSprite = labelSprite;
     ENGINE.scene.add(this.group);
     // 自发光替代点光源（避免动态光照导致的材质重编译与填充率爆炸）
   }
@@ -57,7 +143,7 @@ class LootDrop {
     if (far) return;
     // 浮动旋转
     this.box.rotation.y += dt * 1.6;
-    this.box.position.y = 0.14 + Math.sin(ENGINE.time * 2.4 + this.phase) * 0.06;
+    this.box.position.y = 0.3 + Math.sin(ENGINE.time * 2.4 + this.phase) * 0.07;
     this.beam.material.opacity = 0.22 + Math.sin(ENGINE.time * 3 + this.phase) * 0.08;
     if (this.life < 4) this.group.visible = Math.sin(ENGINE.time * 8) > -0.4; // 临消闪烁
     // 磁吸拾取

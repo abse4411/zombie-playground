@@ -143,3 +143,54 @@ const GIBS = {
     }
   },
 };
+
+/* ---------- 变异头顶词条（v7.0）：变异体头顶显示变异组合标签 ----------
+ * 每种变异组合懒生成一张 canvas 贴图（缓存），sprite 挂在丧尸组内自动跟随。
+ */
+const MUTTAGS = {
+  _tex: {},
+
+  texFor(affixes) {
+    const key = affixes.map(a => a.id).join('+');
+    if (this._tex[key]) return this._tex[key];
+    const names = affixes.map(a => a.name).join(' + ');
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 64;
+    const x = c.getContext('2d', { willReadFrequently: true });
+    x.font = 'bold 32px "Microsoft YaHei", "PingFang SC", sans-serif';
+    const tw = Math.min(240, x.measureText(names).width + 40);
+    const col = '#' + affixes[0].color.toString(16).padStart(6, '0');
+    // 底板 + 变异色描边
+    x.fillStyle = 'rgba(8,10,14,0.75)';
+    x.fillRect((256 - tw) / 2, 8, tw, 48);
+    x.strokeStyle = col;
+    x.lineWidth = 3;
+    x.strokeRect((256 - tw) / 2, 8, tw, 48);
+    // 文字
+    x.fillStyle = col;
+    x.textAlign = 'center';
+    x.textBaseline = 'middle';
+    x.fillText(names, 128, 34, 230);
+    const tex = new THREE.CanvasTexture(c);
+    if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+    this._tex[key] = tex;
+    return tex;
+  },
+
+  attach(zombie) {
+    let tag = zombie.group.userData.mutTag;
+    if (!tag) {
+      tag = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false }));
+      tag.renderOrder = 996;
+      tag.position.y = 2.45;
+      tag.scale.set(1.7, 0.42, 1);
+      zombie.group.add(tag);
+      zombie.group.userData.mutTag = tag;
+    }
+    tag.visible = zombie.affixes.length > 0;
+    if (tag.visible) {
+      tag.material.map = this.texFor(zombie.affixes);   // 组合贴图有缓存，共享，不可dispose
+      tag.material.needsUpdate = true;
+    }
+  },
+};

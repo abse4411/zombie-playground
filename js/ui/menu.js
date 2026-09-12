@@ -86,6 +86,17 @@ const MENU = {
         SAVE.commit();
       });
     }
+    // 狙击开镜灵敏度
+    const ssens = $('scopesens-slider');
+    if (ssens) {
+      ssens.value = SAVE.data.settings.scopeSens !== undefined ? SAVE.data.settings.scopeSens : 0.7;
+      $('scopesens-val').textContent = parseFloat(ssens.value).toFixed(2);
+      ssens.addEventListener('input', () => {
+        SAVE.data.settings.scopeSens = +ssens.value;
+        $('scopesens-val').textContent = parseFloat(ssens.value).toFixed(2);
+        SAVE.commit();
+      });
+    }
     // 帧率上限
     const fBtns = document.querySelectorAll('.fcap-btn');
     const setFcapActive = () => fBtns.forEach(b => b.classList.toggle('active', +b.dataset.fc === (SAVE.data.settings.fpsCap || 0)));

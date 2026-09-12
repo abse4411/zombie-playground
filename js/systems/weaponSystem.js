@@ -168,6 +168,9 @@ class WeaponSystem {
     p.moveMult = (this.w && (this.w.def.weight || this.w.def.slowMove)) || 1;
 
     // 切换武器
+    // 狙击开镜时滚轮保留给倍率切换（不切枪），否则滚轮切枪
+    let scopeWheel = 0;
+    if (this.w && this.w.def.scope && this.adsT > 0.7) scopeWheel = INPUT.consumeWheel();
     const wheel = INPUT.consumeWheel();
     if (wheel !== 0) this._cycle(wheel);
     if (INPUT.justPressed('Digit1')) this._cycleSlot('primary');
@@ -197,7 +200,17 @@ class WeaponSystem {
     const wantAds = INPUT.rmb && this.reloadT <= 0 && !def.melee;
     this.adsT = clamp(this.adsT + (wantAds ? 1 : -1) * dt * 9, 0, 1);
     p.ads = this.adsT > 0.5;
-    const targetFov = (def.scope ? lerp(75, 26, this.adsT) : lerp(75, 62, this.adsT))
+    // 狙击两段开镜（v7.0）：开镜状态下滚动滚轮切换 1×/2× 倍率（滚轮在开镜时不切枪）
+    if (this.zoom2T === undefined) { this.zoom2T = 0; this.zoom2 = false; }
+    if (def.scope && this.adsT > 0.7) {
+      if (scopeWheel > 0) this.zoom2 = true;
+      else if (scopeWheel < 0) this.zoom2 = false;
+      if (!this._scopeTip) { this._scopeTip = true; HUD.toast('🔍 开镜状态：滚动滚轮切换 2× 倍率'); }
+    }
+    if (this.adsT < 0.4) this.zoom2 = false;
+    this.zoom2T = clamp(this.zoom2T + (this.zoom2 ? 1 : -1) * dt * 6, 0, 1);
+    const scopeFov = lerp(26, 11, this.zoom2T);
+    const targetFov = (def.scope ? lerp(75, scopeFov, this.adsT) : lerp(75, 62, this.adsT))
       + (this.p.fovPunch || 0) * 14;   // 终结镜头 FOV 冲击
     if (Math.abs(ENGINE.camera.fov - targetFov) > 0.05 || (this.p.fovPunch || 0) > 0.02) {
       ENGINE.camera.fov = targetFov;

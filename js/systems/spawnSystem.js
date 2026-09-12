@@ -102,12 +102,18 @@ class SpawnSystem {
       sx = use.x + rand(-2.5, 2.5);
       sz = use.z + rand(-2.5, 2.5);
     }
-    // 变异感染体判定（v6.9）：概率随章节进度与波次递增（14%基础 → 上限45%）
+    // 变异感染体判定（v6.9→v7.0）：概率随章节进度与波次递增（14%基础→45%上限），变异可叠加至4个
     const wv = this.game.mode.wave !== undefined ? this.game.mode.wave : (this.game.mode.wavePtr || 0);
     const chapter = this.game.mode.idx || 0;
     if (!opts.boss && !opts.dummy && ZOMBIE_TYPES[typeId].cost < 10 && wv >= 4) {
       const mutChance = Math.min(0.45, GAMECONFIG.elites.chance + wv * 0.012 + chapter * 0.03);
-      if (Math.random() < mutChance) opts.affix = choice(GAMECONFIG.elites.list);
+      if (Math.random() < mutChance) {
+        const pool = GAMECONFIG.elites.list.slice();
+        const extra = (Math.random() < 0.3 ? 1 : 0) + (Math.random() < 0.12 ? 1 : 0) + (Math.random() < 0.05 ? 1 : 0);
+        const n = Math.min(1 + extra, pool.length, 4);
+        opts.affixList = [];
+        for (let i = 0; i < n; i++) opts.affixList.push(pool.splice(randi(0, pool.length - 1), 1)[0]);
+      }
     }
     const zb = new Zombie(typeId, sx, sz, this.mults, opts);
     // 血月强化

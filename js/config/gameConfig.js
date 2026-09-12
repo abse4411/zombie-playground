@@ -150,6 +150,12 @@ const GAMECONFIG = {
     },
   },
   radar: { range: 55 },
+  /* ---------- 感染体整体强化（v7.0）：攻击欲望/攻击距离/移速 ---------- */
+  zombieAggro: {
+    rateMult: 0.7,      // 攻击间隔 ×0.7（更频繁进攻）
+    rangeBonus: 0.3,    // 攻击距离 +0.3m
+    speedMult: 1.18,    // 移速 ×1.18（压迫感提升但可甩开）
+  },
   sensBase: 0.0021,       // 灵敏度基数 rad/px
   touchSensBase: 0.0042,  // 触屏灵敏度基数
 

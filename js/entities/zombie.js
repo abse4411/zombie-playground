@@ -159,15 +159,30 @@ class Zombie {
     this.net = !!opts.net;                  // 联机网络傀儡（客户端）
     this.boss = !!opts.boss;                // Boss：血条 + 超大
     this.bossCfg = (this.boss && opts.bossId && GAMECONFIG.bosses) ? GAMECONFIG.bosses[opts.bossId] : null;
-    this.affix = opts.affix || null;        // 精英词缀
+    // 变异列表（v7.0）：支持叠加，最多4种（兼容旧单数 opts.affix）
+    this.affixes = (opts.affixList && opts.affixList.length) ? opts.affixList.slice(0, 4) : (opts.affix ? [opts.affix] : []);
+    this.affix = this.affixes[0] || null;
     const affix = this.affix;
-    this.maxHp = Math.round(cfg.hp * mults.hp * (affix ? affix.hp : 1) * (this.boss ? GAMECONFIG.boss.hpMult : 1));
+    const AG = GAMECONFIG.zombieAggro || { rateMult: 1, rangeBonus: 0, speedMult: 1 };
+    // 攻击欲望强化（v7.0）：攻击更频繁、距离更远；实例类型统一克隆以便实例化修改
+    this.type = Object.assign({}, cfg);
+    this.type.attackRange = cfg.attackRange + AG.rangeBonus;
+    this.type.attackRate = cfg.attackRate * AG.rateMult;
+    // 变异叠加乘算
+    let affHp = 1, affSpd = 1, affDmg = 1, affScale = 1;
+    for (const a of this.affixes) {
+      affHp *= a.hp || 1; affSpd *= a.speed || 1; affDmg *= a.dmg || 1;
+      if (a.scale) affScale *= a.scale;
+    }
+    this.affixKb = this.affixes.reduce((m, a) => Math.max(m, a.kb || 0), 0);
+    this.affixHeal = Math.min(0.16, this.affixes.reduce((s2, a) => s2 + (a.heal || 0), 0));
+    this.maxHp = Math.round(cfg.hp * mults.hp * affHp * (this.boss ? GAMECONFIG.boss.hpMult : 1));
     this.hp = this.maxHp;
-    this.speed = cfg.speed * mults.speed * rand(0.9, 1.12) * (affix ? affix.speed : 1);
-    this.damage = cfg.damage * mults.dmg * (affix ? affix.dmg : 1);
+    this.speed = cfg.speed * mults.speed * rand(0.9, 1.12) * affSpd * AG.speedMult;
+    this.damage = cfg.damage * mults.dmg * affDmg;
     this.reward = Math.round(cfg.reward * mults.reward
       * (GAMECONFIG.economy.rewardGlobalMult || 1)
-      * (affix ? GAMECONFIG.elites.rewardMult : 1)
+      * Math.pow(GAMECONFIG.elites.rewardMult, Math.min(3, this.affixes.length))
       * (this.boss ? GAMECONFIG.boss.rewardMult : 1));
     // 幕末专属Boss（v6.9）：独立数值（暴君Ω/灯塔巨像/方舟刽子手）
     if (this.bossCfg) {
@@ -178,13 +193,11 @@ class Zombie {
       this.damage = B.dmg * mults.dmg;
       this.reward = Math.round(B.reward * (GAMECONFIG.economy.rewardGlobalMult || 1));
     }
-    // 变异特性合并进实例类型（v6.9）：易爆/长爪/铁甲
-    if (affix && (affix.explode || affix.reach || affix.frontArmor)) {
-      this.type = Object.assign({}, cfg);
-      if (affix.explode) this.type.explode = affix.explode;
-      if (affix.reach) this.type.attackRange = cfg.attackRange * affix.reach;
-      if (affix.frontArmor) this.type.frontArmor = affix.frontArmor;
-    }
+    // 变异特性合并进实例类型（v6.9→v7.0 多变异）：易爆/长爪/铁甲
+    const _ex = this.affixes.find(a => a.explode), _rc = this.affixes.find(a => a.reach), _fa = this.affixes.find(a => a.frontArmor);
+    if (_ex) this.type.explode = _ex.explode;
+    if (_rc) this.type.attackRange = this.type.attackRange * _rc.reach;
+    if (_fa) this.type.frontArmor = _fa.frontArmor;
 
     this.state = 'rise'; this.riseT = 0.9;
     this.dead = false; this.deadT = 0; this.remove = false;
@@ -234,11 +247,11 @@ class Zombie {
       this.auraColor = affix.color;
       this.model.skin.emissive.setHex(affix.color);
       this.group.scale.multiplyScalar(GAMECONFIG.elites.scaleMult);
-      if (affix.scale) this.group.scale.multiplyScalar(affix.scale);
+      if (affScale > 1) this.group.scale.multiplyScalar(affScale);
       // 变异登场播报（限频防尸潮刷屏）
       if (!this.net && !this.dummy && ENGINE.time - (Zombie._lastMutAnn || -99) > 6) {
         Zombie._lastMutAnn = ENGINE.time;
-        HUD.killfeed('⚠ 检测到变异感染体：「' + affix.name + '」', 'big');
+        HUD.killfeed('⚠ 检测到变异感染体：「' + this.affixes.map(a => a.name).join('+') + '」', 'big');
         AUDIO.growl(12, 0.75);
       }
     }
@@ -254,6 +267,8 @@ class Zombie {
     }
     ring.visible = !!affix;
     if (affix) ring.material.color.setHex(affix.color);
+    // 变异头顶词条（v7.0）：显示变异组合名称
+    if (typeof MUTTAGS !== 'undefined') MUTTAGS.attach(this);
     if (this.boss) this.group.scale.multiplyScalar(this.bossCfg ? this.bossCfg.scale / cfg.scale : GAMECONFIG.boss.scale / cfg.scale);
 
     // 幽影：半透明材质（接近时显形）
@@ -626,9 +641,15 @@ class Zombie {
         if (cfg.knockback) {
           p.vel.x += nx * cfg.knockback; p.vel.z += nz * cfg.knockback; p.vel.y += 3.2;
         }
-        // 巨力变异：重击退；嗜血变异：攻击吸血
-        if (this.affix && this.affix.kb) { p.vel.x += nx * this.affix.kb; p.vel.z += nz * this.affix.kb; p.vel.y += 2.6; }
-        if (this.affix && this.affix.heal) this.hp = Math.min(this.maxHp, this.hp + this.maxHp * this.affix.heal);
+        // 变异特效：巨力击退 / 嗜血吸血（v7.0 叠加版）
+        if (this.affixKb > 0) { p.vel.x += nx * this.affixKb; p.vel.z += nz * this.affixKb; p.vel.y += 2.6; }
+        if (this.affixHeal > 0) this.hp = Math.min(this.maxHp, this.hp + this.maxHp * this.affixHeal);
+        // 抓挠减速（游荡者/潜行者）：咬中附带短暂减速
+        if (cfg.grabSlow) p.slowT = Math.max(p.slowT, cfg.grabSlow);
+        // 连击（奔跑者/小丑/地狱犬/暴君）：概率立即补一记快速二连
+        if (cfg.combo && Math.random() < cfg.combo && p.alive && dist < cfg.attackRange + 0.55) {
+          this.windup = GAMECONFIG.combat.attackWindup * 0.55;
+        }
       }
     } else if (cfg.damage > 0 && dist < cfg.attackRange && this.attackCd <= 0 && this.stagger <= 0) {
       this.windup = GAMECONFIG.combat.attackWindup;
@@ -676,7 +697,7 @@ class Zombie {
 
   get displayName() {
     if (this.boss) return this.bossCfg ? this.bossCfg.name : '暴君 Ω';
-    return (this.affix ? this.affix.name + '·' : '') + this.type.name;
+    return (this.affixes.length ? this.affixes.map(a => a.name).join('+') + '·' : '') + this.type.name;
   }
 
   _flash() {

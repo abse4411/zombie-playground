@@ -77,7 +77,13 @@ class Player {
 
     // ---- 视角 ----
     const m = INPUT.consumeMouse();
-    const sens = (INPUT.touch ? GAMECONFIG.touchSensBase : GAMECONFIG.sensBase) * SAVE.data.settings.sens;
+    let sens = (INPUT.touch ? GAMECONFIG.touchSensBase : GAMECONFIG.sensBase) * SAVE.data.settings.sens;
+    // 狙击开镜灵敏度（v7.0）：按FOV比例缩放，倍率可在设置调整（0.2~1.5）
+    const _wdef = GAME.weapons && GAME.weapons.w ? GAME.weapons.w.def : null;
+    if (_wdef && _wdef.scope && this.ads) {
+      const k = SAVE.data.settings.scopeSens !== undefined ? SAVE.data.settings.scopeSens : 0.7;
+      sens *= Math.pow(ENGINE.camera.fov / 75, k);
+    }
     this.yaw -= m.dx * sens;
     this.pitch = clamp(this.pitch - m.dy * sens, -1.53, 1.53);
     // 后坐力自动回正

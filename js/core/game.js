@@ -132,6 +132,9 @@ class Game {
     this.weather = { kind: 'clear', t: rand(35, 60) };
     this.runStats = { damageTaken: 0, fragKills: 0 };
     if (typeof STORY !== 'undefined') STORY.cancel();   // 防上一局残留对话冻结新对局
+    // 第一人称身体（低头可见）
+    this.playerBody = buildPlayerBody(CHARACTER_BODY_COLORS[SAVE.data.character || 'raven']);
+    ENGINE.scene.add(this.playerBody.group);
     // 可破坏物布置（每局重新生成）
     if (typeof spawnDestructibles !== 'undefined') spawnDestructibles(this);
     // 探索补给箱
@@ -381,6 +384,9 @@ class Game {
     AUDIO.setTension(tension);
     AUDIO.musicTick(tension);
 
+    // 主角身体同步（低头可见）
+    if (this.playerBody) syncPlayerBody(this.playerBody, p, dt);
+
     // 联机同步
     if (typeof NET !== 'undefined' && NET.active) NET.netTick(dt);
 
@@ -598,6 +604,7 @@ class Game {
     this.loots = [];
     for (const d of this.destructibles) if (!d.dead) d.dispose();
     this.destructibles = [];
+    if (this.playerBody) { ENGINE.scene.remove(this.playerBody.group); this.playerBody = null; }
     if (this.crates) for (const c of this.crates) c.dispose();
     this.crates = [];
     if (this.weapons) this.weapons._disposeViewmodel();

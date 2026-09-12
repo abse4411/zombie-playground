@@ -140,6 +140,10 @@ class WeaponSystem {
       g.add(this.muzzleSprite);
     }
 
+    // 第一人称手臂（v6.1）
+    const sleeveColor = 0x3a4236;
+    attachArmsToViewmodel(g, def, sleeveColor);
+
     this.viewmodel = g;
     ENGINE.camera.add(g);
     ENGINE.scene.add(ENGINE.camera);

@@ -54,6 +54,18 @@ class Projectile {
 
     if (this.kind === 'molotov') PARTICLES.flames(p.x, p.y, p.z, 1);
     if (this.kind === 'acid' && Math.random() < 0.4) PARTICLES.acidSplash(p.x, p.y, p.z);
+    // 破片手雷：碰到丧尸立即引爆（直接命中不再穿身飞过，教学/实战手感一致）
+    if (this.kind === 'frag') {
+      for (const zb of game.zombies) {
+        if (zb.dead || zb.state === 'rise') continue;
+        const dx2 = zb.pos.x - p.x, dz2 = zb.pos.z - p.z;
+        if (dx2 * dx2 + dz2 * dz2 < 0.42 && p.y < zb.pos.y + 1.9 * zb.group.scale.x) {
+          this._finish(game);
+          explodeGrenade(game, p.x, p.y, p.z, THROWABLES.frag);
+          return;
+        }
+      }
+    }
     // M79榴弹：碰炸（墙/地/碰到即炸）
     if (this.kind === 'gl' && (this.wallHit || p.y <= this.r + 0.01 || this.fuse <= 0)) {
       this._finish(game);

@@ -43,25 +43,40 @@ function attachArmsToViewmodel(vm, def, sleeveColor) {
   vm.add(rightArm, leftArm);
 }
 
-// 主角自身身体（低头可见）：腿/下躯干/腰带 —— 不含头（避免挡镜头）
+// 主角自身身体（低头可见）：腰带/髋 + 双腿/靴子
+// 设计约束：视线高度1.7 —— 不做胸腔（胸腔顶面会挡住腿，v6.6"半圆"问题根源）；
+// 躯干存在感由第一人称视图模型的双臂承担，低头看到的是腰+双腿（Minecraft式）
 function buildPlayerBody(colors) {
   const c = colors || { shirt: 0x3a4a3e, pants: 0x2c3230, vest: 0x232a24, belt: 0x1c1e22 };
   const g = new THREE.Group();
-  const legL = limbMesh(0.1, 0.08, 0.82, ART.mat(c.pants));
-  legL.position.set(-0.13, 0.82, 0);
-  const legR = limbMesh(0.1, 0.08, 0.82, ART.mat(c.pants));
-  legR.position.set(0.13, 0.82, 0);
-  const hips = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.15, 0.22, 10), ART.mat(c.pants));
-  hips.position.y = 0.9;
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.17, 0.5, 10), ART.mat(c.shirt));
-  torso.position.y = 1.26;
-  const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.175, 0.175, 0.07, 10), ART.mat(c.belt));
-  belt.position.y = 1.02;
-  const vest = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.21, 0.3, 10), ART.mat(c.vest));
-  vest.position.y = 1.36;
-  const pack = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.3, 0.12), ART.mat(0x2e2a22));
-  pack.position.set(0, 1.3, -0.18);
-  g.add(legL, legR, hips, torso, belt, vest, pack);
+  const pantsMat = ART.mat(c.pants);
+  const bootMat = ART.mat(0x1c1a18);
+  // 双腿：分立方柱并整体前移——低头时腿从髋板前方露出（正下方会被髋部挡死）；
+  // 间隙拉大让两腿可辨；靴子挂腿上随摆动
+  // 注意：Object3D.add() 返回父对象自身，链式 .position 会覆盖腿的坐标，必须分开赋值
+  const legGeo = new THREE.BoxGeometry(0.15, 0.92, 0.18);
+  const bootGeo = new THREE.BoxGeometry(0.16, 0.09, 0.27);
+  const legL = new THREE.Mesh(legGeo, pantsMat);
+  legL.position.set(-0.145, 0.46, 0.16);
+  const bootL = new THREE.Mesh(bootGeo, bootMat);
+  bootL.position.set(0, -0.415, 0.045);
+  legL.add(bootL);
+  const legR = new THREE.Mesh(legGeo, pantsMat);
+  legR.position.set(0.145, 0.46, 0.16);
+  const bootR = new THREE.Mesh(bootGeo, bootMat);
+  bootR.position.set(0, -0.415, 0.045);
+  legR.add(bootR);
+  // 髋部 + 腰带（小截面盒状，远低于视线不挡腿）
+  const hips = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.2, 0.16), pantsMat);
+  hips.position.y = 1.01;
+  const belt = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.07, 0.17), ART.mat(c.belt));
+  belt.position.y = 1.14;
+  g.add(legL, legR, hips, belt);
+  // 美漫描边：低头视角下把腿/髋/地面在视觉上分开（否则平面光下融成一块灰板）
+  if (ENGINE.quality.outlines) {
+    ART.outline(legL, 1.14); ART.outline(legR, 1.14);
+    ART.outline(hips, 1.12); ART.outline(belt, 1.12);
+  }
   g.traverse(o => { if (o.isMesh) { o.castShadow = false; } });
   return { group: g, legL, legR, walkPhase: 0, _last: new THREE.Vector3() };
 }

@@ -57,6 +57,17 @@ class WeaponSystem {
 
   get w() { return this.p.weapons[this.p.current]; }
 
+  // 槽位全空兜底（旧版继承存档引用了已不存在/改名的武器时）：自动补一把P92
+  _ensureFallbackWeapon() {
+    const p = this.p;
+    if (!p.weapons.secondary) {
+      const inst = new WeaponInstance(WEAPONS.p92);
+      p.weapons.secondary = inst;
+      if (!p.rack.secondary.includes(inst)) p.rack.secondary.push(inst);
+    }
+    if (!p.weapons[p.current]) p.current = 'secondary';
+  }
+
   _disposeViewmodel() {
     if (!this.viewmodel) return;
     ENGINE.camera.remove(this.viewmodel);
@@ -69,6 +80,7 @@ class WeaponSystem {
 
   _buildViewmodel() {
     this._disposeViewmodel();
+    if (!this.w) this._ensureFallbackWeapon();
     const def = this.w.def;
     const g = new THREE.Group();
     // 武器涂装（外观系统）：实例化材质避免污染缓存

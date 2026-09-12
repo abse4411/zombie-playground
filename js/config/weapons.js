@@ -177,7 +177,7 @@ const WEAPONS = {
 const THROWABLES = {
   frag: {
     id: 'frag', name: '破片手雷', price: 160, pack: 3, max: 8,
-    damage: 150, radius: 6.5, fuse: 2.2, speed: 15, gravity: 13,
+    damage: 150, radius: 6.5, fuse: 1.7, speed: 11, gravity: 13,
     color: 0x3d5a3d, selfMult: 0.35,
     desc: '范围爆炸伤害，对密集尸群效果拔群。小心别炸到自己。',
   },

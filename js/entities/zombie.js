@@ -6,33 +6,6 @@ let _shadowGeo = null;   // 全体丧尸共享的接地阴影几何体
 let ZOMBIE_SEQ = 0;
 const ZOMBIE_POOL = {};  // 模型对象池：typeId(+dummy) -> [group,...]
 
-/* ---------- 构件辅助（v4.6 有机人体建模） ---------- */
-// 锥形肢体：上粗下细的圆柱（手臂/腿），两端球关节
-function limbMesh(rTop, rBottom, len, mat) {
-  const g = new THREE.Group();
-  const seg = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBottom, len, 8), mat);
-  seg.position.y = -len / 2;
-  const joint = new THREE.Mesh(new THREE.SphereGeometry(rTop, 8, 6), mat);
-  g.add(seg, joint);
-  return g;
-}
-
-// 圆润头部：球颅+锥下巴+眉骨
-function headMesh(cfg, mat, bloodMat) {
-  const g = new THREE.Group();
-  const headS = cfg.headBig ? 1.4 : 1;
-  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.19 * headS, 12, 10), mat);
-  skull.scale.set(1, 1.08, 1.05);
-  const jaw = new THREE.Mesh(new THREE.CylinderGeometry(0.10 * headS, 0.13 * headS, 0.12 * headS, 8), bloodMat);
-  jaw.position.set(0, -0.14 * headS, 0.045 * headS);
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.035 * headS, 0.07 * headS, 6), mat);
-  nose.rotation.x = Math.PI / 2;
-  nose.position.set(0, -0.02 * headS, 0.19 * headS);
-  g.add(skull, jaw, nose);
-  g.userData.headS = headS;
-  return g;
-}
-
 function buildZombieModel(cfg, outlines) {
   const g = new THREE.Group();
   g.rotation.order = 'YXZ';
@@ -42,104 +15,86 @@ function buildZombieModel(cfg, outlines) {
   const bloodMat = ART.mat(0x5a1010);
   const headS = cfg.headBig ? 1.4 : 1;
 
-  // 躯干：锥形胸腔+腹部（上宽下窄，佝偻前倾）
-  const torsoG = new THREE.Group();
-  torsoG.position.y = 0.92;
-  const chest = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.19, 0.42, 10), cloth);
-  chest.position.y = 0.28; chest.rotation.x = 0.12;
-  const belly = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.15, 0.26, 10), cloth);
-  belly.position.y = -0.02; belly.rotation.x = 0.2;
-  torsoG.add(chest, belly);
-  g.add(torsoG);
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.72, 0.3), cloth);
+  torso.position.y = 1.15; g.add(torso);
+
+  // 破布条与血污
+  for (let i = 0; i < 3; i++) {
+    const patch = new THREE.Mesh(
+      new THREE.BoxGeometry(rand(0.08, 0.16), rand(0.12, 0.26), 0.02),
+      i % 2 ? bloodMat : pants
+    );
+    patch.position.set(rand(-0.2, 0.2), rand(0.9, 1.4), 0.155);
+    patch.rotation.z = rand(-0.4, 0.4);
+    g.add(patch);
+  }
 
   if (cfg.armorPlate) {
-    const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.23, 0.4, 10), ART.mat(0x2e3638));
-    plate.position.y = 1.24; g.add(plate);
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.55, 0.4), ART.mat(0x2e3638));
+    plate.position.y = 1.22; g.add(plate);
+    // 战术背心挂载包
     for (const side of [-1, 1]) {
-      const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.15, 0.08), ART.mat(0x232a24));
-      pouch.position.set(side * 0.17, 1.08, 0.2); g.add(pouch);
-    }
-  } else {
-    // 破布条与血污
-    for (let i = 0; i < 3; i++) {
-      const patch = new THREE.Mesh(
-        new THREE.BoxGeometry(rand(0.08, 0.15), rand(0.1, 0.22), 0.02),
-        i % 2 ? bloodMat : pants
-      );
-      patch.position.set(rand(-0.18, 0.18), rand(0.85, 1.35), 0.17);
-      patch.rotation.z = rand(-0.4, 0.4);
-      g.add(patch);
+      const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.16, 0.08), ART.mat(0x232a24));
+      pouch.position.set(side * 0.18, 1.12, 0.21); g.add(pouch);
     }
   }
 
-  // 头（球形+下颚）
-  const headG = headMesh(cfg, skin, bloodMat);
-  headG.position.y = 1.58 + 0.2 * headS;
-  g.add(headG);
-  const head = headG.children[0];   // 受击闪色引用
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.34 * headS, 0.34 * headS, 0.34 * headS), skin);
+  head.position.y = 1.68 * headS + (cfg.headBig ? 0.02 : 0);
+  g.add(head);
 
-  // 眼睛（发光）
+  // 下颚（张口咬人感）
+  const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.22 * headS, 0.07 * headS, 0.1 * headS), bloodMat);
+  jaw.position.set(0, head.position.y - 0.16 * headS, 0.14 * headS);
+  g.add(jaw);
+
   const eyeC = (cfg.big || cfg.armorPlate) ? 0xff3838 : 0xffd23f;
   const eyeMat = new THREE.MeshBasicMaterial({ color: eyeC });
   for (const side of [-1, 1]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.028 * headS, 6, 5), eyeMat);
-    eye.position.set(side * 0.07 * headS, headG.position.y + 0.03, 0.15 * headS);
+    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.05, 0.03), eyeMat);
+    eye.position.set(side * 0.08 * headS, head.position.y + 0.04, 0.17 * headS);
     g.add(eye);
   }
 
-  // 类型配件
-  if (cfg.armorPlate) {
-    const helm = new THREE.Mesh(new THREE.SphereGeometry(0.22 * headS, 10, 8, 0, TAU, 0, 1.4), ART.mat(0x2a3230));
-    helm.position.y = headG.position.y + 0.04 * headS; g.add(helm);
+  // 类型专属配件
+  if (cfg.armorPlate) { // 头盔 + 面罩
+    const helm = new THREE.Mesh(new THREE.BoxGeometry(0.4 * headS, 0.14, 0.4 * headS), ART.mat(0x2a3230));
+    helm.position.set(0, head.position.y + 0.18 * headS, 0); g.add(helm);
   }
-  if (cfg.zigzag) {
+  if (cfg.typeId === 'jester' || cfg.zigzag) { // 小丑帽
     for (const side of [-1, 1]) {
-      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.26, 6), ART.mat(side < 0 ? 0xc04868 : 0x48a0b8));
-      horn.position.set(side * 0.11, headG.position.y + 0.17, 0);
+      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.3, 6), ART.mat(side < 0 ? 0xc04868 : 0x48a0b8));
+      horn.position.set(side * 0.12, head.position.y + 0.24, 0);
       horn.rotation.z = side * 0.5; g.add(horn);
     }
   }
-  if (cfg.big) {
+  if (cfg.big) { // 暴君肩甲与巨臂
     for (const side of [-1, 1]) {
-      const pad = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), ART.mat(0x3a3028));
-      pad.position.set(side * 0.34, 1.42, 0); pad.scale.set(1, 0.7, 1); g.add(pad);
+      const pad = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.34), ART.mat(0x3a3028));
+      pad.position.set(side * 0.42, 1.5, 0); g.add(pad);
     }
   }
 
-  // 四肢：锥形+球关节（肩/髋 pivot）
   const arms = [], legs = [];
   for (const side of [-1, 1]) {
-    const shoulder = new THREE.Group();
-    shoulder.position.set(side * 0.29, 1.38, 0);
-    const upper = limbMesh(0.065, 0.055, 0.3, skin); upper.position.y = 0;
-    const foreG = new THREE.Group();
-    foreG.position.y = -0.3;
-    const fore = limbMesh(0.05, 0.045, 0.3, skin); 
-    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.055, 6, 5), bloodMat);
-    hand.position.y = -0.32;
-    foreG.add(fore, hand);
-    shoulder.add(upper, foreG);
-    g.add(shoulder); arms.push(shoulder);
-    shoulder.userData.fore = foreG;
+    const armPivot = new THREE.Group();
+    armPivot.position.set(side * 0.37, 1.44, 0);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.62, 0.15), skin);
+    arm.position.y = -0.3;
+    armPivot.add(arm); g.add(armPivot); arms.push(armPivot);
   }
   for (const side of [-1, 1]) {
-    const hip = new THREE.Group();
-    hip.position.set(side * 0.13, 0.78, 0);
-    const thigh = limbMesh(0.085, 0.07, 0.4, pants);
-    const shinG = new THREE.Group();
-    shinG.position.y = -0.4;
-    const shin = limbMesh(0.065, 0.055, 0.38, pants);
-    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.07, 0.22), ART.mat(0x1c1a18));
-    foot.position.set(0, -0.4, 0.05);
-    shinG.add(shin, foot);
-    hip.add(thigh, shinG);
-    hip.userData.shin = shinG;
-    g.add(hip); legs.push(hip);
+    const legPivot = new THREE.Group();
+    legPivot.position.set(side * 0.16, 0.78, 0);
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.78, 0.19), pants);
+    leg.position.y = -0.39;
+    legPivot.add(leg); g.add(legPivot); legs.push(legPivot);
   }
 
-  // 美漫描边（主要块面）
+  // 美漫描边（躯干/头/四肢）
   if (outlines) {
-    ART.outline(chest, 1.12); ART.outline(head, 1.16);
+    for (const m of [torso, head, jaw]) ART.outline(m, 1.14);
+    for (const pv of [...arms, ...legs]) for (const c of pv.children) ART.outline(c, 1.16);
   }
 
   g.scale.setScalar(cfg.scale);
@@ -551,20 +506,11 @@ class Zombie {
     }
     m.legs[0].rotation.x = sw * 0.55;
     m.legs[1].rotation.x = -sw * 0.55;
-    // 膝盖弯曲（摆动腿屈膝，支撑腿伸直）
-    for (let i = 0; i < 2; i++) {
-      const shin = m.legs[i].userData.shin;
-      if (shin) shin.rotation.x = Math.max(0, (i === 0 ? sw : -sw)) * -0.9;
-    }
     const base = cfg.crawl ? -0.5 : -1.15;
     const attackT = this.windup >= 0 ? 1 - this.windup / GAMECONFIG.combat.attackWindup : -1;
     if (m.arms.length) {
       m.arms[0].rotation.x = base + sw * 0.22;
       m.arms[1].rotation.x = base - sw * 0.22;
-      // 手肘：前伸爪姿
-      for (const a of m.arms) {
-        if (a.userData.fore) a.userData.fore.rotation.x = -0.55 + Math.sin(ENGINE.time * 2 + this.walkPhase) * 0.1;
-      }
       if (attackT >= 0) {
         m.arms[0].rotation.x = base - 0.4 + attackT * 0.9;
         m.arms[1].rotation.x = base - 0.4 + attackT * 0.9;

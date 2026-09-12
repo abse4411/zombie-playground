@@ -66,7 +66,7 @@ const SHOP = {
     } else if (tabId === 'perk') {
       for (const id in PERKS) {
         const k = PERKS[id];
-        const tier = p.perks[id];
+        const tier = p.perks[id] || 0;   // 旧存档可能缺新Perk键
         if (tier >= k.tiers.length) {
           items.push({ kind: 'perk', id, name: `${k.icon} ${k.name} MAX`, desc: k.desc, price: 0, state: 'maxed', stats: [['等级', 'MAX']] });
         } else {

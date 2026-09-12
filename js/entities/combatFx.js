@@ -37,6 +37,7 @@ const HPBARS = {
     hb.group.position.set(zombie.pos.x, 2.15 * zombie.group.scale.x, zombie.pos.z);
     const pct = clamp(zombie.hp / zombie.maxHp, 0, 1);
     hb.fill.scale.x = 0.68 * pct;
+    hb.fill.position.x = -0.34 * (1 - pct);   // 左端锚定：血量减少时从右向左缩短
     // 面向相机（手动billboard）
     hb.group.quaternion.copy(ENGINE.camera.quaternion);
   },

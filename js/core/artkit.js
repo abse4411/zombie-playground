@@ -84,7 +84,7 @@ const ART = (() => {
     if (_texs[key]) return _texs[key];
     const c = document.createElement('canvas');
     c.width = c.height = size;
-    const ctx = c.getContext('2d');
+    const ctx = c.getContext('2d', { willReadFrequently: true });
     fn(ctx, size);
     const t = new THREE.CanvasTexture(c);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -213,11 +213,11 @@ const ART = (() => {
   // 高度→法线（Sobel）
   function _heightToNormal(srcCanvas, strength = 2.2) {
     const S = srcCanvas.width;
-    const sctx = srcCanvas.getContext('2d');
+    const sctx = srcCanvas.getContext('2d', { willReadFrequently: true });
     const src = sctx.getImageData(0, 0, S, S).data;
     const out = document.createElement('canvas');
     out.width = out.height = S;
-    const octx = out.getContext('2d');
+    const octx = out.getContext('2d', { willReadFrequently: true });
     const dst = octx.createImageData(S, S);
     const hAt = (x, y) => {
       x = (x + S) % S; y = (y + S) % S;
@@ -249,7 +249,7 @@ const ART = (() => {
     const S = baseCanvas.width;
     const rc = document.createElement('canvas');
     rc.width = rc.height = S;
-    const rctx = rc.getContext('2d');
+    const rctx = rc.getContext('2d', { willReadFrequently: true });
     rctx.drawImage(baseCanvas, 0, 0);
     const rd = rctx.getImageData(0, 0, S, S);
     for (let i = 0; i < rd.data.length; i += 4) {
@@ -340,7 +340,7 @@ const ART = (() => {
   function _makeCanvas(key, size, fn) {
     const c = document.createElement('canvas');
     c.width = c.height = size;
-    fn(c.getContext('2d'), size);
+    fn(c.getContext('2d', { willReadFrequently: true }), size);
     return c;
   }
 
@@ -349,7 +349,7 @@ const ART = (() => {
     const S = srcCanvas.width;
     const out = document.createElement('canvas');
     out.width = out.height = S;
-    const ctx = out.getContext('2d');
+    const ctx = out.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(srcCanvas, 0, 0);
     const src = ctx.getImageData(0, 0, S, S);
     // 色彩抖动（按块调色，模拟手绘上色）

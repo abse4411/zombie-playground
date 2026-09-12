@@ -97,7 +97,7 @@ class TutorialMode {
       },
       {
         text: T ? '按 💣 投掷手雷' : '按 G 投掷手雷，炸倒假人',
-        hint: '手雷有 2 秒引信，注意自己也别站太近',
+        hint: '手雷碰到丧尸会立即引爆，注意自己也别站太近',
         check: (g) => this.fragKill,
       },
       {
@@ -141,8 +141,10 @@ class TutorialMode {
   // 假人被击杀时由 Zombie.die 调用
   onDummyKilled(z, headshot, slot, fragWindow) {
     AUDIO.dummyHit();
-    if (slot === 'melee') this.meleeKill = true;
-    else if (fragWindow) this.fragKill = true;
+    // 手雷归因优先：手雷步骤通常紧跟近战步骤，玩家手里还是军刀，
+    // 若先判 slot==='melee' 会把手雷击杀记到近战上，导致手雷步骤永远过不去
+    if (fragWindow) this.fragKill = true;
+    else if (slot === 'melee') this.meleeKill = true;
     else if (headshot) this.hsKills++;
     else this.shotKills++;
   }

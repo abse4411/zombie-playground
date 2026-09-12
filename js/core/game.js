@@ -75,7 +75,8 @@ class Game {
   _applyCarry(c) {
     const p = this.player;
     p.money = c.money;
-    p.perks = Object.assign({ hp: 0, armor: 0, speed: 0, ammo: 0, reload: 0, ap: 0, regen: 0 }, c.perks);
+    // 以全量 PERKS 键为基底（v5.4 新增的 tough/scavenger 在旧存档里不存在，undefined 会崩商店）
+    p.perks = Object.assign(zeroPerks(), c.perks || {});
     p.recomputePerks();
     p.armor = p.maxArmor;
     p.hp = p.maxHp;
@@ -96,11 +97,23 @@ class Game {
       }
       if (!p.weapons[slot] && p.rack[slot].length) p.weapons[slot] = p.rack[slot][0];
     }
+    // 兜底：继承数据引用的武器全部失效（跨版本旧存档）时补默认配枪
+    const FALLBACK_IDS = { primary: 'm4a1', secondary: 'p92', melee: 'knife' };
+    for (const slot of ['primary', 'secondary', 'melee']) {
+      if (!p.weapons[slot] && WEAPONS[FALLBACK_IDS[slot]]) {
+        const inst = new WeaponInstance(WEAPONS[FALLBACK_IDS[slot]]);
+        inst.mag = inst.magSize;
+        inst.reserve = Math.floor(inst.def.reserve * p.reserveMult);
+        p.weapons[slot] = inst;
+        p.rack[slot].push(inst);
+      }
+    }
     if (c.throwables !== undefined || c.frag !== undefined) {
       p.throwables.frag.count = c.frag;
       p.throwables.molotov.count = c.molo;
     }
-    p.current = c.current || 'secondary';
+    p.current = (c.current && p.weapons[c.current]) ? c.current : 'secondary';
+    if (!p.weapons[p.current]) p.current = ['secondary', 'melee', 'primary'].find(s => p.weapons[s]);
     this.weapons._buildViewmodel();
     HUD.toast('📦 战役继承：装备 / 弹药 / 生命 已全部补满');
   }

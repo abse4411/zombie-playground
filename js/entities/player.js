@@ -1,6 +1,14 @@
 /* ============================================================
  * 玩家实体 —— 移动 / 生命 / 护甲 / 经济 / 强化
  * ============================================================ */
+
+// 全量 Perk 键归零：新加 Perk（如 tough/scavenger）在旧存档/旧对象上不缺失
+function zeroPerks() {
+  const o = {};
+  for (const id in PERKS) o[id] = 0;
+  return o;
+}
+
 class Player {
   constructor() {
     this.pos = new THREE.Vector3();
@@ -16,7 +24,7 @@ class Player {
     this.money = GAMECONFIG.economy.startMoney;
     this.kills = 0; this.headshots = 0;
     this.moneyEarned = 0;
-    this.perks = { hp: 0, armor: 0, speed: 0, ammo: 0, reload: 0, ap: 0, regen: 0 };
+    this.perks = zeroPerks();
     this.weapons = {
       primary: null,
       secondary: new WeaponInstance(WEAPONS.p92),

@@ -45,6 +45,7 @@ class SupplyCrate {
     this.lid.position.z = -0.35;
     this.beam.visible = false;
     if (typeof AUDIO !== 'undefined') AUDIO.crateOpen();
+    if (typeof SAVE !== 'undefined' && SAVE.data) SAVE.data.totalCrates = (SAVE.data.totalCrates || 0) + 1;
     // 掉落2-3件战利品（精英箱更豪华）
     const n = this.tier === 'elite' ? 3 : 2;
     for (let i = 0; i < n; i++) {

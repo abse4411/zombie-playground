@@ -153,6 +153,9 @@ class Game {
     this.killStreak = 0; this.streakT = 0;
     this._fireCount = 0; this._fragWindowT = 0;
     this._lootTipShown = false;
+    this._buyCount = 0; this._throwCount = 0; this._meleeKillCount = 0; this._flawlessCount = 0;
+    this._lastMapId = mapId; this._lastWin = false;
+    if (typeof ACHV !== 'undefined' && ACHV.event('runBegin', this) === undefined) { /* 事件位 */ }
     this.weather = { kind: 'clear', t: rand(35, 60) };
     this.runStats = { damageTaken: 0, fragKills: 0 };
     if (typeof STORY !== 'undefined') STORY.cancel();   // 防上一局残留对话冻结新对局
@@ -482,7 +485,10 @@ class Game {
     }
 
     p.kills++;
-    if (headshot) p.headshots++;
+    if (headshot) { p.headshots++; const d = SAVE.data; d.totalHeadshots = (d.totalHeadshots || 0) + 1; }
+    if (p.current === 'melee') { this._meleeKillCount++; const d = SAVE.data; d.bestMeleeKills = Math.max(d.bestMeleeKills || 0, this._meleeKillCount); }
+    if (this._fragWindowT > 0) { const d = SAVE.data; d.totalFragKills = (d.totalFragKills || 0) + 1; }
+    if (z.burnT !== undefined && z.burnT > -99 && z._burnDeath) { const d = SAVE.data; d.totalBurnKills = (d.totalBurnKills || 0) + 1; }
     const total = z.reward + (headshot ? GAMECONFIG.economy.headshotBonus : 0);
     p.addMoney(total);
     SAVE.data.totalKills++;
@@ -501,6 +507,7 @@ class Game {
     // 连杀
     this.streakT = GAMECONFIG.streak.window;
     this.killStreak++;
+    { const d = SAVE.data; d.bestStreak = Math.max(d.bestStreak || 0, this.killStreak); }
     if (this.killStreak >= 3) HUD.streak(this.killStreak);
     if (this.killStreak % GAMECONFIG.streak.bonusEvery === 0) {
       p.addMoney(GAMECONFIG.streak.bonusAmount);
@@ -560,6 +567,8 @@ class Game {
   showVictory(idx) {
     if (this.state !== 'playing' && this.state !== 'paused') return;
     this.state = 'victory';
+    this._lastWin = true;
+    if (typeof ACHV !== 'undefined') ACHV.event('runEnd', this);
     AUDIO.victory();
     AUDIO.stopAmbient();
     AUDIO.stopFireLoop();
@@ -610,6 +619,9 @@ class Game {
   }
 
   quitToMenu() {
+    if (this.state === 'playing' || this.state === 'paused') {
+      if (typeof ACHV !== 'undefined') ACHV.event('runEnd', this);
+    }
     this.state = 'menu';
     this._cleanupWorld();
     ENGINE.clearMap();

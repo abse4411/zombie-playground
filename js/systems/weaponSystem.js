@@ -546,6 +546,7 @@ class WeaponSystem {
     const t = this.p.throwables[kind];
     if (!t || t.count <= 0) { AUDIO.emptyClick(); return; }
     t.count--;
+    if (game._throwCount !== undefined) game._throwCount++;
     AUDIO.throwPin();
     const cam = ENGINE.camera;
     const origin = new THREE.Vector3();

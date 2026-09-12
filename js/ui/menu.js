@@ -390,7 +390,9 @@ const MENU = {
       }
     } else if (this.codexTab === 'achv') {
       const unlocked = SAVE.data.achievements || [];
-      // 总统计面板
+      const TIER = { bronze: ['🥉', '#cd8f5a'], silver: ['🥈', '#c8d0da'], gold: ['🥇', '#ffd76a'], platinum: ['💎', '#8ad8ff'] };
+      // 未成就筛选与统计头
+      const got = unlocked.length, all = ACHIEVEMENTS.length;
       const stats = document.createElement('div');
       stats.className = 'codex-grid';
       stats.style.marginBottom = '14px';
@@ -399,8 +401,8 @@ const MENU = {
         ['累计击杀', d.totalKills], ['总场次', d.totalRuns],
         ['剧情进度', `${d.missionsDone}/${MISSIONS.length}`],
         ['狩猎最深', `${d.huntBest.wave || 0} 波`],
-        ['成就', `${unlocked.length}/${ACHIEVEMENTS.length}`],
-        ['教学', d.tutorialDone ? '✔ 已毕业' : '未完成'],
+        ['成就', `${got}/${all}`],
+        ['完成度', `${Math.round(got / all * 100)}%`],
       ];
       for (const [k, v] of cells) {
         const c = document.createElement('div');
@@ -409,19 +411,38 @@ const MENU = {
         grid.appendChild(c);
       }
       box.appendChild(stats);
-      const grid2 = document.createElement('div');
-      grid2.className = 'codex-grid';
-      for (const a of ACHIEVEMENTS) {
-        const ok = unlocked.includes(a.id);
-        const c = document.createElement('div');
-        c.className = 'codex-card' + (ok ? '' : ' achv-locked');
-        c.innerHTML = `
-          <h4>${ok ? '🏆' : '🔒'} ${a.name}</h4>
-          <div class="cx-role">${ok ? '已解锁' : '未解锁'}</div>
-          <p style="margin:0">${a.desc}</p>`;
-        grid2.appendChild(c);
+      // 分类小节渲染
+      const CATS = [['combat', '⚔ 战斗'], ['survival', '🏕 生存'], ['explore', '🧭 探索'], ['story', '📖 剧情'], ['collect', '💰 收集']];
+      for (const [catId, catName] of CATS) {
+        const list = ACHIEVEMENTS.filter(a => a.cat === catId);
+        const gotC = list.filter(a => unlocked.includes(a.id)).length;
+        const h = document.createElement('h3');
+        h.style.cssText = 'margin:14px 0 8px;color:#ffd76a';
+        h.textContent = `${catName}（${gotC}/${list.length}）`;
+        box.appendChild(h);
+        const grid2 = document.createElement('div');
+        grid2.className = 'codex-grid';
+        for (const a of list) {
+          const ok = unlocked.includes(a.id);
+          const [ic, col] = TIER[a.tier];
+          const c = document.createElement('div');
+          c.className = 'codex-card' + (ok ? '' : ' achv-locked');
+          let progHtml = '';
+          if (!ok && a.goal) {
+            const [cur, max] = ACHV.progress(a);
+            const pct = Math.min(100, Math.round(cur / max * 100));
+            progHtml = `<div style="margin-top:6px;height:6px;background:rgba(255,255,255,.12)"><div style="width:${pct}%;height:100%;background:${col}"></div></div><div style="font-size:11px;color:var(--dim);margin-top:3px">${cur} / ${max}</div>`;
+          }
+          c.innerHTML = `
+            <h4>${ok ? ic : '🔒'} ${a.name}</h4>
+            <div class="cx-role" style="color:${col}">${{ bronze: '铜', silver: '银', gold: '金', platinum: '白金' }[a.tier]}${ok ? ' · 已解锁' : ''}</div>
+            <p style="margin:0">${a.desc}</p>${progHtml}`;
+          grid2.appendChild(c);
+        }
+        box.appendChild(grid2);
       }
-      box.appendChild(grid2);
+    } else if (false) {
+      // （旧渲染已由上方分类渲染取代）
     } else {
       for (const id in PERKS) {
         const k = PERKS[id];

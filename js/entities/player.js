@@ -206,6 +206,7 @@ class Player {
 
   // 使用医疗包（H键）
   useMedkit() {
+    if (typeof GAME !== 'undefined' && GAME && SAVE.data) SAVE.data.totalMedkits = (SAVE.data.totalMedkits || 0) + 1;
     if (this.medkits <= 0 || this.hp >= this.maxHp) { AUDIO.emptyClick(); return; }
     this.medkits--;
     this.hp = Math.min(this.maxHp, this.hp + (this.medkitHeal || GAMECONFIG.inventory.medkitHeal));

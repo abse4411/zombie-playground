@@ -81,6 +81,7 @@ class LootDrop {
       HUD.toast(INPUT.touch ? '🎒 战利品已入背包，点右下角🎒查看' : '🎒 战利品已入背包，按 Tab 查看（医疗包按 H 使用）');
     }
     const p = game.player;
+    if (typeof SAVE !== 'undefined' && SAVE.data) SAVE.data.totalLoots = (SAVE.data.totalLoots || 0) + 1;
     switch (this.kind) {
       case 'cash':
         p.addMoney(this.value);

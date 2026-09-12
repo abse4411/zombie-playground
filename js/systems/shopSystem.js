@@ -159,6 +159,7 @@ const SHOP = {
       case 'armorFix': p.armor = p.maxArmor; break;
     }
     p.money -= item.price;
+    if (game._buyCount !== undefined) game._buyCount++;
     AUDIO.purchase();
     return true;
   },

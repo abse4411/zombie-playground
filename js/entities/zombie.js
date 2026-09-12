@@ -409,7 +409,7 @@ class Zombie {
         this._burnP = 0.1;
         PARTICLES.flames(this.pos.x + rand(-0.25, 0.25), rand(0.4, 1.5) * this.group.scale.x, this.pos.z + rand(-0.25, 0.25), 1);
       } else this._burnP -= dt;
-      if (this.hp <= 0) { this.die(game, false); return; }
+      if (this.hp <= 0) { this._burnDeath = true; this.die(game, false); return; }
     }
     if (this.flashT > 0) {
       this.flashT -= dt;

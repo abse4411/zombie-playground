@@ -45,6 +45,7 @@ class Destructible {
   destroy(game, byExplosion) {
     if (this.dead) return;
     this.dead = true;
+    if (this.cfg.explode && typeof SAVE !== 'undefined' && SAVE.data) SAVE.data.totalBarrels = (SAVE.data.totalBarrels || 0) + 1;
     ENGINE.scene.remove(this.group);
     // 移除碰撞体
     ENGINE.colliders.splice(this.colliderIdx, 1);

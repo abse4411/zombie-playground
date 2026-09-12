@@ -17,6 +17,15 @@ const STORY = {
     });
   },
 
+  // 强制取消（退出到主菜单/开新对局时调用，防止上一局对话冻结下一局）
+  cancel() {
+    this.active = false;
+    this.queue = [];
+    this.onDone = null;
+    this.typing = false;
+    this.els.overlay.classList.add('hidden');
+  },
+
   play(lines, onDone) {
     this.active = true;
     this.queue = [...lines];

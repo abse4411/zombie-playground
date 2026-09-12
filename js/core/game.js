@@ -131,6 +131,7 @@ class Game {
     this._fireCount = 0; this._fragWindowT = 0;
     this.weather = { kind: 'clear', t: rand(35, 60) };
     this.runStats = { damageTaken: 0, fragKills: 0 };
+    if (typeof STORY !== 'undefined') STORY.cancel();   // 防上一局残留对话冻结新对局
     // 可破坏物布置（每局重新生成）
     if (typeof spawnDestructibles !== 'undefined') spawnDestructibles(this);
     // 探索补给箱
@@ -570,6 +571,7 @@ class Game {
     AUDIO.stopWind();
     INPUT.releaseLock();
     if (typeof NET !== 'undefined' && NET.role !== 'off') { NET.inGame = false; MENU.refreshNetUI(); }
+    if (typeof STORY !== 'undefined') STORY.cancel();
     MENU.show('screen-menu');
     MENU.refreshStats();
   }

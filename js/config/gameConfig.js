@@ -32,12 +32,12 @@ const GAMECONFIG = {
   hunt: {
     baseBudget: 60,       // 首波刷怪点数
     budgetPerWave: 36,    // 每波递增
-    baseCap: 6,           // 同屏上限（首波）
-    capPerWave: 2,
-    maxCap: 36,
-    spawnIntervalStart: 2.4,
-    spawnIntervalMin: 0.45,
-    spawnIntervalPerWave: -0.13,
+    baseCap: 8,           // 同屏上限（首波，v11.0提速）
+    capPerWave: 3,
+    maxCap: 42,
+    spawnIntervalStart: 1.6,
+    spawnIntervalMin: 0.3,
+    spawnIntervalPerWave: -0.15,
     intermission: 14,     // 波间休整时间（可购物）
     startCountdown: 6,    // 开局倒计时
     hpPerWave: 0.07,      // 每波血量成长

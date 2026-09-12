@@ -156,12 +156,20 @@ class SpawnSystem {
     if (typeof NET !== 'undefined' && NET.role === 'client') return null;  // 客户端怪物由房主同步
     let sx = x, sz = z;
     if (sx === undefined) {
+      // v11.0 双模式：70% 固定刷怪点随机挑 / 30% 玩家周围环带随机
       const pts = ENGINE.mapDef.spawns;
       const p = this.game.player.pos;
-      const far = pts.filter(s => dist2d(s.x, s.z, p.x, p.z) > 15);
-      const use = far.length ? choice(far) : choice(pts);
-      sx = use.x + rand(-2.5, 2.5);
-      sz = use.z + rand(-2.5, 2.5);
+      if (Math.random() < 0.3) {
+        const S = ENGINE.mapDef.size - 2;
+        const a = rand(0, TAU), r = rand(18, 30);
+        sx = clamp(p.x + Math.cos(a) * r, -S, S);
+        sz = clamp(p.z + Math.sin(a) * r, -S, S);
+      } else {
+        const far = pts.filter(s => dist2d(s.x, s.z, p.x, p.z) > 15);
+        const use = far.length ? choice(far) : choice(pts);
+        sx = use.x + rand(-2.5, 2.5);
+        sz = use.z + rand(-2.5, 2.5);
+      }
     }
     // 变异感染体判定（v6.9→v7.0）：概率随章节进度与波次递增（14%基础→45%上限），变异可叠加至4个
     const wv = this.game.mode.wave !== undefined ? this.game.mode.wave : (this.game.mode.wavePtr || 0);

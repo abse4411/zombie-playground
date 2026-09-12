@@ -66,6 +66,40 @@ const SHOPUI = {
       }
       card.appendChild(stats);
 
+      // 升级工作台（v11.10）：每武器一张聚合卡，逐行升级按钮
+      if (item.kind === 'upbench') {
+        const box = document.createElement('div');
+        box.className = 'si-lines';
+        for (const L of item.lines) {
+          const row = document.createElement('div');
+          row.className = 'si-line';
+          const dots = '●'.repeat(L.lv) + '<i>' + '○'.repeat(L.max - L.lv) + '</i>';
+          row.innerHTML = `<div class="si-line-top"><span class="si-line-name">${L.name}</span>
+            <span class="si-line-dots${L.maxed ? ' maxed' : ''}">${dots}</span></div>
+            <div class="si-line-desc"><b>${L.gain}</b>｜代价：${L.drawback}</div>`;
+          const lbtn = document.createElement('button');
+          if (L.maxed) {
+            lbtn.textContent = '已满级';
+            lbtn.className = 'si-line-btn maxed';
+            lbtn.disabled = true;
+          } else {
+            lbtn.textContent = `升级 ${fmtMoney(L.price)}`;
+            lbtn.className = 'si-line-btn';
+            if (p.money < L.price) lbtn.classList.add('poor');
+            lbtn.addEventListener('click', () => {
+              if (SHOP.buy(this.game, { kind: 'weaponUp', def: item.def, upId: L.upId, price: L.price, state: 'buy' })) {
+                AUDIO.uiClick(); this.render(); HUD.update(this.game);
+              }
+            });
+          }
+          row.appendChild(lbtn);
+          box.appendChild(row);
+        }
+        card.appendChild(box);
+        this.els.items.appendChild(card);
+        continue;
+      }
+
       const btn = document.createElement('button');
       btn.className = 'si-btn';
       if (item.state === 'buy') {

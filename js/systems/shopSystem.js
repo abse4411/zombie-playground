@@ -7,6 +7,7 @@ const SHOP = {
     { id: 'secondary', name: '🔫 副武器' },
     { id: 'melee', name: '🔪 近战' },
     { id: 'throw', name: '💣 投掷物' },
+    { id: 'upgrade', name: '🔧 升级台' },
     { id: 'perk', name: '💉 强化' },
     { id: 'supply', name: '🩹 补给' },
   ],
@@ -34,24 +35,36 @@ const SHOP = {
           price: owned ? (w.melee ? 0 : GAMECONFIG.economy.ammoPrice) : w.price,
           owned, state: owned ? (needAmmo ? 'ammo' : 'owned') : 'buy',
           lvl: inst ? inst.lvl : 0,
+          upSum: inst ? inst.tierLevel : 0,
           stats: w.melee
             ? [['伤害', Math.round(w.damage * (inst ? inst.dmgMult : 1))], ['攻速', Math.round(w.rpm / 10) + ''], ['范围', w.range.toFixed(1) + 'm']]
             : [['伤害', Math.round(w.damage * (inst ? inst.dmgMult : 1)) * (w.pellets || 1)], ['射速', w.rpm], ['弹匣', inst ? inst.magSize : w.mag]],
         });
-        // 武器分项升级（v11.6 Gunsmith式）：每项独立等级+上限+代价
-        if (owned && inst) {
+      }
+    } else if (tabId === 'upgrade') {
+      // 升级工作台（v11.10）：每把已拥有武器一张聚合卡，逐行升级
+      for (const slot of ['primary', 'secondary', 'melee']) {
+        for (const inst of p.rack[slot]) {
+          if (!inst || !inst.def) continue;
+          const lines = [];
           for (const upId in W_UPGRADES) {
             const U = W_UPGRADES[upId];
-            const lv = inst.upgrades[upId] || 0;
-            if (lv >= U.max) continue;
-            items.push({
-              kind: 'weaponUp', id: id + '_up_' + upId, def: w, upId,
-              name: `⚙ ${w.name} · ${U.name} ${lv + 1}/${U.max}`,
-              desc: `${U.gain}；代价：${U.drawback}`,
-              price: U.price(w.price, lv), state: 'buy',
-              stats: [[U.name, `Lv.${lv + 1}`], ['代价', U.drawback.replace(/-/g, '')]],
+            const lv = (inst.upgrades && inst.upgrades[upId]) || 0;
+            const maxed = lv >= U.max;
+            lines.push({
+              upId, name: U.name, lv, max: U.max, gain: U.gain, drawback: U.drawback,
+              maxed, price: maxed ? 0 : U.price(inst.def.price, lv),
             });
           }
+          items.push({
+            kind: 'upbench', id: 'bench_' + inst.def.id, def: inst.def, slot,
+            name: `${inst.def.name}${inst.tierLevel ? ` · 强化${inst.tierLevel}级` : ''}`,
+            desc: inst.def.desc,
+            price: 0, state: 'bench', lines,
+            stats: inst.def.melee
+              ? [['伤害', Math.round(inst.def.damage * inst.dmgMult)], ['范围', (inst.def.range + ((inst.upgrades && inst.upgrades.rng) || 0) * 0.25).toFixed(1) + 'm']]
+              : [['伤害', Math.round(inst.def.damage * inst.dmgMult) * (inst.def.pellets || 1)], ['弹匣', inst.magSize], ['换弹', (inst.def.reloadTime * inst.reloadTimeMult).toFixed(1) + 's']],
+          });
         }
       }
     } else if (tabId === 'throw') {

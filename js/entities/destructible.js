@@ -53,6 +53,11 @@ class Destructible {
   destroy(game, byExplosion) {
     if (this.dead) return;
     this.dead = true;
+    if (this.isMissionDoor && game.mode && game.mode.m && game.mode.m.phases) {
+      const left = game.destructibles.filter(d => d.isMissionDoor && !d.dead && d !== this).length;
+      HUD.killfeed(left > 0 ? `🚪 封锁门已突破！剩余 ${left} 道` : '🚪 全部封锁门已突破！', 'big');
+      AUDIO.waveHorn();
+    }
     if (this.cfg.explode && typeof SAVE !== 'undefined' && SAVE.data) SAVE.data.totalBarrels = (SAVE.data.totalBarrels || 0) + 1;
     ENGINE.scene.remove(this.group);
     // 移除碰撞体

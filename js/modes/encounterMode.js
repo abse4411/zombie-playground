@@ -16,6 +16,7 @@ class EncounterMode {
     // CSOL大灾变式阶段制（v10.0）：defend→destroy→boss
     this.phaseIdx = -1;
     this.reactorSpawned = false;
+    this.doorsSpawned = false;
     this.bossPhaseSpawned = false;
     this.midPlayed = false;
     this.ended = false;
@@ -212,6 +213,7 @@ class EncounterMode {
     if (this.phaseIdx === -1) advance = true;   // 进入第一阶段
     else if (cur.type === 'defend' && this.elapsed >= cur.until) advance = true;
     else if (cur.type === 'destroy' && g.destructibles.filter(d => d.kind === 'reactor' && !d.dead).length === 0 && this.reactorSpawned) advance = true;
+    else if (cur.type === 'breach' && this.doorsSpawned && g.destructibles.filter(d => d.isMissionDoor && !d.dead).length === 0) advance = true;
     if (advance) {
       this.phaseIdx++;
       const ph = phases[this.phaseIdx];
@@ -225,6 +227,20 @@ class EncounterMode {
       flash.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:200;pointer-events:none;opacity:.85;transition:opacity .5s';
       document.body.appendChild(flash);
       requestAnimationFrame(() => { flash.style.opacity = '0'; setTimeout(() => flash.remove(), 600); });
+      if (ph.type === 'breach' && !this.doorsSpawned) {
+        // 剧情破坏门（v11.2）：3道封锁门三角布置
+        this.doorsSpawned = true;
+        const S2 = Math.min(26, ENGINE.mapDef.size - 12);
+        const spots = [[-S2 * 0.4, S2 * 0.3], [S2 * 0.45, -S2 * 0.2], [0, -S2 * 0.5]];
+        this._doorsTotal = spots.length;
+        spots.forEach(([x, z], i) => {
+          const d = new Destructible(i === 0 ? 'door' : (i === 1 ? 'woodwall' : 'door'), x, z, rand(0, TAU));
+          d.isMissionDoor = true;
+          g.destructibles.push(d);
+          PARTICLES.dust(x, 1, z, 8);
+        });
+        HUD.toast(`🚪 破坏全部 ${this._doorsTotal} 道封锁门突进！（可射击/近战/爆炸）`);
+      }
       if (ph.type === 'destroy' && !this.reactorSpawned) {
         // 生成3座反应堆（围绕地图中心三角布置）
         this.reactorSpawned = true;

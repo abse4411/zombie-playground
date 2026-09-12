@@ -443,4 +443,41 @@ const MISSIONS = [
       { s: '旁白', t: '钢铁的哀鸣传遍街区——赤潮与机械的同盟，出现了第一道裂缝。' },
     ],
   },
+
+  /* ================= 第二部 · 第五幕：突围（剧情破坏门） ================= */
+  {
+    act: 3,
+    id: 'm12', name: '第十二章 · 突围', map: 'city', duration: 540, hpMult: 1.65, rewardMult: 1.5,
+    brief: '方舟用加固门封死了整个街区——他们要把赤潮和我们一起锁死在这里。门后是撤离点。破门，突围，或者死在这条街上。',
+    objective: '突破三道封锁门，抵达撤离点',
+    phases: [
+      { type: 'defend', at: 0, until: 45, label: '第一阶段 · 街口坚持' },
+      { type: 'breach', at: 45, label: '第二阶段 · 破门突进', doors: 3 },
+      { type: 'boss', at: -1, label: '最终阶段 · 撤离点死战' },
+    ],
+    waves: [
+      { at: 8, comp: { walker: 14, runner: 10 } },
+      { at: 80, comp: { armored: 5, licker: 3, bloater: 4 } },
+      { at: 170, comp: { boomer: 3, hunter: 3, runner: 12 } },
+      { at: 270, comp: { regenerator: 2, phantom: 4, toxic: 4 } },
+      { at: 380, comp: { witch: 1, tank: 1, walker: 12 } },
+      { at: 470, comp: { tank: 1, licker: 5, runner: 14 } },
+    ],
+    eliteBrutes: [{ at: 180, count: 2 }, { at: 400, count: 2 }],
+    finaleHorde: { at: 480, tanks: 1 },
+    intro: [
+      { s: '老周', t: '焊死的钢门，三道。方舟是想把我们钉死在街这头。' },
+      { s: '林晚', t: '门框应力我已经算好了——大火力集中一点就能炸开。近战劈砍也行，就是费胳膊。' },
+      { s: '渡鸦', t: '破门。突围。谁挡路就让开。' },
+    ],
+    mid: [
+      { s: '林晚', t: '最后一道门后面有大量生物电信号——它们把尸潮也锁在里面了！' },
+      { s: '老周', t: '那就连尸带门一起轰开！' },
+    ],
+    outro: [
+      { s: '林晚', t: '撤离点到了……直升机的声音！我们真的冲出来了！' },
+      { s: '渡鸦', t: '还没完。极地方舟还在等我们。但这片街区——是我们从方舟手里抢回来的。' },
+      { s: '旁白', t: '三道大门的残骸躺在街头。突围战成了传说——而传说还在继续。' },
+    ],
+  },
 ];

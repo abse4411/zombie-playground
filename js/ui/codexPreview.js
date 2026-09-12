@@ -68,7 +68,7 @@ const CODEXPREVIEW = {
   },
 
   _clear() {
-    if (this.model) { this.scene.remove(this.model); this.model = null; }
+    if (this.model) { disposeObject3D(this.model); this.scene.remove(this.model); this.model = null; }
     this.camera.position.set(0, 1.3, 3.4);
     this.camera.lookAt(0, 0.9, 0);
   },

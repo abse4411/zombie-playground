@@ -180,7 +180,7 @@ function updateAttractors(dt, game) {
   for (const a of ATTRACTORS.list) {
     a.t -= dt;
     a.ring.scale.setScalar(1 + Math.sin(ENGINE.time * 6) * 0.15);
-    if (a.t <= 0) { ENGINE.scene.remove(a.ring); a.dead = true; continue; }
+    if (a.t <= 0) { a.ring.geometry.dispose(); a.ring.material.dispose(); ENGINE.scene.remove(a.ring); a.dead = true; continue; }
     // 吸引：24m内普通尸朝诱饵移动（覆盖追击目标）
     for (const z of game.zombies) {
       if (z.dead || z.boss || z.type.cost >= 3 || z.state === 'rise') continue;

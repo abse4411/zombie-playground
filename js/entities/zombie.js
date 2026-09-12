@@ -6,6 +6,20 @@ let _shadowGeo = null;   // 全体丧尸共享的接地阴影几何体
 let ZOMBIE_SEQ = 0;
 const ZOMBIE_POOL = {};  // 模型对象池：typeId(+dummy) -> [group,...]
 
+// 退出对局时全量清池：释放所有池内模型的 GPU 资源（v12.1）
+function clearZombiePool() {
+  for (const k in ZOMBIE_POOL) {
+    for (const g of ZOMBIE_POOL[k]) {
+      g.traverse(o => {
+        if (o.geometry && o.geometry !== _shadowGeo) o.geometry.dispose();
+        const mats = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+        for (const m of mats) if (!m.__cached) m.dispose();
+      });
+    }
+    ZOMBIE_POOL[k].length = 0;
+  }
+}
+
 function buildZombieModel(cfg, outlines) {
   const g = new THREE.Group();
   g.rotation.order = 'YXZ';

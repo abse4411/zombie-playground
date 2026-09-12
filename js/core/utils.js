@@ -28,3 +28,21 @@ function weightedPick(items) {
   return items[items.length - 1];
 }
 function fmtMoney(n) { return '$' + Math.round(n); }
+
+/* ---------- GPU 资源释放工具（v12.1） ----------
+ * 遍历释放几何体 + 非缓存材质 + 实体自有纹理（__ownedTex 标记的克隆贴图）
+ * 共享缓存资源（ART.__cached 材质 / 无标记贴图）不释放 —— 由全局缓存复用 */
+function disposeObject3D(root) {
+  root.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    const mats = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+    for (const m of mats) {
+      if (m.__cached) continue;
+      for (const key of ['map', 'normalMap', 'roughnessMap', 'emissiveMap', 'alphaMap']) {
+        const t = m[key];
+        if (t && t.__ownedTex) t.dispose();
+      }
+      m.dispose();
+    }
+  });
+}

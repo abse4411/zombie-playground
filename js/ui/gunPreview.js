@@ -39,7 +39,7 @@ const GUNPREVIEW = {
     this.renderer.setSize(cw, ch, true);
     this.camera.aspect = cw / ch;
     this.camera.updateProjectionMatrix();
-    if (this.gun) { this.scene.remove(this.gun); this.gun = null; }
+    if (this.gun) { disposeObject3D(this.gun); this.scene.remove(this.gun); this.gun = null; }
     if (this.nameEl) this.nameEl.textContent = label || (def ? def.name : '—');
     if (!def) return;
     const gun = buildGunModel(def, { outlines: true, tint: 0xffffff });

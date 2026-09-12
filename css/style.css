@@ -803,3 +803,31 @@ body.touch .lu-card { max-width: 100%; width: 92%; display: flex; align-items: c
 .meta-card.afford:hover { transform: translateY(-4px); border-color: #ffd76a; }
 .meta-cost { margin-top: 8px; font-size: 13px; color: var(--dim); }
 .meta-card.afford .meta-cost b { color: #ffd76a; }
+/* ==================== 启动加载屏（v12.1 资源文件化） ==================== */
+#boot-screen {
+  position: fixed; inset: 0; z-index: 300; background: #07080c;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .45s;
+}
+#boot-screen.done { opacity: 0; pointer-events: none; }
+.boot-inner { text-align: center; }
+.boot-inner h1 { color: #c8d2dc; font-size: 34px; letter-spacing: 10px; margin-bottom: 26px; text-shadow: 0 0 30px rgba(120,160,255,.25); }
+.boot-bar { width: 300px; height: 4px; background: rgba(255,255,255,.08); margin: 0 auto 12px; overflow: hidden; }
+#boot-bar-fill { width: 0%; height: 100%; background: #52b788; transition: width .25s; }
+#boot-tip { color: #5a6068; font-size: 12px; letter-spacing: 2px; }
+
+/* ==================== 对局加载遮罩（v12.1） ==================== */
+#load-overlay {
+  position: fixed; inset: 0; z-index: 200; background: rgba(5,6,9,.88);
+  display: flex; align-items: center; justify-content: center;
+}
+#load-overlay.hidden { display: none; }
+.load-inner { text-align: center; }
+.load-spin {
+  width: 34px; height: 34px; margin: 0 auto 14px;
+  border: 3px solid rgba(255,255,255,.12); border-top-color: #52b788;
+  border-radius: 50%; animation: loadSpin .8s linear infinite;
+}
+@keyframes loadSpin { to { transform: rotate(360deg); } }
+#load-tip { color: #8a949e; font-size: 13px; letter-spacing: 3px; }
+

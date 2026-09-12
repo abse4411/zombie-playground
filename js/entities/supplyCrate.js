@@ -14,7 +14,7 @@ class SupplyCrate {
     const box = new THREE.Mesh(
       new THREE.BoxGeometry(1.0, 0.7, 0.7),
       new THREE.MeshStandardMaterial({
-        map: (() => { const t = ART.panel(elite ? 0x4a3a6a : 0x2e4a5a).clone(); t.needsUpdate = true; return t; })(),
+        map: (() => { const t = ART.panel(elite ? 0x4a3a6a : 0x2e4a5a).clone(); t.needsUpdate = true; t.__ownedTex = true; return t; })(),
         roughness: 0.6, metalness: 0.35, emissive: color, emissiveIntensity: 0.06,
       })
     );
@@ -68,8 +68,8 @@ class SupplyCrate {
   }
 
   dispose() {
+    disposeObject3D(this.group);
     ENGINE.scene.remove(this.group);
-    this.group.traverse(o => { if (o.geometry) o.geometry.dispose(); });
   }
 }
 

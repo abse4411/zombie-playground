@@ -108,6 +108,9 @@ class WeaponInstance {
 }
 
 let _muzzleTex = null;
+// 热路径零分配（v12.1）：开火时的相机坐标/朝向复用模块级临时向量
+const _tvOrigin = new THREE.Vector3(), _tvFwd = new THREE.Vector3(),
+  _tvRight = new THREE.Vector3(), _tvUp = new THREE.Vector3();
 function getMuzzleTex() {
   if (_muzzleTex) return _muzzleTex;
   const c = document.createElement('canvas');
@@ -174,6 +177,28 @@ class WeaponSystem {
       if (o.material && !o.material.__cached) o.material.dispose();
     });
     this.viewmodel = null; this.muzzleSprite = null;
+  }
+
+  // 整个武器系统生命周期结束时调用（退局）：释放逐局挂件（v12.1 防累积）
+  // 近战弧光/枪口灯/弹道预览挂在常驻相机与场景上 —— 不释放会逐局累积
+  disposeFx() {
+    if (this.trail) {
+      ENGINE.camera.remove(this.trail);
+      this.trail.geometry.dispose(); this.trail.material.dispose();
+      this.trail = null;
+    }
+    if (this.muzzleLight) { ENGINE.camera.remove(this.muzzleLight); this.muzzleLight = null; }
+    if (this.trajLine) {
+      ENGINE.scene.remove(this.trajLine);
+      this.trajLine.geometry.dispose(); this.trajLine.material.dispose();
+      this.trajLine = null;
+    }
+    if (this.trajRing) {
+      ENGINE.scene.remove(this.trajRing);
+      this.trajRing.geometry.dispose(); this.trajRing.material.dispose();
+      this.trajRing = null;
+    }
+    this.chargeThrow = null; this._chargeFromSlot = false; this._hideTraj();
   }
 
   _buildViewmodel() {
@@ -403,11 +428,11 @@ class WeaponSystem {
     ENGINE.shake(def.recoil * 1.1);
 
     const cam = ENGINE.camera;
-    const origin = new THREE.Vector3();
+    const origin = _tvOrigin;
     cam.getWorldPosition(origin);
-    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
-    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
-    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion);
+    const fwd = _tvFwd.set(0, 0, -1).applyQuaternion(cam.quaternion);
+    const right = _tvRight.set(1, 0, 0).applyQuaternion(cam.quaternion);
+    const up = _tvUp.set(0, 1, 0).applyQuaternion(cam.quaternion);
     // 弹壳抛出（右侧金色小粒子）
     PARTICLES.spawn('spark', origin.x + right.x * 0.3, origin.y - 0.1, origin.z + right.z * 0.3, 1,
       { speed: 1.6, vy: 1.5, life: 0.5, color: [1, 0.85, 0.3], color2: [0.9, 0.6, 0.1] });

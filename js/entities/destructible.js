@@ -90,7 +90,12 @@ class Destructible {
 
   dispose() {
     ENGINE.scene.remove(this.group);
-    this.mesh.geometry.dispose();
+    // 注意：cfg.geo 为同类型共享几何体，不可 dispose；仅释放实例材质与自有贴图（v12.1）
+    const mats = Array.isArray(this.mesh.material) ? this.mesh.material : [this.mesh.material];
+    for (const m of mats) {
+      for (const tk of ['map', 'normalMap', 'roughnessMap']) { const t = m[tk]; if (t && t.__ownedTex) t.dispose(); }
+      if (!m.__cached) m.dispose();
+    }
   }
 }
 
@@ -99,7 +104,7 @@ const DESTRUCTIBLES = {
     hp: 150, w: 2.0, h: 2.8, outline: true, door: true,
     geo: new THREE.BoxGeometry(2.0, 2.8, 0.22),
     mat: () => {
-      const t = ART.panel(0x6a4a2e).clone(); t.needsUpdate = true; t.repeat.set(1, 1.4);
+      const t = ART.panel(0x6a4a2e).clone(); t.needsUpdate = true; t.repeat.set(1, 1.4); t.__ownedTex = true;
       return new THREE.MeshStandardMaterial({ map: t, roughness: 0.85, metalness: 0.05 });
     },
   },
@@ -107,7 +112,7 @@ const DESTRUCTIBLES = {
     hp: 200, w: 3.2, h: 2.4, outline: true,
     geo: new THREE.BoxGeometry(3.2, 2.4, 0.3),
     mat: () => {
-      const t = ART.panel(0x5c4428).clone(); t.needsUpdate = true; t.repeat.set(1.6, 1.2);
+      const t = ART.panel(0x5c4428).clone(); t.needsUpdate = true; t.repeat.set(1.6, 1.2); t.__ownedTex = true;
       return new THREE.MeshStandardMaterial({ map: t, roughness: 0.9, metalness: 0 });
     },
   },
@@ -130,7 +135,7 @@ const DESTRUCTIBLES = {
     hp: 40, w: 1.1, h: 1.1, outline: true,
     geo: new THREE.BoxGeometry(1.1, 1.1, 1.1),
     mat: () => {
-      const t = ART.panel(0x7a5c38).clone(); t.needsUpdate = true; t.repeat.set(1, 1);
+      const t = ART.panel(0x7a5c38).clone(); t.needsUpdate = true; t.repeat.set(1, 1); t.__ownedTex = true;
       return new THREE.MeshStandardMaterial({ map: t, roughness: 0.9, metalness: 0 });
     },
   },
@@ -138,7 +143,7 @@ const DESTRUCTIBLES = {
     hp: 220, w: 2.2, h: 1.15, outline: true,
     geo: new THREE.BoxGeometry(2.2, 1.15, 0.55),
     mat: () => {
-      const t = ART.panel(0x6a6350).clone(); t.needsUpdate = true; t.repeat.set(2, 0.5);
+      const t = ART.panel(0x6a6350).clone(); t.needsUpdate = true; t.repeat.set(2, 0.5); t.__ownedTex = true;
       return new THREE.MeshStandardMaterial({ map: t, roughness: 0.95, metalness: 0 });
     },
   },

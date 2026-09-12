@@ -327,7 +327,7 @@ const MENU = {
   },
 
   /* ---------- 地图卡片 ---------- */
-  buildMapCards() {
+  async buildMapCards() {
     const list = document.getElementById('map-list');
     list.innerHTML = '';
     document.getElementById('difficulty-row').classList.remove('hidden');
@@ -337,6 +337,7 @@ const MENU = {
       const best = SAVE.data.bestWave[id] || 0;
       const card = document.createElement('div');
       card.className = 'card';
+      card.dataset.mapId = id;
       card.innerHTML = `
         <canvas width="252" height="120"></canvas>
         <h3>${m.name}</h3>
@@ -346,8 +347,13 @@ const MENU = {
       `;
       card.addEventListener('click', () => { AUDIO.uiClick(); GAME.startHunt(id, this.diff); });
       list.appendChild(card);
-      drawMapPreview(card.querySelector('canvas'), m);
     }
+    // 懒加载（v12.1）：进入本页才拉取各猎场完整数据（画缩略图需要 props），逐张绘制
+    const ids = Object.keys(MAPS);
+    await RES.preloadMaps(ids, id => {
+      const card = list.querySelector(`[data-map-id="${id}"]`);
+      if (card) drawMapPreview(card.querySelector('canvas'), MAPS[id]);
+    });
   },
 
   /* ---------- 强化实验室（v10.8 元进度） ---------- */

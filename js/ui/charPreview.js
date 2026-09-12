@@ -35,7 +35,7 @@ const CHARPREVIEW = {
 
   show(charId) {
     if (!this.renderer) return;
-    if (this.model) { this.scene.remove(this.model.group); }
+    if (this.model) { disposeObject3D(this.model.group); this.scene.remove(this.model.group); }
     const ch = getCharacter(charId);
     const colors = CHARACTER_BODY_COLORS[charId] || CHARACTER_BODY_COLORS.raven;
     const body = buildPlayerBody(colors);

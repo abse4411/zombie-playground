@@ -105,7 +105,7 @@ const NESTS = {
       if (SAVE.data.neroTech >= 6 && typeof ACHV !== 'undefined') ACHV.unlock('nero6');
     }
     // 区域净化：清走巢附近游荡丧尸的30%概率（软性效果——通过 spawner 查询）
-    setTimeout(() => ENGINE.scene.remove(nest.group), 1200);
+    setTimeout(() => { disposeObject3D(nest.group); ENGINE.scene.remove(nest.group); }, 1200);
     nest.group.traverse(o => { if (o.isMesh) o.visible = false; });
     nest.group.children[0] && (nest.group.children[0].visible = true);   // 留土丘残骸
   },
@@ -116,7 +116,7 @@ const NESTS = {
   },
 
   clear(game) {
-    for (const n of this.list) ENGINE.scene.remove(n.group);
+    for (const n of this.list) { disposeObject3D(n.group); ENGINE.scene.remove(n.group); }
     this.list = [];
   },
 };

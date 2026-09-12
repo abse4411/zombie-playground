@@ -143,7 +143,7 @@ class LootDrop {
     lctx.strokeRect((256 - tw2) / 2, 6, tw2, 44);
     lctx.fillStyle = '#fff';
     lctx.fillText(label, 128, 30, 226);
-    const labelTex = new THREE.CanvasTexture(labelCanvas);
+    const labelTex = new THREE.CanvasTexture(labelCanvas); labelTex.__ownedTex = true;
     if (THREE.sRGBEncoding) labelTex.encoding = THREE.sRGBEncoding;
     const labelSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex, transparent: true, depthTest: false }));
     labelSprite.scale.set(1.15, 0.25, 1);
@@ -188,6 +188,7 @@ class LootDrop {
 
   _collect(game, picked) {
     this.dead = true;
+    disposeObject3D(this.group);
     ENGINE.scene.remove(this.group);
     if (!picked) return;
     // 首次拾取引导：告诉玩家背包入口（战利品/武器架/消耗品都在背包里）
@@ -255,8 +256,8 @@ class LootDrop {
   }
 
   dispose() {
+    disposeObject3D(this.group);
     ENGINE.scene.remove(this.group);
-    this.group.traverse(o => { if (o.geometry) o.geometry.dispose(); });
   }
 }
 

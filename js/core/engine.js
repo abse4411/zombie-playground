@@ -87,6 +87,10 @@ const ENGINE = {
         const mats = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
         for (const m of mats) {
           if (m.map && m.map.__tracked) { this._trackedTex.delete(m.map); m.map.dispose(); }
+          for (const tk of ['map', 'normalMap', 'roughnessMap', 'emissiveMap', 'alphaMap']) {
+            const t = m[tk];
+            if (t && t.__ownedTex) t.dispose();   // 实体自有克隆贴图（v12.1）
+          }
           if (!m.__cached) m.dispose();
         }
       });

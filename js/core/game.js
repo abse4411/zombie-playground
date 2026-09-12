@@ -68,19 +68,66 @@ class Game {
   }
 
   /* ================= 开局 ================= */
-  startHunt(mapId, diffKey) {
+  async startHunt(mapId, diffKey) {
     this._lastStart = { type: 'hunt', mapId, diffKey };
+    if (!(await this._loadFor(mapId, '正在进入猎场…'))) return;
     this._begin(mapId, () => new HuntMode(this, mapId, diffKey));
   }
 
-  startMission(idx, skipIntro, diffKey) {
+  async startMission(idx, skipIntro, diffKey) {
     this._lastStart = { type: 'mission', idx, diffKey: diffKey || 'normal' };
     const m = MISSIONS[idx];
+    if (!(await this._loadFor(m.map, '正在部署任务…', m.id))) return;
     // 战役继承：仅当从上一章胜利接续时生效（噩梦不可继承——难度自担）
     this._pendingCarry = (diffKey === 'nightmare') ? null
       : ((SAVE.data.carry && SAVE.data.carry.nextIdx === idx) ? SAVE.data.carry : null);
     this._missionDiff = diffKey || 'normal';
     this._begin(m.map, () => new EncounterMode(this, idx, skipIntro));
+  }
+
+  // 开局前懒加载：地图完整数据 + 任务详情（v12.1 资源文件化），带防重入与加载遮罩
+  async _loadFor(mapId, tip, missionId) {
+    if (this._loadingGame) return false;
+    this._loadingGame = true;
+    this.showLoading(tip);
+    try {
+      await RES.loadMap(mapId);
+      if (missionId) await RES.loadMission(missionId);
+      // 让加载遮罩至少渲染一帧，避免场景构建造成画面冻结感；
+      // 后台标签 rAF 会被节流 —— 300ms 超时兜底防止永久挂起（v12.1）
+      await new Promise(r => {
+        let done = false;
+        const fin = () => { if (!done) { done = true; r(); } };
+        requestAnimationFrame(() => requestAnimationFrame(fin));
+        setTimeout(fin, 300);
+      });
+      return true;
+    } catch (e) {
+      console.error(e);
+      HUD.toast('✖ 资源加载失败：' + (e.message || e));
+      return false;
+    } finally {
+      this._loadingGame = false;
+      this.hideLoading();
+    }
+  }
+
+  // 加载遮罩（v12.1）
+  showLoading(tip) {
+    let el = document.getElementById('load-overlay');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'load-overlay';
+      el.innerHTML = '<div class="load-inner"><div class="load-spin"></div><div id="load-tip"></div></div>';
+      document.body.appendChild(el);
+    }
+    el.querySelector('#load-tip').textContent = tip || '加载中…';
+    el.classList.remove('hidden');
+  }
+
+  hideLoading() {
+    const el = document.getElementById('load-overlay');
+    if (el) el.classList.add('hidden');
   }
 
   // 应用上一章继承：武器/装备/金钱 + 全补给（v3.1）
@@ -132,7 +179,10 @@ class Game {
 
   startTutorial() {
     this._lastStart = { type: 'tutorial' };
-    this._begin('park', () => new TutorialMode(this));
+    (async () => {
+      if (!(await this._loadFor('park', '正在准备教学…'))) return;
+      this._begin('park', () => new TutorialMode(this));
+    })();
   }
 
   _begin(mapId, makeMode) {
@@ -745,23 +795,28 @@ class Game {
   _cleanupWorld() {
     for (const z of this.zombies) z.dispose();
     this.zombies = [];
+    if (typeof clearZombiePool === 'function') clearZombiePool();   // 释放模型池 GPU 资源（v12.1）
     for (const pr of this.projectiles) pr._finish(this);
     this.projectiles = [];
-    for (const f of this.fireZones) ENGINE.scene.remove(f.mesh);
-    for (const a of this.acidPools) ENGINE.scene.remove(a.mesh);
+    for (const f of this.fireZones) { disposeObject3D(f.mesh); ENGINE.scene.remove(f.mesh); }
+    for (const a of this.acidPools) { disposeObject3D(a.mesh); ENGINE.scene.remove(a.mesh); }
     this.fireZones = []; this.acidPools = [];
     for (const l of this.loots) l.dispose();
     this.loots = [];
     for (const d of this.destructibles) if (!d.dead) d.dispose();
     this.destructibles = [];
-    if (this.playerBody) { ENGINE.scene.remove(this.playerBody.group); this.playerBody = null; }
+    if (this.playerBody) {
+      disposeObject3D(this.playerBody.group);   // 身体几何体逐局新建，退局释放（v12.1）
+      ENGINE.scene.remove(this.playerBody.group);
+      this.playerBody = null;
+    }
     if (typeof NESTS !== 'undefined') NESTS.clear(this);
     if (typeof XPGEMS !== 'undefined') XPGEMS.clear();
     if (typeof CHESTS !== 'undefined') CHESTS.clear();
     if (typeof BLOODPOOLS !== 'undefined') BLOODPOOLS.clear();
     if (this.crates) for (const c of this.crates) c.dispose();
     this.crates = [];
-    if (this.weapons) this.weapons._disposeViewmodel();
+    if (this.weapons) { this.weapons._disposeViewmodel(); this.weapons.disposeFx(); }
     this.player = null; this.weapons = null; this.mode = null;
     this.interactText = null;
   }

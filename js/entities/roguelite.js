@@ -216,6 +216,7 @@ const CHESTS = {
 
   remove(c) {
     c.dead = true;
+    disposeObject3D(c.group);
     ENGINE.scene.remove(c.group);
   },
 
@@ -247,7 +248,7 @@ const CHESTS = {
   },
 
   clear() {
-    for (const c of this.list) ENGINE.scene.remove(c.group);
+    for (const c of this.list) { disposeObject3D(c.group); ENGINE.scene.remove(c.group); }
     this.list = [];
   },
 };

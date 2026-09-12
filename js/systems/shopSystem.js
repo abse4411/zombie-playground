@@ -100,6 +100,21 @@ const SHOP = {
         state: p.maxArmor <= 0 ? 'locked' : (p.armor >= p.maxArmor ? 'maxed' : 'buy'),
         stats: [['护甲', `${Math.round(p.armor)}/${p.maxArmor}`]],
       });
+      // 背包扩容（v9.4）：6→9→12
+      const BAG_TIERS = [{ cap: 9, price: 2200 }, { cap: 12, price: 4800 }];
+      const nextBag = BAG_TIERS.find(t => t.cap > p.storageMax);
+      if (nextBag) {
+        items.push({
+          kind: 'bagUp', id: 'bagUp', name: '🎒 战术背包扩容', desc: `背包容量 ${p.storageMax} → ${nextBag.cap} 格。可存放更多武器与物资。`,
+          price: nextBag.price, state: 'buy',
+          stats: [['容量', `${p.storageMax} → ${nextBag.cap}`], ['当前', `${p.storage.length}/${p.storageMax}`]],
+        });
+      } else {
+        items.push({
+          kind: 'bagUp', id: 'bagUp', name: '🎒 战术背包 · 已满级', desc: '背包已扩容至 12 格上限。',
+          price: 0, state: 'maxed', stats: [['容量', '12']],
+        });
+      }
     }
     return items;
   },
@@ -122,11 +137,31 @@ const SHOP = {
           inst.mag = inst.magSize;
           if (p.weapons[slot] === inst && game.weapons) game.weapons.reloadT = 0;
         } else {
-          // 新武器：入武器架并自动装备（旧武器保留，1/2/3循环或Q切换）
+          // 新武器（v9.4 流转）：直接装备该槽；槽满(2把)则手中旧枪退入背包
           const inst = new WeaponInstance(item.def);
           inst.reserve = Math.floor(item.def.reserve * p.reserveMult);
-          p.rack[slot].push(inst);
-          p.weapons[slot] = inst;
+          if (p.rack[slot].length < p.EQUIP_MAX) {
+            p.rack[slot].push(inst);
+            p.weapons[slot] = inst;
+          } else {
+            const old = p.weapons[slot];
+            const oldIdx = p.rack[slot].indexOf(old);
+            if (old && p.storageAdd({ kind: 'weapon', inst: old })) {
+              if (oldIdx >= 0) p.rack[slot].splice(oldIdx, 1);
+              p.rack[slot].push(inst);
+              p.weapons[slot] = inst;
+              HUD.toast(`🎒 ${old.def.name} 已存入背包`);
+            } else {
+              HUD.toast('⚠ 装备槽与背包已满——旧武器仍在手（本次购买自动改装弹）');
+              // 槽和背包都满：只补弹不换枪
+              const cur = p.weapons[slot];
+              if (cur) { cur.reserve = Math.floor(cur.def.reserve * p.reserveMult); cur.mag = cur.magSize; }
+              p.money -= item.price * 0;   // 退款由下方统一扣除——这里标记取消
+              p.money += item.price;       // 退还
+              AUDIO.denied();
+              return false;
+            }
+          }
           p.current = slot;
           if (game.weapons) game.weapons._buildViewmodel();
         }
@@ -159,6 +194,12 @@ const SHOP = {
         }
         break;
       case 'armorFix': p.armor = p.maxArmor; break;
+      case 'bagUp': {
+        const BAG_TIERS2 = [{ cap: 9, price: 2200 }, { cap: 12, price: 4800 }];
+        const nb = BAG_TIERS2.find(t => t.cap > p.storageMax);
+        if (nb) p.storageMax = nb.cap;
+        break;
+      }
     }
     p.money -= item.price;
     if (game._buyCount !== undefined) game._buyCount++;

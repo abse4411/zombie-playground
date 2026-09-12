@@ -30,12 +30,16 @@ class Player {
       secondary: new WeaponInstance(WEAPONS.p92),
       melee: new WeaponInstance(WEAPONS.knife),
     };
-    // 武器架（v4.5）：每槽位可持有多个武器，购买不再覆盖旧枪
+    // 武器架（v4.5）→ 装备栏（v9.2）：每槽最多2把，超出入背包
     this.rack = {
       primary: [this.weapons.primary].filter(Boolean),
       secondary: [this.weapons.secondary],
       melee: [this.weapons.melee],
     };
+    this.EQUIP_MAX = 2;   // 每装备槽上限
+    // 背包仓库（v9.2）：容量制，存武器/物资，商城可扩容
+    this.storage = [];       // [{kind:'weapon', inst} | {kind:'item', itemId, count}]
+    this.storageMax = 6;
     this.current = 'secondary';
     this.lastWeapon = null;   // Q键切换上一把武器 {slot, defId}
     this.throwables = { frag: { count: 2 }, molotov: { count: 1 } };
@@ -216,6 +220,56 @@ class Player {
   }
 
   // 使用医疗包（H键）
+  /* ---------- 背包仓库（v9.2） ---------- */
+  storageUsed() { return this.storage.length; }
+
+  // 入仓：满返回 false（由调用方折现）
+  storageAdd(entry) {
+    if (this.storage.length >= this.storageMax) return false;
+    this.storage.push(entry);
+    return true;
+  }
+
+  // 尝试把武器装上装备槽：槽位有空则直接装备返回'equipped'；
+  // 槽满则把手中武器退入背包再装备返回'swapped'；背包也满返回 false（拒绝）
+  equipFromStorage(slot, inst) {
+    const idx = this.storage.findIndex(e => e.kind === 'weapon' && e.inst === inst);
+    if (idx < 0) return false;
+    if (this.rack[slot].length < this.EQUIP_MAX) {
+      this.storage.splice(idx, 1);
+      this.rack[slot].push(inst);
+      this.weapons[slot] = inst;
+      this.current = slot;
+      return 'equipped';
+    }
+    // 槽满：退手中旧枪入背包
+    const old = this.weapons[slot];
+    const oldIdx = this.rack[slot].indexOf(old);
+    if (old && this.storageAdd({ kind: 'weapon', inst: old })) {
+      this.storage.splice(idx, 1);
+      if (oldIdx >= 0) this.rack[slot].splice(oldIdx, 1);
+      this.rack[slot].push(inst);
+      this.weapons[slot] = inst;
+      this.current = slot;
+      return 'swapped';
+    }
+    return false;   // 背包也满
+  }
+
+  // 卸下装备槽武器入背包（至少保留1把）
+  unequipToStorage(slot, inst) {
+    if (this.rack[slot].length <= 1) return false;   // 每槽至少1把
+    const idx = this.rack[slot].indexOf(inst);
+    if (idx < 0) return false;
+    if (!this.storageAdd({ kind: 'weapon', inst })) return false;
+    this.rack[slot].splice(idx, 1);
+    if (this.weapons[slot] === inst) {
+      this.weapons[slot] = this.rack[slot][0] || null;
+      this.current = this.weapons[slot] ? slot : 'secondary';
+    }
+    return true;
+  }
+
   useMedkit() {
     if (typeof GAME !== 'undefined' && GAME && SAVE.data) SAVE.data.totalMedkits = (SAVE.data.totalMedkits || 0) + 1;
     if (this.medkits <= 0 || this.hp >= this.maxHp) { AUDIO.emptyClick(); return; }

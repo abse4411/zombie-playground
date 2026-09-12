@@ -79,6 +79,75 @@ function buildZombieModel(cfg, outlines) {
     }
   }
 
+  // 专属特征件（v7.3 精致化）：每型 2~4 个辨识件（生化危机式不对称变异语言）
+  {
+    const flesh = ART.mat(0x9a4038, 0x300808);
+    const P = (geo, mat, x, y, z, rz) => {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, z);
+      if (rz) m.rotation.z = rz;
+      g.add(m);
+      return m;
+    };
+    switch (cfg.id) {
+      case 'walker': // 外露肋骨 + 歪斜头
+        for (let i = 0; i < 3; i++) P(new THREE.BoxGeometry(0.03, 0.04, 0.26), flesh, 0.29, 1.02 + i * 0.09, 0);
+        head.rotation.z = 0.18;
+        break;
+      case 'runner': // 前倾躯干 + 背部撕裂布
+        torso.rotation.x = 0.18;
+        P(new THREE.BoxGeometry(0.2, 0.14, 0.03), flesh, -0.1, 1.3, -0.17, 0.2);
+        break;
+      case 'stalker': // 脊刺×4
+        for (let i = 0; i < 4; i++) P(new THREE.ConeGeometry(0.045, 0.14, 5), flesh, rand(-0.08, 0.08), 1.32 - i * 0.14, -0.17);
+        break;
+      case 'spitter': // 喉囊 + 酸斑
+        P(new THREE.BoxGeometry(0.16, 0.16, 0.12), ART.mat(0x8fb05a, 0x2a3a14), 0, 1.52, 0.12);
+        P(new THREE.BoxGeometry(0.1, 0.08, 0.03), ART.mat(0x9cc45a, 0x2a3a14), -0.12, 1.05, 0.16, 0.3);
+        break;
+      case 'bloater': // 巨腹 + 气孔斑
+        P(new THREE.BoxGeometry(0.5, 0.4, 0.34), ART.mat(0xa8a878, 0x222211), 0, 0.95, 0.03);
+        for (let i = 0; i < 4; i++) P(new THREE.BoxGeometry(0.07, 0.07, 0.02), ART.mat(0x6a7048, 0x141810), rand(-0.16, 0.16), 1.0 + rand(-0.1, 0.1), 0.18);
+        break;
+      case 'screamer': // 喉管外露
+        P(new THREE.BoxGeometry(0.06, 0.2, 0.05), flesh, 0, 1.42, 0.12);
+        break;
+      case 'armored': // 护膝 + 面罩板 + 弹挂袋
+        P(new THREE.BoxGeometry(0.2, 0.12, 0.06), ART.mat(0x2e3638), -0.16, 0.5, 0.12);
+        P(new THREE.BoxGeometry(0.2, 0.12, 0.06), ART.mat(0x2e3638), 0.16, 0.5, 0.12);
+        P(new THREE.BoxGeometry(0.3, 0.1, 0.04), ART.mat(0x232a24), 0, 1.68, 0.15);
+        P(new THREE.BoxGeometry(0.1, 0.12, 0.06), ART.mat(0x232a24), 0.2, 1.0, 0.18);
+        break;
+      case 'jester': // 彩条补丁 + 歪帽檐
+        P(new THREE.BoxGeometry(0.1, 0.16, 0.02), ART.mat(0x40a0a0), -0.14, 1.25, 0.17, 0.4);
+        P(new THREE.BoxGeometry(0.1, 0.16, 0.02), ART.mat(0xa03050), 0.14, 1.1, 0.17, -0.3);
+        P(new THREE.BoxGeometry(0.4, 0.03, 0.3), ART.mat(0xa03050), 0, head.position.y + 0.14, 0);
+        break;
+      case 'charger': // 不对称巨肩 + 背部肌束
+        P(new THREE.BoxGeometry(0.3, 0.26, 0.4), ART.mat(0x6a4a3a), 0.28, 1.5, 0);
+        for (let i = 0; i < 3; i++) P(new THREE.BoxGeometry(0.06, 0.3, 0.04), flesh, -0.1 + i * 0.1, 1.3, -0.17);
+        break;
+      case 'toxic': // 背部囊袋×2
+        P(new THREE.BoxGeometry(0.16, 0.2, 0.1), ART.mat(0x5a7a3a, 0x1a2a08), -0.12, 1.45, -0.18);
+        P(new THREE.BoxGeometry(0.13, 0.16, 0.09), ART.mat(0x5a7a3a, 0x1a2a08), 0.14, 1.4, -0.18);
+        break;
+      case 'radiant': // 荧光晶体×3（emissive发光）
+        P(new THREE.ConeGeometry(0.05, 0.2, 5), ART.mat(0x39ff6a, 0x1a8a3a), -0.14, 1.35, -0.16, 0.3);
+        P(new THREE.ConeGeometry(0.04, 0.16, 5), ART.mat(0x39ff6a, 0x1a8a3a), 0.15, 1.5, -0.16, -0.2);
+        P(new THREE.BoxGeometry(0.03, 0.3, 0.03), ART.mat(0x59ff7a, 0x1a8a3a), 0, 1.15, -0.17);
+        break;
+      case 'phantom': // 残破披风片 + 指爪
+        P(new THREE.BoxGeometry(0.18, 0.5, 0.02), ART.mat(0x2a2e3e, 0x0a0c14), -0.08, 1.05, -0.18, 0.15);
+        P(new THREE.BoxGeometry(0.14, 0.4, 0.02), ART.mat(0x2a2e3e, 0x0a0c14), 0.16, 1.0, -0.18, -0.2);
+        break;
+      case 'brute': // 外露心脏 + 不对称巨右臂 + 装甲残片
+        P(new THREE.BoxGeometry(0.16, 0.16, 0.1), ART.mat(0xa82020, 0x400808), 0.12, 1.28, 0.17);
+        P(new THREE.BoxGeometry(0.22, 0.7, 0.22), ART.mat(0x8a4a42, 0x200606), 0.52, 1.15, 0);
+        P(new THREE.BoxGeometry(0.26, 0.12, 0.3), ART.mat(0x2e3638), -0.3, 1.55, 0);
+        break;
+    }
+  }
+
   const arms = [], legs = [];
   for (const side of [-1, 1]) {
     const armPivot = new THREE.Group();
@@ -146,6 +215,26 @@ function buildQuadrupedModel(cfg, outlines) {
     pivot.add(leg); g.add(pivot); legs.push(pivot);
   }
   if (outlines) { ART.outline(body, 1.14); ART.outline(head, 1.14); }
+  // 四足专属特征件（v7.3）：地狱犬=外露肋骨+脊刺+断尾 / 獠王=弯獠牙+背鬃
+  {
+    const flesh = ART.mat(0x9a4038, 0x300808);
+    const P = (geo, mat, x, y, z, rx) => {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, z);
+      if (rx) m.rotation.x = rx;
+      g.add(m);
+      return m;
+    };
+    if (cfg.id === 'boar') {
+      P(new THREE.BoxGeometry(0.04, 0.04, 0.16), ART.mat(0xe8e0d0), -0.08, 0.66, 0.68, -0.5);  // 左弯獠牙
+      P(new THREE.BoxGeometry(0.04, 0.04, 0.16), ART.mat(0xe8e0d0), 0.08, 0.66, 0.68, -0.5);  // 右弯獠牙
+      for (let i = 0; i < 4; i++) P(new THREE.ConeGeometry(0.05, 0.16, 4), flesh, 0, 0.82, 0.25 - i * 0.18, -0.3); // 背鬃
+      P(new THREE.BoxGeometry(0.3, 0.05, 0.5), ART.mat(0x3a2c1e), 0, 0.44, 0.05);             // 厚皮褶皱
+    } else { // hound 等其他四足
+      for (let i = 0; i < 3; i++) P(new THREE.BoxGeometry(0.3, 0.035, 0.05), flesh, 0, 0.55, 0.15 - i * 0.12); // 外露肋骨
+      for (let i = 0; i < 3; i++) P(new THREE.ConeGeometry(0.04, 0.12, 4), flesh, 0, 0.83, 0.1 - i * 0.16, -0.4); // 脊刺
+    }
+  }
   g.scale.setScalar(cfg.scale);
   return { group: g, skin, cloth: skin, head, arms: [], legs, headBits: [head, jaw], tilt: 0, quadruped: true };
 }
@@ -692,7 +781,7 @@ class Zombie {
         m.arms[1].rotation.x = base - 0.4 + attackT * 0.9;
       }
     }
-    m.head.rotation.z = Math.sin(ENGINE.time * 1.7 + this.walkPhase) * 0.09;
+    m.head.rotation.z = (cfg.id === 'walker' ? 0.18 : 0) + Math.sin(ENGINE.time * 1.7 + this.walkPhase) * 0.09;
   }
 
   get displayName() {

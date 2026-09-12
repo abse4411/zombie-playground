@@ -1306,6 +1306,7 @@ class Zombie {
     const d = game.player ? dist2d(this.pos.x, this.pos.z, game.player.pos.x, game.player.pos.z) : 0;
     AUDIO.zombieDie(d, this.growlPitch);
     PARTICLES.blood(this.pos.x, 1.1 * this.group.scale.x, this.pos.z, 14);
+    if (typeof BLOODPOOLS !== 'undefined') BLOODPOOLS.spawn(this.pos.x, this.pos.z, overkill || this.boss);
     this._gibDeath(headshot, overkill);
     if (game.player.synVampire && !this.dummy && game.player.alive) game.player.hp = Math.min(game.player.maxHp, game.player.hp + 1);
     if (typeof XPGEMS !== 'undefined' && !this.dummy) XPGEMS.drop(this.pos.x, 0.6, this.pos.z, this.boss ? 30 : this.type.cost >= 3 ? 8 : this.type.cost >= 2 ? 4 : 2);

@@ -166,6 +166,54 @@ const ART = (() => {
   }
 
   // 金属板（墙体/集装箱）
+  // 血渍污染层（v11.3 恐怖氛围）：暗红喷溅+拖痕，用于地面/墙面叠加
+  function gore(hex) {
+    return _make('gore' + hex, 256, (ctx, S) => {
+      ctx.fillStyle = '#' + hex.toString(16).padStart(6, '0');
+      ctx.fillRect(0, 0, S, S);
+      // 大血泊
+      for (let i = 0; i < 5; i++) {
+        const x = rand(0, S), y = rand(0, S), r = rand(14, 42);
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, 'rgba(88,10,14,0.85)');
+        g.addColorStop(0.7, 'rgba(60,8,10,0.5)');
+        g.addColorStop(1, 'rgba(40,5,8,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+      }
+      // 喷溅点
+      ctx.fillStyle = 'rgba(90,12,16,0.7)';
+      for (let i = 0; i < 40; i++) {
+        ctx.beginPath();
+        ctx.arc(rand(0, S), rand(0, S), rand(0.8, 3.2), 0, TAU);
+        ctx.fill();
+      }
+      // 拖痕（拖拽血痕）
+      ctx.strokeStyle = 'rgba(70,8,12,0.55)';
+      for (let i = 0; i < 4; i++) {
+        ctx.lineWidth = rand(3, 8);
+        ctx.beginPath();
+        const sx = rand(0, S), sy = rand(0, S);
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + rand(-70, 70), sy + rand(-40, 40));
+        ctx.stroke();
+      }
+      // 血手印（简版：掌+五指）
+      if (i_want_handprint()) {
+        const hx = rand(40, S - 40), hy = rand(40, S - 40);
+        ctx.fillStyle = 'rgba(96,12,16,0.6)';
+        ctx.beginPath(); ctx.arc(hx, hy, 7, 0, TAU); ctx.fill();
+        for (let f = 0; f < 5; f++) {
+          const a2 = -Math.PI / 2 + (f - 2) * 0.45;
+          ctx.beginPath();
+          ctx.arc(hx + Math.cos(a2) * 13, hy + Math.sin(a2) * 13, 2.6, 0, TAU);
+          ctx.fill();
+        }
+      }
+      function i_want_handprint() { return Math.random() < 0.7; }
+    });
+  }
+
   function panel(hex) {
     return _make('p' + hex, 256, (ctx, S) => {
       ctx.fillStyle = '#' + hex.toString(16).padStart(6, '0');
@@ -377,5 +425,5 @@ const ART = (() => {
     return out;
   }
 
-  return { mat, toon, gradientMap, outline, setOutlines, resetOutlines, ground, windows, stripes, panel, sky, groundPBR, concretePBR, pbr, handPaint };
+  return { mat, toon, gradientMap, outline, setOutlines, resetOutlines, ground, windows, stripes, panel, sky, groundPBR, concretePBR, pbr, handPaint, gore };
 })();

@@ -219,7 +219,7 @@ const MAPS = {
   park: {
     id: 'park', name: '荒废游乐园', subtitle: '旋转木马还在转，只是乘客换了', mode: 'both',
     desc: '赤潮病毒泄源头的地表伪装设施。褪色的旋转木马与摩天轮之间，小丑感染者仍在“演出”。',
-    size: 68, groundColor: 0x1c1a24, sky: 0x0d0a18, fogColor: 0x15101f, fogDensity: 0.016,
+    size: 68, groundColor: 0x241318, sky: 0x0d0a18, fogColor: 0x15101f, fogDensity: 0.019,
     hemi: { sky: 0x4a4a6a, ground: 0x1a1418, i: 0.75 },
     dir: { c: 0x8888cc, i: 0.35, x: -30, y: 60, z: 20 },
     lights: [
@@ -246,6 +246,11 @@ const MAPS = {
       { t: 'b', x: -48, z: -28, w: 1, h: 9, d: 1, c: 0x6a2a2a, nc: true }, { t: 'b', x: -44, z: -20, w: 1, h: 7, d: 1, c: 0x6a2a2a, nc: true },
       { t: 'b', x: 48, z: -30, w: 1, h: 9, d: 1, c: 0x6a2a2a, nc: true }, { t: 'b', x: 52, z: -22, w: 1, h: 7, d: 1, c: 0x6a2a2a, nc: true },
       { t: 'b', x: -46, z: -24, w: 9, h: 0.6, d: 0.6, ry: 0.4, y: 8, c: 0x6a2a2a, nc: true }, { t: 'b', x: 50, z: -26, w: 9, h: 0.6, d: 0.6, ry: 0.5, y: 8, c: 0x6a2a2a, nc: true },
+      // 恐怖氛围件（v11.3）：绞架/尸袋堆/警示牌
+      { t: 'b', x: -16, z: 8, w: 0.3, h: 4.2, d: 0.3, c: 0x2a2620 }, { t: 'b', x: -16, z: 8, w: 1.6, h: 0.3, d: 0.3, y: 4.2, c: 0x2a2620 },
+      { t: 'b', x: -15.6, z: 8, w: 0.12, h: 0.9, d: 0.12, y: 3.4, c: 0x3a3028 },
+      { t: 'b', x: 22, z: 6, w: 1.8, h: 0.9, d: 1.2, c: 0x2e2a24 }, { t: 'b', x: 22, z: 6, w: 1.4, h: 0.5, d: 1.0, y: 0.9, c: 0x3a342c },
+      { t: 'c', x: -28, z: -18, r: 0.5, h: 2.6, c: 0x443e34 },
     ],
     structures: [
       { type: 'carousel', x: 0, z: -5 },
@@ -268,7 +273,7 @@ const MAPS = {
   city: {
     id: 'city', name: '废弃街区', subtitle: '轰炸倒计时下的空城', mode: 'both',
     desc: '撤离点的所在地。残破的楼宇间散落着警车与路障，装甲暴兵在废墟中游荡。',
-    size: 72, groundColor: 0x232323, sky: 0x1c1410, fogColor: 0x241a12, fogDensity: 0.015,
+    size: 72, groundColor: 0x2a2224, sky: 0x1c1410, fogColor: 0x241a12, fogDensity: 0.018,
     hemi: { sky: 0x8a5a3a, ground: 0x1a1410, i: 0.7 },
     dir: { c: 0xff9955, i: 0.5, x: 40, y: 50, z: -30 },
     lights: [

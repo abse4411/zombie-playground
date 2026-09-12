@@ -758,6 +758,7 @@ class Game {
     if (typeof NESTS !== 'undefined') NESTS.clear(this);
     if (typeof XPGEMS !== 'undefined') XPGEMS.clear();
     if (typeof CHESTS !== 'undefined') CHESTS.clear();
+    if (typeof BLOODPOOLS !== 'undefined') BLOODPOOLS.clear();
     if (this.crates) for (const c of this.crates) c.dispose();
     this.crates = [];
     if (this.weapons) this.weapons._disposeViewmodel();

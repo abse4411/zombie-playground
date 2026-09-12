@@ -194,3 +194,43 @@ const MUTTAGS = {
     }
   },
 };
+
+/* ---------- 血泊 decals（v11.3 击杀留痕，上限25循环覆盖） ---------- */
+const BLOODPOOLS = {
+  list: [], _geo: null, _mats: null, MAX: 25,
+
+  _init() {
+    if (this._geo) return;
+    this._geo = new THREE.CircleGeometry(1, 14);
+    this._mats = [0, 1, 2].map(() => new THREE.MeshBasicMaterial({
+      color: 0x3a0a0e, transparent: true, opacity: 0.75, depthWrite: false,
+    }));
+  },
+
+  // 击杀时调用：随机大小血泊
+  spawn(x, z, big) {
+    this._init();
+    let pool = this.list.find(p => p.dead);
+    if (!pool) {
+      if (this.list.length >= this.MAX) {
+        pool = this.list[0];   // 复用最老的
+        this.list.shift();
+      } else {
+        pool = { mesh: new THREE.Mesh(this._geo, this._mats[randi(0, 2)]), dead: true };
+        pool.mesh.rotation.x = -Math.PI / 2;
+        pool.mesh.position.y = 0.02 + rand(0, 0.01);
+        ENGINE.scene.add(pool.mesh);
+        this.list.push(pool);
+      }
+    }
+    pool.dead = false;
+    pool.mesh.visible = true;
+    const s = big ? rand(0.9, 1.5) : rand(0.45, 0.8);
+    pool.mesh.scale.set(s, s * rand(0.7, 1), 1);
+    pool.mesh.rotation.z = rand(0, TAU);
+    pool.mesh.position.x = x + rand(-0.2, 0.2);
+    pool.mesh.position.z = z + rand(-0.2, 0.2);
+  },
+
+  clear() { for (const p of this.list) p.mesh.visible = false; this.list = []; },
+};

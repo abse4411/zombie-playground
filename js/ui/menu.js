@@ -353,6 +353,7 @@ const MENU = {
     const grid = document.createElement('div');
     grid.className = 'codex-grid';
 
+    CODEXPREVIEW.init(document.getElementById('codex-canvas'));
     if (this.codexTab === 'zombies') {
       for (const id in ZOMBIE_TYPES) {
         const z = ZOMBIE_TYPES[id];
@@ -368,6 +369,12 @@ const MENU = {
             <span>伤害 <b>${z.damage || '自爆'}</b></span><span>赏金 <b>$${z.reward}</b></span>
             <span>出场 <b>第${z.minWave}波+</b></span><span>威胁 <b>${z.cost >= 3 ? '极高' : z.cost >= 2 ? '高' : '中'}</b></span>
           </div>`;
+        c.addEventListener('click', () => {
+          AUDIO.uiClick();
+          document.getElementById('codex-pv-name').textContent = z.name;
+          CODEXPREVIEW.showZombie(id);
+          CODEXPREVIEW.renderSync();
+        });
         grid.appendChild(c);
       }
     } else if (this.codexTab === 'weapons') {
@@ -384,9 +391,15 @@ const MENU = {
             : `<span>伤害 <b>${w.damage}${w.pellets > 1 ? '×' + w.pellets : ''}</b></span><span>射速 <b>${w.rpm}/分</b></span><span>弹匣 <b>${w.mag}</b></span><span>价格 <b>${w.price ? '$' + w.price : '初始'}</b></span>`;
           c.innerHTML = `
             <h4><span class="codex-dot" style="background:${hex};color:${hex}"></span>${w.name}</h4>
-            <div class="cx-role">${label}</div>
+            <div class="cx-role">${label}${w.unlockBy ? ' · 成就专属' : ''}</div>
             <p>${w.desc}</p>
             <div class="cx-stats">${stats}</div>`;
+          c.addEventListener('click', () => {
+            AUDIO.uiClick();
+            document.getElementById('codex-pv-name').textContent = w.name;
+            CODEXPREVIEW.showWeapon(w);
+            CODEXPREVIEW.renderSync();
+          });
           grid.appendChild(c);
         }
       }

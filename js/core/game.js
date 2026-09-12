@@ -349,6 +349,10 @@ class Game {
     for (const a of this.acidPools) a.update(dt, this);
     this.acidPools = this.acidPools.filter(a => !a.dead);
 
+    // 曳光与头顶血条
+    if (typeof TRACERS !== 'undefined') TRACERS.update(dt);
+    if (typeof HPBARS !== 'undefined') { for (const z of zs) if (z.hpbar && !z.dead) HPBARS.update(z); }
+
     // 掉落物
     for (const l of this.loots) l.update(dt, this);
     this.loots = this.loots.filter(l => !l.dead);

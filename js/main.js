@@ -16,6 +16,7 @@ window.addEventListener('DOMContentLoaded', () => {
   BACKPACK.init();
   MENU.init(GAME);
   TOUCH.init();
+  if (typeof TRACERS !== 'undefined') TRACERS.init(ENGINE.scene);
 
   // 恢复画质设置
   const q = SAVE.data.settings.quality || 'auto';

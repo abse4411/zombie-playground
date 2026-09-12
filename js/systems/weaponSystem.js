@@ -305,6 +305,13 @@ class WeaponSystem {
           .addScaledVector(up, Math.sin(a) * r).normalize();
       }
       const res = this._hitscan(game, origin, dir, def);
+      // 曳光：枪口 -> 命中/落点
+      if (typeof TRACERS !== 'undefined') {
+        const mz = this.muzzleSprite ? this.muzzleSprite.getWorldPosition(new THREE.Vector3())
+          : origin.clone().addScaledVector(dir, 0.5);
+        const endT = res ? res.pt : origin.clone().addScaledVector(dir, def.range * 0.7);
+        TRACERS.fire(mz, endT);
+      }
       if (res) {
         anyHit = true;
         const prev = hits.get(res.zombie);
@@ -560,8 +567,9 @@ class WeaponSystem {
     if (this.switchT > 0) oy = -0.28 * (this.switchT / 0.38);
     if (this.reloadT > 0) {
       const k = 1 - this.reloadT / (def.reloadTime * p.reloadMult);
-      rx = 0.55 * Math.sin(clamp(k, 0, 1) * Math.PI);
-      oy -= 0.07;
+      rx = 0.95 * Math.sin(clamp(k, 0, 1) * Math.PI);          // 大幅翻枪
+      oy -= 0.14 + 0.05 * Math.sin(k * Math.PI * 3);           // 下沉+抖动
+      rz = 0.3 * Math.sin(k * Math.PI * 2);                    // 左右晃
     }
     if (this.swingT >= 0) {
       const k = this.swingT / this._swingDur;

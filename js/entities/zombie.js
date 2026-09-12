@@ -305,6 +305,7 @@ class Zombie {
       this.group.rotation.x = this.model.tilt - Math.min(1, this.deadT / 0.45) * 1.35;
       if (this.deadT > 1.0) this.pos.y -= dt * 0.7;
       if (this.deadT > 2.1) { this.remove = true; this.shadow.visible = false; }
+    if (this.hpbar && typeof HPBARS !== 'undefined') HPBARS.remove(this);
       return;
     }
 
@@ -583,6 +584,8 @@ class Zombie {
     this.hp -= amount;
     this.flashT = 0.07;
     this._flash();
+    // 头顶血条（首次受伤时懒创建）
+    if (typeof HPBARS !== 'undefined' && !this.dummy && this.hp < this.maxHp && !this.hpbar) HPBARS.create(this);
     if (kb) this.addKnockback(kb.x, kb.z);
     if (hitPoint) PARTICLES.blood(hitPoint.x, hitPoint.y, hitPoint.z, isHead ? 10 : 6, isHead);
     if (this.hp <= 0) this.die(game, isHead);

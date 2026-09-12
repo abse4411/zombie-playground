@@ -1,15 +1,63 @@
 /* ============================================================
  * 武器系统 —— 第一人称枪模 / 开火 / 弹道 / 近战 / 脚踢 / 投掷 / ADS
  * ============================================================ */
+/* ---------- 武器多属性升级（v11.5 COD Gunsmith 式权衡） ----------
+ * 每项独立等级+上限，升级有增益也有代价（tradeoff）
+ * upgrades: { dmg: n, mag: n, rel: n, rof: n, acc: n, res: n, [special]: n }
+ */
+const W_UPGRADES = {
+  dmg:  { name: '威力',     max: 5, gain: '伤害 +8%',            drawback: '弹匣容量 -5%',   price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.28 * (lv + 1)) },
+  mag:  { name: '扩容弹匣', max: 3, gain: '弹匣容量 +20%',        drawback: '换弹时间 +6%',   price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.22 * (lv + 1)) },
+  rel:  { name: '快速换弹', max: 4, gain: '换弹时间 -10%',        drawback: '备弹上限 -8%',   price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.24 * (lv + 1)) },
+  rof:  { name: '射速',     max: 3, gain: '射速 +7%',             drawback: '后坐力 +6%',     price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.26 * (lv + 1)) },
+  acc:  { name: '精准',     max: 3, gain: '散布 -12%',            drawback: '移速 -1.5%',     price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.22 * (lv + 1)) },
+  res:  { name: '备弹扩容', max: 2, gain: '备弹 +25%',            drawback: '武器更重',       price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.2 * (lv + 1)) },
+};
+
 class WeaponInstance {
   constructor(def) {
     this.def = def;
     this.mag = def.mag;
     this.reserve = def.reserve;
-    this.lvl = 0;   // 强化等级 0-3（Borderlands 式品质：白/绿/蓝/紫）
+    this.lvl = 0;   // 总品质等级（各分项之和，Borderlands 色阶仍用）
+    // 分项升级（v11.5）
+    this.upgrades = {};
   }
-  get magSize() { return Math.round(this.def.mag * (1 + 0.2 * this.lvl)); }
-  get dmgMult() { return 1 + 0.15 * this.lvl; }
+  get magSize() {
+    let m = this.def.mag * (1 + 0.2 * this.lvl);   // 旧总等级仍生效（兼容存档）
+    if (this.upgrades.mag) m *= 1 + 0.2 * this.upgrades.mag;
+    if (this.upgrades.dmg) m *= 1 - 0.05 * this.upgrades.dmg;
+    return Math.max(1, Math.round(m));
+  }
+  get dmgMult() {
+    let d = 1 + 0.15 * this.lvl;
+    if (this.upgrades.dmg) d *= 1 + 0.08 * this.upgrades.dmg;
+    return d;
+  }
+  get reloadTimeMult() {
+    let r = 1;
+    if (this.upgrades.rel) r *= 1 - 0.10 * this.upgrades.rel;
+    if (this.upgrades.mag) r *= 1 + 0.06 * this.upgrades.mag;
+    return r;
+  }
+  get rpmMult() {
+    let r = 1;
+    if (this.upgrades.rof) r *= 1 + 0.07 * this.upgrades.rof;
+    return r;
+  }
+  get spreadMult() {
+    let s = 1;
+    if (this.upgrades.acc) s *= 1 - 0.12 * this.upgrades.acc;
+    return s;
+  }
+  get reserveMaxMult() {
+    let r = 1;
+    if (this.upgrades.res) r *= 1 + 0.25 * this.upgrades.res;
+    if (this.upgrades.rel) r *= 1 - 0.08 * this.upgrades.rel;
+    return r;
+  }
+  // 品质色阶（总等级=分项和+旧lvl）
+  get tierLevel() { return this.lvl + Object.values(this.upgrades || {}).reduce((a, b) => a + b, 0); }
 }
 
 let _muzzleTex = null;
@@ -175,7 +223,7 @@ class WeaponSystem {
           if (this._emptyCd <= 0) { AUDIO.emptyClick(); this._emptyCd = 0.3; if (SAVE.data.settings.autoReload !== false) this._startReload(); }
         } else {
           w.mag--;
-          this.cooldown = 60 / (def.rpm * (this.p.rogueRof || 1));
+          this.cooldown = 60 / (def.rpm * (this.p.rogueRof || 1) * (w.rpmMult || 1));
           AUDIO.shot(def.sound.freq, def.sound.dur, def.sound.boom);
           this.recoilKick = Math.min(1, this.recoilKick + 0.8);
           ENGINE.shake(0.15);
@@ -269,7 +317,7 @@ class WeaponSystem {
       { speed: 1.6, vy: 1.5, life: 0.5, color: [1, 0.85, 0.3], color2: [0.9, 0.6, 0.1] });
 
     const moving = this.p.moving || this.p.sprinting;
-    const spread = lerp(def.spread, def.adsSpread, this.adsT)
+    const spread = lerp(def.spread, def.adsSpread, this.adsT) * (w.spreadMult || 1)
       * (moving ? 1.45 : 1) * (this.p.onGround ? 1 : 1.8);
 
     game.stats.shots++;
@@ -564,7 +612,7 @@ class WeaponSystem {
     const w = this.w;
     if (!w || w.def.melee) return;
     if (this.reloadT > 0 || w.mag >= w.magSize || w.reserve <= 0 || this.switchT > 0) return;
-    this.reloadT = w.def.reloadTime * this.p.reloadMult;
+    this.reloadT = w.def.reloadTime * this.p.reloadMult * (w.reloadTimeMult || 1);
     AUDIO.reloadStart();
   }
 
@@ -677,7 +725,7 @@ class WeaponSystem {
     let rx = 0, rz = 0, ox = 0, oy = 0;
     if (this.switchT > 0) oy = -0.28 * (this.switchT / 0.38);
     if (this.reloadT > 0) {
-      const k = 1 - this.reloadT / (def.reloadTime * this._reloadMult());
+      const k = 1 - this.reloadT / (def.reloadTime * this._reloadMult() * (w.reloadTimeMult || 1));
       rx = 0.95 * Math.sin(clamp(k, 0, 1) * Math.PI);          // 大幅翻枪
       oy -= 0.14 + 0.05 * Math.sin(k * Math.PI * 3);           // 下沉+抖动
       rz = 0.3 * Math.sin(k * Math.PI * 2);                    // 左右晃

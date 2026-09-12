@@ -38,16 +38,20 @@ const SHOP = {
             ? [['伤害', Math.round(w.damage * (inst ? inst.dmgMult : 1))], ['攻速', Math.round(w.rpm / 10) + ''], ['范围', w.range.toFixed(1) + 'm']]
             : [['伤害', Math.round(w.damage * (inst ? inst.dmgMult : 1)) * (w.pellets || 1)], ['射速', w.rpm], ['弹匣', inst ? inst.magSize : w.mag]],
         });
-        // 武器强化（已持有且未满级）
-        if (owned && inst && inst.lvl < 3) {
-          const upPrice = Math.round((w.price > 0 ? w.price * 0.5 : 500) * (inst.lvl + 1));
-          items.push({
-            kind: 'weaponUp', id: id + '_up', def: w,
-            name: `⚙ ${w.name} 强化 Lv.${inst.lvl + 1}`,
-            desc: '伤害 +15%、弹匣 +20%。品质提升：白 → 绿 → 蓝 → 紫。',
-            price: upPrice, state: 'buy',
-            stats: [['伤害', `+15%`], ['弹匣', `+20%`], ['品质', ['白', '绿', '蓝', '紫'][inst.lvl + 1]]],
-          });
+        // 武器分项升级（v11.6 Gunsmith式）：每项独立等级+上限+代价
+        if (owned && inst) {
+          for (const upId in W_UPGRADES) {
+            const U = W_UPGRADES[upId];
+            const lv = inst.upgrades[upId] || 0;
+            if (lv >= U.max) continue;
+            items.push({
+              kind: 'weaponUp', id: id + '_up_' + upId, def: w, upId,
+              name: `⚙ ${w.name} · ${U.name} ${lv + 1}/${U.max}`,
+              desc: `${U.gain}；代价：${U.drawback}`,
+              price: U.price(w.price, lv), state: 'buy',
+              stats: [[U.name, `Lv.${lv + 1}`], ['代价', U.drawback.replace(/-/g, '')]],
+            });
+          }
         }
       }
     } else if (tabId === 'throw') {
@@ -133,7 +137,7 @@ const SHOP = {
         if (item.owned) {
           // 已拥有：补满该把武器弹药（无论是否在手中）
           const inst = p.rack[slot].find(r => r.def.id === item.id);
-          inst.reserve = Math.floor(inst.def.reserve * p.reserveMult);
+          inst.reserve = Math.min(Math.floor(inst.def.reserve * p.reserveMult * (inst.reserveMaxMult || 1) * 1.2), inst.reserve + Math.floor(inst.def.reserve * p.reserveMult));
           inst.mag = inst.magSize;
           if (p.weapons[slot] === inst && game.weapons) game.weapons.reloadT = 0;
         } else {
@@ -168,9 +172,15 @@ const SHOP = {
         break;
       }
       case 'weaponUp': {
-        // 强化对应武器架中的实例（无论是否在手中）
+        // 分项升级（v11.6）
         const inst = p.rack[item.def.slot].find(r => r.def.id === item.def.id);
-        if (inst && inst.lvl < 3) inst.lvl++;
+        if (inst && item.upId) {
+          inst.upgrades = inst.upgrades || {};
+          inst.upgrades[item.upId] = (inst.upgrades[item.upId] || 0) + 1;
+          inst.lvl = inst.tierLevel - (inst.lvl || 0) >= 0 ? inst.lvl : inst.lvl;   // 旧品质字段保留
+          // 即时生效：满弹引用新弹容
+          if (item.upId === 'mag' || item.upId === 'dmg') inst.mag = inst.magSize;
+        }
         break;
       }
       case 'throw': {

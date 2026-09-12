@@ -29,3 +29,4 @@
 | v10.3-days-gone.md | 往日不再移植（尸巢/诱饵/兽群/NERO收集） | v10.3~v10.5 |
 | v10.6-roguelite-mechanics.md | 肉鸽割草上瘾机制（宝石磁吸/三选一/宝箱轮盘/元进度/连携） | v10.6~v10.10 |
 | v11.0-destruction-art.md | 破坏系统与恐怖美术（可破坏门墙/剧情破坏/血腥氛围） | v11.0~v11.3 |
+| v11.5-weapon-upgrade.md | 武器升级（Gunsmith权衡式6项）/投掷蓄力/医疗动画 | v11.5~v11.8 |

@@ -355,18 +355,19 @@ class Zombie {
     // 硬直
     if (this.stagger > 0) { this.stagger -= dt; mvx = 0; mvz = 0; spd = 0; }
 
-    // ---- 移动（含击退冲量衰减） ----
+    // ---- 移动（含击退冲量衰减 + 立体地形踏步，v4.1） ----
     this.pos.x += mvx * spd * dt + this.kvx * dt;
     this.pos.z += mvz * spd * dt + this.kvz * dt;
     const kd = Math.exp(-7 * dt);
     this.kvx *= kd; this.kvz *= kd;
-    if (spd > 0 || Math.abs(this.kvx) > 0.01 || Math.abs(this.kvz) > 0.01) {
-      resolveCircleAABBs(this.pos, 0.42 * cfg.scale, 1.8 * cfg.scale, 0);
-      const S = ENGINE.mapDef.size;
-      this.pos.x = clamp(this.pos.x, -S + 1, S - 1);
-      this.pos.z = clamp(this.pos.z, -S + 1, S - 1);
-      this.walkPhase += spd * dt * 2.4;
-    }
+    resolveCircleAABBs(this.pos, 0.42 * cfg.scale, 1.8 * cfg.scale, this.pos.y, 0.6);
+    const S = ENGINE.mapDef.size;
+    this.pos.x = clamp(this.pos.x, -S + 1, S - 1);
+    this.pos.z = clamp(this.pos.z, -S + 1, S - 1);
+    if (spd > 0) this.walkPhase += spd * dt * 2.4;
+    // 贴合支撑面高度（台阶平滑爬升，可上站台追杀）
+    const gh = groundHeightAt(this.pos.x, this.pos.z, 0.42 * cfg.scale, this.pos.y, 0.6);
+    this.pos.y = Math.abs(gh - this.pos.y) > 0.01 ? lerp(this.pos.y, gh, Math.min(1, 12 * dt)) : gh;
 
     // ---- 攻击 ----
     this.attackCd -= dt;

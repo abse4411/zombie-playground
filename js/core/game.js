@@ -286,6 +286,22 @@ class Game {
         }
       }
     }
+    // 玩家 vs 丧尸防穿模：圆体互相推挤（丧尸让70%，玩家让30%）
+    if (p.alive) {
+      for (const z of zs) {
+        if (z.dead || z.state === 'rise') continue;
+        let dx = p.pos.x - z.pos.x, dz = p.pos.z - z.pos.z;
+        const d2 = dx * dx + dz * dz;
+        const min = 0.42 * (1 + z.type.scale);
+        // 仅同层高度才推挤（站高台时不被下层丧尸卡住）
+        if (d2 > min * min || d2 < 0.0001 || Math.abs((z.pos.y || 0) - p.pos.y) > 1.2) continue;
+        const d = Math.sqrt(d2);
+        const push = (min - d) / d;
+        dx *= push; dz *= push;
+        p.pos.x += dx * 0.3; p.pos.z += dz * 0.3;
+        z.pos.x -= dx * 0.7; z.pos.z -= dz * 0.7;
+      }
+    }
     // 清理尸体
     for (let i = zs.length - 1; i >= 0; i--) {
       if (zs[i].remove) { zs[i].dispose(); zs.splice(i, 1); }

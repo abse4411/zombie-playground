@@ -128,10 +128,17 @@ class Player {
     this.pos.y += this.vel.y * dt;
     this.pos.z += this.vel.z * dt;
 
-    if (this.pos.y <= 0) { this.pos.y = 0; this.vel.y = 0; this.onGround = true; }
-    else this.onGround = false;
-
-    resolveCircleAABBs(this.pos, P.radius, 1.7, this.pos.y);
+    // 立体地形：水平推挤(可踏上台阶) + 落到支撑面高度（v4.1）
+    resolveCircleAABBs(this.pos, P.radius, 1.7, this.pos.y, 0.55);
+    const gh = groundHeightAt(this.pos.x, this.pos.z, P.radius, this.pos.y, 0.55);
+    if (this.pos.y <= gh) {
+      if (this.vel.y < -7) AUDIO.step(true);   // 落地重脚步
+      this.pos.y = gh;
+      this.vel.y = 0;
+      this.onGround = true;
+    } else {
+      this.onGround = false;
+    }
     const S = ENGINE.mapDef ? ENGINE.mapDef.size : 60;
     this.pos.x = clamp(this.pos.x, -S + 0.8, S - 0.8);
     this.pos.z = clamp(this.pos.z, -S + 0.8, S - 0.8);

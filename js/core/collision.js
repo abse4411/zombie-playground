@@ -1,21 +1,21 @@
 /* ============================================================
- * 碰撞系统 —— 圆柱体 vs AABB 推挤 / 射线检测
+ * 碰撞系统 —— 圆柱 vs AABB 推挤 / 站立高度 / 射线（v4.1 立体地形）
  * ============================================================ */
 
-// 把一个位于 (pos.x, pos.z)、脚底 y=footY、身高 height 的圆柱推出所有碰撞体
-function resolveCircleAABBs(pos, radius, height, footY) {
+// 把圆柱推出所有"腿部高度以上"的碰撞体（低于抬脚高度的台面不阻挡，可自然踏上去）
+function resolveCircleAABBs(pos, radius, height, footY, stepHeight) {
   footY = footY || 0;
+  stepHeight = stepHeight === undefined ? 0.3 : stepHeight;
   const cols = ENGINE.colliders;
   for (let i = 0; i < cols.length; i++) {
     const c = cols[i];
-    if (c.maxY < footY + 0.3 || c.minY > footY + height) continue;
+    if (c.maxY < footY + stepHeight || c.minY > footY + height) continue;
     const cx = clamp(pos.x, c.minX, c.maxX);
     const cz = clamp(pos.z, c.minZ, c.maxZ);
     const dx = pos.x - cx, dz = pos.z - cz;
     const d2 = dx * dx + dz * dz;
     if (d2 > radius * radius) continue;
     if (d2 < 1e-9) {
-      // 圆心在碰撞体内：沿最浅方向弹出
       const pl = pos.x - c.minX, pr = c.maxX - pos.x;
       const pn = pos.z - c.minZ, pf = c.maxZ - pos.z;
       const m = Math.min(pl, pr, pn, pf);
@@ -29,6 +29,22 @@ function resolveCircleAABBs(pos, radius, height, footY) {
       pos.z += dz * push;
     }
   }
+}
+
+// 脚下支撑高度：找 (x,z) 覆盖范围内、顶面不高于 footY+step 的最高台面（0=地面）
+function groundHeightAt(x, z, radius, footY, stepHeight) {
+  stepHeight = stepHeight === undefined ? 0.55 : stepHeight;
+  let g = 0;
+  const cols = ENGINE.colliders;
+  const r = radius * 0.7;
+  for (let i = 0; i < cols.length; i++) {
+    const c = cols[i];
+    if (c.maxY > footY + stepHeight || c.maxY <= g) continue;
+    if (x > c.minX - r && x < c.maxX + r && z > c.minZ - r && z < c.maxZ + r) {
+      g = c.maxY;
+    }
+  }
+  return g;
 }
 
 // 射线 vs 单个 AABB（slab 法），返回 t 或 null

@@ -68,6 +68,21 @@ const HUD = {
   hideObjective() { this.el.objPanel.classList.add('hidden'); },
 
   /* ---------- 打击反馈 ---------- */
+  // 治疗渐晕（v11.8）
+  healFlash() {
+    let v = document.getElementById('heal-vignette');
+    if (!v) {
+      v = document.createElement('div');
+      v.id = 'heal-vignette';
+      v.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:40;box-shadow:inset 0 0 120px rgba(80,220,120,0);transition:box-shadow .4s';
+      const hud = document.getElementById('hud');
+      if (hud) hud.appendChild(v);
+    }
+    v.style.boxShadow = 'inset 0 0 120px rgba(80,220,120,.55)';
+    clearTimeout(this._healVt);
+    this._healVt = setTimeout(() => { v.style.boxShadow = 'inset 0 0 120px rgba(80,220,120,0)'; }, 700);
+  },
+
   damageFlash() { this._dmgFlash = 1; },
 
   hitmarker(head) {

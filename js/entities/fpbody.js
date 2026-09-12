@@ -122,6 +122,11 @@ function syncPlayerBody(body, player, dt) {
         lean = 0.08 * pulse;
         rollZ = -0.18 * thrust;
         break;
+      case 'heal':   // 自疗：微蹲+右倾包扎姿态
+        crouch = 1 - 0.06 * pulse;
+        rollZ = 0.12 * pulse;
+        lean = 0.1 * pulse;
+        break;
       case 'swing':  // 近战挥击：左腿跨步+转肩
         body.legL.rotation.x = -0.5 * thrust;
         lean = -0.05 * pulse;

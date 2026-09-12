@@ -51,6 +51,7 @@ class Player {
     this.moveMult = 1;
     this.dashCd = 0; this.dashT = 0; this.iframesT = 0; this._dashDir = { x: 0, z: 1 };
     this.bileT = 0; this.draggedBy = null;   // L4D特感状态（v9.7）
+    this.healT = 0; this.healTotal = 1.2;   // 医疗施法（v11.8）
     // 肉鸽强化（v10.6）
     this.xp = 0; this.level = 1; this.xpNext = 10;
     this.rogueLevels = {}; this.rogueAtk = 1; this.rogueRof = 1; this.rogueSpd = 1;
@@ -194,6 +195,8 @@ class Player {
       AUDIO.step(this.sprinting);
     }
 
+    // 医疗施法（v11.8）
+    this._healTick(dt);
     // 再生血清
     if (this.regenRate > 0 && ENGINE.time - this.lastDamageT > 5 && this.hp < this.maxHp) {
       this.hp = Math.min(this.maxHp, this.hp + this.regenRate * dt);
@@ -212,6 +215,7 @@ class Player {
       this.armor -= ab; dmg -= ab;
     }
     this.hp -= dmg;
+    if (this.healT > 0) { this.healT = 0; HUD.toast('💥 包扎被打断！'); }
     this.lastDamageT = ENGINE.time;
     AUDIO.playerHurt();
     ENGINE.shake(0.1 + Math.min(0.25, dmg * 0.005));
@@ -283,13 +287,29 @@ class Player {
     this.relRogue = this.rogueRel;
   }
 
+  // 使用医疗包（v11.8）：1.2s施法，受击打断；带自疗动画
   useMedkit() {
-    if (typeof GAME !== 'undefined' && GAME && SAVE.data) SAVE.data.totalMedkits = (SAVE.data.totalMedkits || 0) + 1;
-    if (this.medkits <= 0 || this.hp >= this.maxHp) { AUDIO.emptyClick(); return; }
-    this.medkits--;
-    this.hp = Math.min(this.maxHp, this.hp + (this.medkitHeal || GAMECONFIG.inventory.medkitHeal));
-    AUDIO.purchase();
-    HUD.pickup(`🧪 使用医疗包 +${GAMECONFIG.inventory.medkitHeal}HP（剩 ${this.medkits}）`, 1);
+    if (this.medkits <= 0 || this.hp >= this.maxHp || this.healT > 0) { AUDIO.emptyClick(); return; }
+    this.healT = 1.2; this.healTotal = 1.2;
+    if (typeof GAME !== 'undefined' && GAME.playerBody) bodyAct(GAME.playerBody, 'heal', 1.2);
+    if (typeof GAME !== 'undefined' && GAME.weapons) GAME.weapons.healAnimT = 1.2;
+    AUDIO.reloadStart();
+    HUD.toast('💉 包扎中…（受击会打断）');
+  }
+
+  // 施法结算（update内调用）
+  _healTick(dt) {
+    if (this.healT > 0) {
+      this.healT -= dt;
+      if (typeof HUD !== 'undefined' && HUD.healFlash && Math.random() < dt * 4) HUD.healFlash();
+      if (this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + (this.medkitHeal || GAMECONFIG.inventory.medkitHeal) * dt / this.healTotal);
+      if (this.healT <= 0) {
+        this.medkits--;
+        if (typeof GAME !== 'undefined' && GAME && SAVE.data) SAVE.data.totalMedkits = (SAVE.data.totalMedkits || 0) + 1;
+        AUDIO.purchase();
+        HUD.pickup(`🧪 医疗包使用完毕（剩 ${this.medkits}）`, 1);
+      }
+    }
   }
 
   addMoney(n) {

@@ -85,7 +85,7 @@ class WeaponSystem {
     this.swingT = -1; this.sawPhase = 0; this._emptyCd = 0;
     this.kickCd = 0;
     this._swingDur = 0.3; this._heavySwing = false; this._prevRmb = false; this._fireKick = 0;
-    this.chargeThrow = null; this.chargePower = 0;
+    this.chargeThrow = null; this.chargePower = 0; this.healAnimT = 0;
     this.viewmodel = null; this.muzzleSprite = null; this.muzzleLight = null;
     this._buildViewmodel();
 
@@ -788,6 +788,13 @@ class WeaponSystem {
     // 冲刺摆臂 / 脚踢前蹬
     if (p.dashT > 0) { ox -= 0.06; rz += 0.2; }
     if (this.kickAnimT > 0) { ox -= 0.16 * Math.sin((0.22 - this.kickAnimT) / 0.22 * Math.PI); oy -= 0.07 * Math.sin((0.22 - this.kickAnimT) / 0.22 * Math.PI); rx += 0.35 * Math.sin((0.22 - this.kickAnimT) / 0.22 * Math.PI); }
+    // 医疗包扎动画（v11.8）：武器下沉+左倾+规律按压抖动
+    if (this.healAnimT > 0) {
+      this.healAnimT -= dt;
+      const press = Math.abs(Math.sin(ENGINE.time * 7));
+      oy -= 0.12 + press * 0.03; rx += 0.25 + press * 0.12; rz += 0.25;
+      ox -= 0.06;
+    }
     // 投掷蓄力（v11.7）：武器下沉+后仰，屏显力度
     if (this.chargeThrow) {
       const cp = this.chargePower || 0;

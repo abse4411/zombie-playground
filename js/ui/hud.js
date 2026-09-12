@@ -197,7 +197,8 @@ const HUD = {
     for (const s of this.el.slots) {
       const slot = s.dataset.slot;
       const inst = p.weapons[slot];
-      s.innerHTML = `<b>${slot === 'primary' ? 1 : slot === 'secondary' ? 2 : 3}</b> ${inst ? inst.def.name : '—'}`;
+      const rackN = p.rack[slot] ? p.rack[slot].length : 0;
+      s.innerHTML = `<b>${slot === 'primary' ? 1 : slot === 'secondary' ? 2 : 3}</b> ${inst ? inst.def.name : '—'}${rackN > 1 ? ` ×${rackN}` : ''}`;
       s.classList.toggle('active', p.current === slot);
     }
     this.el.throwFrag.innerHTML = `💣 ×${p.throwables.frag.count} <i>${INPUT.touch ? '💣键' : '[G]'}</i>`;

@@ -80,14 +80,21 @@ class Game {
     p.armor = p.maxArmor;
     p.hp = p.maxHp;
     for (const slot of ['primary', 'secondary', 'melee']) {
-      const w = c.weapons[slot];
-      if (w && WEAPONS[w.id]) {
-        const inst = new WeaponInstance(WEAPONS[w.id]);
-        inst.lvl = w.lvl || 0;
-        inst.mag = inst.magSize;   // 弹匣自动补满
-        inst.reserve = Math.floor(inst.def.reserve * p.reserveMult);  // 备弹自动补满
-        p.weapons[slot] = inst;
+      const list = c.weapons && c.weapons[slot];
+      p.rack[slot] = [];
+      p.weapons[slot] = null;
+      if (Array.isArray(list)) {
+        for (const w of list) {
+          if (!w || !WEAPONS[w.id]) continue;
+          const inst = new WeaponInstance(WEAPONS[w.id]);
+          inst.lvl = w.lvl || 0;
+          inst.mag = inst.magSize;
+          inst.reserve = Math.floor(inst.def.reserve * p.reserveMult);
+          p.rack[slot].push(inst);
+          if (!p.weapons[slot]) p.weapons[slot] = inst;
+        }
       }
+      if (!p.weapons[slot] && p.rack[slot].length) p.weapons[slot] = p.rack[slot][0];
     }
     if (c.throwables !== undefined || c.frag !== undefined) {
       p.throwables.frag.count = c.frag;

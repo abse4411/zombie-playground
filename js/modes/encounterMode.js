@@ -120,13 +120,12 @@ class EncounterMode {
     if (!best[this.idx] || 'SABC'.indexOf(this.rating) < 'SABC'.indexOf(best[this.idx])) {
       best[this.idx] = this.rating;
     }
-    // ---- 战役继承快照：武器/装备/金钱 + 过关奖励 + 全补给（v3.1）----
+    // ---- 战役继承快照：武器架/装备/金钱 + 过关奖励 + 全补给（v3.1/v4.5）----
     const E = GAMECONFIG.economy;
     this.chapterBonus = E.chapterBonusBase + E.chapterBonusPerChapter * this.idx;
     const weapons = {};
     for (const slot of ['primary', 'secondary', 'melee']) {
-      const inst = p.weapons[slot];
-      weapons[slot] = inst ? { id: inst.def.id, lvl: inst.lvl } : null;
+      weapons[slot] = p.rack[slot].map(inst => ({ id: inst.def.id, lvl: inst.lvl }));
     }
     weapons.current = p.current;
     SAVE.data.carry = {

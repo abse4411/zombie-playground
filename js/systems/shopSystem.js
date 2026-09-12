@@ -19,23 +19,25 @@ const SHOP = {
       for (const id in WEAPONS) {
         const w = WEAPONS[id];
         if (w.slot !== tabId) continue;
-        const owned = p.weapons[tabId] && p.weapons[tabId].def.id === id;
-        const inst = p.weapons[tabId];
-        const needAmmo = owned && (inst.mag < inst.magSize
-          || inst.reserve < Math.floor(w.reserve * p.reserveMult));
+        const rackInst = p.rack[tabId].find(r => r.def.id === id);
+        const owned = !!rackInst;
+        const equipped = p.weapons[tabId] && p.weapons[tabId].def.id === id;
+        const inst = equipped ? p.weapons[tabId] : rackInst;
+        const fullAmmo = inst && inst.mag >= inst.magSize && inst.reserve >= Math.floor(w.reserve * p.reserveMult);
+        const needAmmo = owned && !fullAmmo;
         items.push({
           kind: 'weapon', id, def: w,
           name: w.name,
           desc: w.desc,
           price: owned ? GAMECONFIG.economy.ammoPrice : w.price,
           owned, state: owned ? (needAmmo ? 'ammo' : 'owned') : 'buy',
-          lvl: owned ? inst.lvl : 0,
+          lvl: inst ? inst.lvl : 0,
           stats: w.melee
-            ? [['伤害', Math.round(w.damage * (owned ? inst.dmgMult : 1))], ['攻速', Math.round(w.rpm / 10) + ''], ['范围', w.range.toFixed(1) + 'm']]
-            : [['伤害', Math.round(w.damage * (owned ? inst.dmgMult : 1)) * (w.pellets || 1)], ['射速', w.rpm], ['弹匣', owned ? inst.magSize : w.mag]],
+            ? [['伤害', Math.round(w.damage * (inst ? inst.dmgMult : 1))], ['攻速', Math.round(w.rpm / 10) + ''], ['范围', w.range.toFixed(1) + 'm']]
+            : [['伤害', Math.round(w.damage * (inst ? inst.dmgMult : 1)) * (w.pellets || 1)], ['射速', w.rpm], ['弹匣', inst ? inst.magSize : w.mag]],
         });
         // 武器强化（已持有且未满级）
-        if (owned && inst.lvl < 3) {
+        if (owned && inst && inst.lvl < 3) {
           const upPrice = Math.round((w.price > 0 ? w.price * 0.5 : 500) * (inst.lvl + 1));
           items.push({
             kind: 'weaponUp', id: id + '_up', def: w,
@@ -111,19 +113,25 @@ const SHOP = {
       case 'weapon': {
         const slot = item.def.slot;
         if (item.owned) {
-          const inst = p.weapons[slot];
+          // 已拥有：补满该把武器弹药（无论是否在手中）
+          const inst = p.rack[slot].find(r => r.def.id === item.id);
           inst.reserve = Math.floor(inst.def.reserve * p.reserveMult);
           inst.mag = inst.magSize;
+          if (p.weapons[slot] === inst && game.weapons) game.weapons.reloadT = 0;
         } else {
+          // 新武器：入武器架并自动装备（旧武器保留，1/2/3循环或Q切换）
           const inst = new WeaponInstance(item.def);
           inst.reserve = Math.floor(item.def.reserve * p.reserveMult);
+          p.rack[slot].push(inst);
           p.weapons[slot] = inst;
+          p.current = slot;
           if (game.weapons) game.weapons._buildViewmodel();
         }
         break;
       }
       case 'weaponUp': {
-        const inst = p.weapons[item.def.slot];
+        // 强化对应武器架中的实例（无论是否在手中）
+        const inst = p.rack[item.def.slot].find(r => r.def.id === item.def.id);
         if (inst && inst.lvl < 3) inst.lvl++;
         break;
       }

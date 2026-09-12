@@ -22,7 +22,14 @@ class Player {
       secondary: new WeaponInstance(WEAPONS.p92),
       melee: new WeaponInstance(WEAPONS.knife),
     };
+    // 武器架（v4.5）：每槽位可持有多个武器，购买不再覆盖旧枪
+    this.rack = {
+      primary: [this.weapons.primary].filter(Boolean),
+      secondary: [this.weapons.secondary],
+      melee: [this.weapons.melee],
+    };
     this.current = 'secondary';
+    this.lastWeapon = null;   // Q键切换上一把武器 {slot, defId}
     this.throwables = { frag: { count: 2 }, molotov: { count: 1 } };
     this.medkits = 2;   // 背包医疗包
     this.alive = true;

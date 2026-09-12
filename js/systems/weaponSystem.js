@@ -146,9 +146,10 @@ class WeaponSystem {
     // 切换武器
     const wheel = INPUT.consumeWheel();
     if (wheel !== 0) this._cycle(wheel);
-    if (INPUT.justPressed('Digit1')) this._equip('primary');
-    if (INPUT.justPressed('Digit2')) this._equip('secondary');
-    if (INPUT.justPressed('Digit3')) this._equip('melee');
+    if (INPUT.justPressed('Digit1')) this._cycleSlot('primary');
+    if (INPUT.justPressed('Digit2')) this._cycleSlot('secondary');
+    if (INPUT.justPressed('Digit3')) this._cycleSlot('melee');
+    if (INPUT.justPressed('KeyQ')) this._lastInv();
     if (INPUT.justPressed('KeyG')) this._throw('frag', game);
     if (INPUT.justPressed('KeyT')) this._throw('molotov', game);
     if (INPUT.justPressed('KeyR')) this._startReload();
@@ -428,14 +429,52 @@ class WeaponSystem {
     AUDIO.reloadEnd();
   }
 
-  _equip(slot) {
-    if (this.p.weapons[slot] && this.p.current !== slot) {
-      this.p.current = slot;
-      this.switchT = 0.38; this.reloadT = 0; this.adsT = 0;
-      this.swingT = -1; this._fireKick = 0;
-      this._buildViewmodel();
-      AUDIO.weaponSwitch();
-    }
+  /* ---------- 武器架装备（v4.5） ---------- */
+  _equip(slot, inst) {
+    if (!this.p.weapons[slot] && !inst) return;
+    if (this.p.weapons[slot] && this.p.current === slot && !inst) return;
+    this._rememberLast();
+    if (inst) this.p.weapons[slot] = inst;
+    else if (!this.p.weapons[slot]) return;
+    this.p.current = slot;
+    this.switchT = 0.38; this.reloadT = 0; this.adsT = 0;
+    this.swingT = -1; this._fireKick = 0;
+    this._buildViewmodel();
+    AUDIO.weaponSwitch();
+  }
+
+  // 记录当前武器为"上一把"（Q键用）
+  _rememberLast() {
+    const w = this.w;
+    if (w) this.p.lastWeapon = { slot: this.p.current, defId: w.def.id };
+  }
+
+  // 槽位键：多件武器时循环装备该槽位的武器架
+  _cycleSlot(slot) {
+    const rack = this.p.rack[slot];
+    if (!rack || !rack.length) { AUDIO.emptyClick(); return; }
+    if (rack.length === 1) { this._equip(slot); return; }
+    this._rememberLast();
+    const cur = this.p.weapons[slot];
+    let idx = cur ? rack.findIndex(r => r.def.id === cur.def.id) : -1;
+    const next = rack[(idx + 1) % rack.length];
+    if (next === cur) return;
+    this.p.weapons[slot] = next;
+    this.p.current = slot;
+    this.switchT = 0.38; this.reloadT = 0; this.adsT = 0;
+    this.swingT = -1; this._fireKick = 0;
+    this._buildViewmodel();
+    AUDIO.weaponSwitch();
+    HUD.pickup(`🔸 ${next.def.name}${next.lvl ? ' Lv.' + next.lvl : ''}`, 1);
+  }
+
+  // Q键：切回上一把使用的武器
+  _lastInv() {
+    const lw = this.p.lastWeapon;
+    if (!lw) { AUDIO.emptyClick(); return; }
+    const inst = this.p.rack[lw.slot]?.find(r => r.def.id === lw.defId);
+    if (!inst) { AUDIO.emptyClick(); return; }
+    this._equip(lw.slot, inst);
   }
 
   _cycle(dir) {

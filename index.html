@@ -74,6 +74,7 @@
   <div id="hud-bl">
     <div class="bar hp-bar"><div id="hp-fill"></div><span id="hp-text">100</span></div>
     <div class="bar armor-bar"><div id="armor-fill"></div><span id="armor-text">0</span></div>
+    <div class="bar stamina-bar"><div id="stamina-fill"></div></div>
     <div id="money-row">
       <span class="money-tag">$</span><span id="money-val">0</span>
       <span id="kills-val">击杀 0</span>
@@ -484,55 +485,55 @@
 <div id="toast" class="hidden"></div>
 
 <!-- ==================== 脚本（按依赖顺序加载） ==================== -->
-<script src="js/lib/three.min.js?v=12.1"></script>
+<script src="js/lib/three.min.js?v=13.1"></script>
 <!-- 配置层 -->
-<script src="js/config/gameConfig.js?v=12.1"></script>
-<script src="js/core/resources.js?v=12.1"></script>
-<script src="js/systems/mapStructs.js?v=12.1"></script>
+<script src="js/config/gameConfig.js?v=13.1"></script>
+<script src="js/core/resources.js?v=13.1"></script>
+<script src="js/systems/mapStructs.js?v=13.1"></script>
 <!-- 核心层 -->
-<script src="js/core/utils.js?v=12.1"></script>
-<script src="js/core/artkit.js?v=12.1"></script>
-<script src="js/core/audio.js?v=12.1"></script>
-<script src="js/core/input.js?v=12.1"></script>
-<script src="js/core/touch.js?v=12.1"></script>
-<script src="js/core/particles.js?v=12.1"></script>
-<script src="js/core/collision.js?v=12.1"></script>
-<script src="js/core/engine.js?v=12.1"></script>
+<script src="js/core/utils.js?v=13.1"></script>
+<script src="js/core/artkit.js?v=13.1"></script>
+<script src="js/core/audio.js?v=13.1"></script>
+<script src="js/core/input.js?v=13.1"></script>
+<script src="js/core/touch.js?v=13.1"></script>
+<script src="js/core/particles.js?v=13.1"></script>
+<script src="js/core/collision.js?v=13.1"></script>
+<script src="js/core/engine.js?v=13.1"></script>
 <!-- 实体层 -->
-<script src="js/entities/fpbody.js?v=12.1"></script>
-<script src="js/entities/player.js?v=12.1"></script>
-<script src="js/entities/zombie.js?v=12.1"></script>
-<script src="js/entities/projectile.js?v=12.1"></script>
-<script src="js/entities/combatFx.js?v=12.1"></script>
-<script src="js/entities/loot.js?v=12.1"></script>
-<script src="js/entities/destructible.js?v=12.1"></script>
-<script src="js/entities/supplyCrate.js?v=12.1"></script>
-    <script src="js/entities/nest.js?v=12.1"></script>
-    <script src="js/entities/roguelite.js?v=12.1"></script>
+<script src="js/entities/fpbody.js?v=13.1"></script>
+<script src="js/entities/player.js?v=13.1"></script>
+<script src="js/entities/zombie.js?v=13.1"></script>
+<script src="js/entities/projectile.js?v=13.1"></script>
+<script src="js/entities/combatFx.js?v=13.1"></script>
+<script src="js/entities/loot.js?v=13.1"></script>
+<script src="js/entities/destructible.js?v=13.1"></script>
+<script src="js/entities/supplyCrate.js?v=13.1"></script>
+    <script src="js/entities/nest.js?v=13.1"></script>
+    <script src="js/entities/roguelite.js?v=13.1"></script>
 <!-- 系统层 -->
-<script src="js/systems/gunModels.js?v=12.1"></script>
-    <script src="js/systems/weaponSystem.js?v=12.1"></script>
-<script src="js/systems/spawnSystem.js?v=12.1"></script>
-<script src="js/systems/shopSystem.js?v=12.1"></script>
-<script src="js/systems/saveSystem.js?v=12.1"></script>
+<script src="js/systems/gunModels.js?v=13.1"></script>
+    <script src="js/systems/weaponSystem.js?v=13.1"></script>
+<script src="js/systems/spawnSystem.js?v=13.1"></script>
+<script src="js/systems/shopSystem.js?v=13.1"></script>
+<script src="js/systems/saveSystem.js?v=13.1"></script>
 <!-- UI层 -->
-<script src="js/ui/hud.js?v=12.1"></script>
-<script src="js/ui/damageNumbers.js?v=12.1"></script>
-<script src="js/ui/gunPreview.js?v=12.1"></script>
-    <script src="js/ui/codexPreview.js?v=12.1"></script>
-    <script src="js/ui/shopUI.js?v=12.1"></script>
-<script src="js/ui/storyUI.js?v=12.1"></script>
-<script src="js/ui/backpack.js?v=12.1"></script>
-<script src="js/ui/charPreview.js?v=12.1"></script>
-    <script src="js/ui/menuScene.js?v=12.1"></script>
-<script src="js/ui/menu.js?v=12.1"></script>
+<script src="js/ui/hud.js?v=13.1"></script>
+<script src="js/ui/damageNumbers.js?v=13.1"></script>
+<script src="js/ui/gunPreview.js?v=13.1"></script>
+    <script src="js/ui/codexPreview.js?v=13.1"></script>
+    <script src="js/ui/shopUI.js?v=13.1"></script>
+<script src="js/ui/storyUI.js?v=13.1"></script>
+<script src="js/ui/backpack.js?v=13.1"></script>
+<script src="js/ui/charPreview.js?v=13.1"></script>
+    <script src="js/ui/menuScene.js?v=13.1"></script>
+<script src="js/ui/menu.js?v=13.1"></script>
 <!-- 模式层 -->
-<script src="js/modes/huntMode.js?v=12.1"></script>
-<script src="js/modes/encounterMode.js?v=12.1"></script>
-<script src="js/modes/tutorialMode.js?v=12.1"></script>
+<script src="js/modes/huntMode.js?v=13.1"></script>
+<script src="js/modes/encounterMode.js?v=13.1"></script>
+<script src="js/modes/tutorialMode.js?v=13.1"></script>
 <!-- 主循环 -->
-<script src="js/net/net.js?v=12.1"></script>
-<script src="js/core/game.js?v=12.1"></script>
-<script src="js/main.js?v=12.1"></script>
+<script src="js/net/net.js?v=13.1"></script>
+<script src="js/core/game.js?v=13.1"></script>
+<script src="js/main.js?v=13.1"></script>
 </body>
 </html>

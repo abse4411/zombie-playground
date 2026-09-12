@@ -14,6 +14,7 @@ const HUD = {
       killfeed: $('killfeed'), radar: $('radar'),
       hpFill: $('hp-fill'), hpText: $('hp-text'),
       armorFill: $('armor-fill'), armorText: $('armor-text'),
+      staminaFill: $('stamina-fill'),
       moneyVal: $('money-val'), killsVal: $('kills-val'), headshotVal: $('headshot-val'),
       throwFrag: $('throw-frag'), throwMolo: $('throw-molo'), throwAttr: $('throw-attr'),
       weaponName: $('weapon-name'), ammoMag: $('ammo-mag'), ammoReserve: $('ammo-reserve'),
@@ -189,6 +190,12 @@ const HUD = {
     this.el.hpText.textContent = `${Math.ceil(p.hp)} / ${p.maxHp}`;
     this.el.armorFill.style.width = (p.maxArmor > 0 ? clamp(p.armor / p.maxArmor * 100, 0, 100) : 0) + '%';
     this.el.armorText.textContent = `护甲 ${Math.round(p.armor)}${p.maxArmor ? ' / ' + p.maxArmor : ''}`;
+    // 体力条（v13.1）：橙=低体力，红闪=疲劳锁定
+    if (p.maxStamina > 0) {
+      const stPct = clamp(p.stamina / p.maxStamina * 100, 0, 100);
+      this.el.staminaFill.style.width = stPct + '%';
+      this.el.staminaFill.className = p.exhausted ? 'exhausted' : (stPct < 30 ? 'low' : '');
+    }
     this.el.moneyVal.textContent = fmtMoney(p.money);
     this.el.killsVal.textContent = `击杀 ${p.kills}`;
     this.el.headshotVal.textContent = `爆头 ${p.headshots}`;

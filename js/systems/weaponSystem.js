@@ -704,6 +704,13 @@ class WeaponSystem {
   _kick(game) {
     if (this.kickCd > 0) return;
     const K = GAMECONFIG.kick;
+    // 战术踢消耗体力（v13.1）
+    if (this.p.stamina < GAMECONFIG.stamina.kickCost) {
+      AUDIO.emptyClick();
+      if (this.p._stamTipT <= 0) { HUD.toast('💨 体力不足，无法踢击'); this.p._stamTipT = 1.5; }
+      return;
+    }
+    this.p.stamina -= GAMECONFIG.stamina.kickCost;
     this.kickCd = K.cooldown;
     AUDIO.kick();
     this.kickAnimT = 0.22;

@@ -75,6 +75,17 @@ const GAMECONFIG = {
     knockback: 9, stagger: 1.1,
   },
 
+  // 体力系统（v13.1）：走路不耗，站立快回/走路慢回，耗尽疲劳锁定
+  stamina: {
+    max: 100,
+    sprintDrain: 14,        // 冲刺消耗/秒（满体力≈7s持续冲刺）
+    dashCost: 25,           // 闪避冲刺瞬耗
+    kickCost: 18,           // 战术踢瞬耗
+    idleRegen: 38,          // 站立回复/秒（快，≈2.6s回满）
+    walkRegen: 16,          // 走路回复/秒（慢，≈6s回满）
+    exhaustedRecover: 0.3,  // 疲劳后需回到30%才能再次冲刺
+  },
+
   /* ---------- 连杀系统 ---------- */
   streak: {
     window: 4.5,        // 连杀计时窗口(秒)

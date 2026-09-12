@@ -764,7 +764,7 @@ class Game {
   }
 
   quitToMenu() {
-    if (this.state === 'playing' || this.state === 'paused') {
+    if ((this.state === 'playing' || this.state === 'paused') && this.player) {
       if (typeof ACHV !== 'undefined') ACHV.event('runEnd', this);
       if (typeof META !== 'undefined') META.award(this);
     }

@@ -52,6 +52,13 @@ class Player {
     this.dashCd = 0; this.dashT = 0; this.iframesT = 0; this._dashDir = { x: 0, z: 1 };
     this.bileT = 0; this.draggedBy = null;   // L4D特感状态（v9.7）
     this.healT = 0; this.healTotal = 1.2;   // 医疗施法（v11.8）
+    // 体力系统（v13.1）
+    this.staminaMaxBase = GAMECONFIG.stamina.max;
+    this.maxStamina = this.staminaMaxBase;
+    this.stamina = this.maxStamina;
+    this.staminaRegenMult = 1;
+    this.exhausted = false;
+    this._stamTipT = 0;
     // 肉鸽强化（v10.6）
     this.xp = 0; this.level = 1; this.xpNext = 10;
     this.rogueLevels = {}; this.rogueAtk = 1; this.rogueRof = 1; this.rogueSpd = 1;
@@ -76,6 +83,14 @@ class Player {
     this.bulletstormOn = false; this.laststandOn = false;
     if (p.bulletstorm > 0) this.bulletstormVal = PERKS.bulletstorm.tiers[p.bulletstorm - 1].val;
     if (p.laststand > 0) this.laststandVal = PERKS.laststand.tiers[p.laststand - 1].val;
+    // 体力：角色基准 + 耐力针剂 + 肾上腺素回复乘区（v13.1）
+    const stamBase = (ch.staminaMax !== undefined) ? ch.staminaMax : GAMECONFIG.stamina.max;
+    this.staminaMaxBase = stamBase;
+    this.maxStamina = stamBase + (p.stamina > 0 ? PERKS.stamina.tiers[p.stamina - 1].val : 0);
+    this.staminaRegenMult = ((ch.staminaRegen !== undefined) ? ch.staminaRegen : 1)
+      * (1 + (p.adrenaline > 0 ? PERKS.adrenaline.tiers[p.adrenaline - 1].val : 0));
+    if (this.stamina === undefined) this.stamina = this.maxStamina;
+    if (this.stamina > this.maxStamina) this.stamina = this.maxStamina;
     if (this.armor > this.maxArmor) this.armor = this.maxArmor;
   }
 
@@ -128,7 +143,8 @@ class Player {
       wx /= l; wz /= l;
     }
 
-    const sprint = (INPUT.isDown('ShiftLeft') || INPUT.isDown('ShiftRight')) && fz < 0;
+    const canSprint = !this.exhausted && this.stamina > 0;   // 疲劳/耗尽时禁冲刺（v13.1）
+    const sprint = (INPUT.isDown('ShiftLeft') || INPUT.isDown('ShiftRight')) && fz < 0 && canSprint;
     const P = GAMECONFIG.player;
     let spd = (sprint ? P.sprintSpeed : P.walkSpeed) * this.speedMult;
     if (this.slowT > 0) { spd *= 0.55; this.slowT -= dt; }
@@ -140,7 +156,13 @@ class Player {
     this.dashCd -= dt;
     this.iframesT -= dt;
     const wantDash = INPUT.justPressed('KeyC') || INPUT.justPressed('ControlLeft');
-    if (wantDash && this.dashCd <= 0 && this.onGround) {
+    const DS = GAMECONFIG.stamina;
+    if (wantDash && this.dashCd <= 0 && this.onGround && this.stamina < DS.dashCost) {
+      // 体力不足：拒绝闪避并给一次性提示（v13.1）
+      if (this._stamTipT <= 0) { HUD.toast('💨 体力不足，无法闪避'); this._stamTipT = 1.5; AUDIO.emptyClick(); }
+    }
+    if (wantDash && this.dashCd <= 0 && this.onGround && this.stamina >= DS.dashCost) {
+      this.stamina -= DS.dashCost;
       this.dashCd = GAMECONFIG.dash.cooldown;
       this.dashT = GAMECONFIG.dash.time;
       this.iframesT = GAMECONFIG.dash.iframes;
@@ -188,6 +210,19 @@ class Player {
 
     this.moving = hasInput && this.onGround;
     this.sprinting = sprint && this.moving;
+    // ---- 体力结算（v13.1）：冲刺耗、站立快回、走路慢回、疲劳锁定 ----
+    {
+      const S = GAMECONFIG.stamina;
+      if (this._stamTipT > 0) this._stamTipT -= dt;
+      if (this.sprinting) {
+        this.stamina = Math.max(0, this.stamina - S.sprintDrain * dt);
+        if (this.stamina <= 0 && !this.exhausted) { this.exhausted = true; HUD.toast('💨 体力耗尽！'); AUDIO.emptyClick(); }
+      } else if (this.stamina < this.maxStamina) {
+        const regen = (this.moving ? S.walkRegen : S.idleRegen) * (this.staminaRegenMult || 1);
+        this.stamina = Math.min(this.maxStamina, this.stamina + regen * dt);
+      }
+      if (this.exhausted && this.stamina >= this.maxStamina * S.exhaustedRecover) this.exhausted = false;
+    }
     const stepBound = this.bobPhase;
     this.bobPhase += dt * (this.moving ? (this.sprinting ? 11.5 : 8) : 2);
     // 脚步声（相位每跨过 π 触发一步）

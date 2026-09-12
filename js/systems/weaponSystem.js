@@ -55,6 +55,7 @@ class WeaponInstance {
     this.upgrades = {};
   }
   get magSize() {
+    if (!this.def.mag) return 0;   // 近战无弹匣概念
     let m = this.def.mag * (1 + 0.2 * this.lvl);   // 旧总等级仍生效（兼容存档）
     if (this.upgrades.mag) m *= 1 + 0.2 * this.upgrades.mag;
     if (this.upgrades.dmg) m *= 1 - 0.05 * this.upgrades.dmg;

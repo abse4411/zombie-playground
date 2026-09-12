@@ -268,3 +268,59 @@ const REEL = {
     setTimeout(() => { panel.style.opacity = '0'; setTimeout(() => panel.remove(), 500); }, 600 + rewards.length * 450);
   },
 };
+
+/* ---------- 元进度永久强化树（v10.8 永不从零开始） ---------- */
+/* 局内结束按表现换算猎杀点数(SP)，主菜单"强化实验室"花SP买永久强化 */
+const META_PERKS = [
+  { id: 'm_hp',    name: '强化体魄', icon: '❤', max: 5, cost: lv => 120 + lv * 160, desc: lv => `最大生命 +${lv * 8}` },
+  { id: 'm_atk',   name: '杀伤训练', icon: '💢', max: 5, cost: lv => 150 + lv * 200, desc: lv => `武器伤害 +${lv * 4}%` },
+  { id: 'm_spd',   name: '战术靴',   icon: '🏃', max: 4, cost: lv => 140 + lv * 180, desc: lv => `移动速度 +${lv * 3}%` },
+  { id: 'm_mag',   name: '宝石磁场', icon: '🧲', max: 4, cost: lv => 130 + lv * 150, desc: lv => `经验磁吸 +${lv * 0.8}m` },
+  { id: 'm_rel',   name: '肌肉记忆', icon: '🧤', max: 4, cost: lv => 140 + lv * 170, desc: lv => `换弹速度 +${lv * 4}%` },
+  { id: 'm_cash',  name: '赏金嗅觉', icon: '💰', max: 4, cost: lv => 160 + lv * 190, desc: lv => `金钱获取 +${lv * 6}%` },
+  { id: 'm_armor', name: '插板背心', icon: '🛡', max: 3, cost: lv => 200 + lv * 260, desc: lv => `开局护甲 +${lv * 15}` },
+  { id: 'm_crit',  name: '猎手直觉', icon: '🎯', max: 3, cost: lv => 220 + lv * 280, desc: lv => `暴击率 +${lv * 3}%` },
+];
+
+const META = {
+  // 局末结算：击杀/波次/评级→SP
+  award(game) {
+    const p = game.player;
+    const sp = Math.round(p.kills * 1.2 + (game.mode.wave || 0) * 8 + (game.mode.rating === 'S' ? 60 : game.mode.rating === 'A' ? 35 : 15));
+    if (!SAVE.data.meta) SAVE.data.meta = { sp: 0, levels: {} };
+    SAVE.data.meta.sp += sp;
+    SAVE.commit();
+    if (sp > 5) HUD.toast(`🧬 猎杀点数 +${sp}（强化实验室可用）`);
+    return sp;
+  },
+
+  lv(id) { return (SAVE.data.meta && SAVE.data.meta.levels[id]) || 0; },
+
+  buy(id) {
+    if (!SAVE.data.meta) SAVE.data.meta = { sp: 0, levels: {} };
+    const k = META_PERKS.find(x => x.id === id);
+    const lv = this.lv(id);
+    if (lv >= k.max) return false;
+    const cost = k.cost(lv);
+    if (SAVE.data.meta.sp < cost) return false;
+    SAVE.data.meta.sp -= cost;
+    SAVE.data.meta.levels[id] = lv + 1;
+    SAVE.commit();
+    AUDIO.purchase();
+    return true;
+  },
+
+  // 开局应用全部永久强化
+  apply(p) {
+    if (!SAVE.data.meta) return;
+    const L = id => this.lv(id);
+    if (L('m_hp')) { p.maxHp += L('m_hp') * 8; p.hp = p.maxHp; }
+    if (L('m_atk')) p.metaAtk = 1 + L('m_atk') * 0.04;
+    if (L('m_spd')) p.metaSpd = 1 + L('m_spd') * 0.03;
+    if (L('m_mag')) p.xpMagnet = (p.xpMagnet || 0) + L('m_mag') * 0.8;
+    if (L('m_rel')) p.metaRel = 1 - L('m_rel') * 0.04;
+    if (L('m_cash')) p.cashMult = (p.cashMult || 1) + L('m_cash') * 0.06;
+    if (L('m_armor')) { p.maxArmor = Math.max(p.maxArmor, L('m_armor') * 15); p.armor = L('m_armor') * 15; }
+    if (L('m_crit')) p.critChance = (p.critChance || 0) + L('m_crit') * 0.03;
+  },
+};

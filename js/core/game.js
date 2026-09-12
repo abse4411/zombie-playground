@@ -186,6 +186,8 @@ class Game {
       }
       if (this.weapons) this.weapons._buildViewmodel();
     }
+    // 元进度永久强化（v10.8）
+    if (typeof META !== 'undefined') META.apply(this.player);
     // 成就酬金发放（v8.2奖励）
     if (SAVE.data.bonusMoney > 0) { this.player.money += SAVE.data.bonusMoney; HUD.toast(`🏆 成就酬金 +$${SAVE.data.bonusMoney}`); SAVE.data.bonusMoney = 0; }
     // 角色属性（v6.2）
@@ -661,6 +663,7 @@ class Game {
     this.state = 'victory';
     this._lastWin = true;
     if (typeof ACHV !== 'undefined') ACHV.event('runEnd', this);
+    if (typeof META !== 'undefined') META.award(this);
     AUDIO.victory();
     AUDIO.stopAmbient();
     AUDIO.stopFireLoop();
@@ -713,6 +716,7 @@ class Game {
   quitToMenu() {
     if (this.state === 'playing' || this.state === 'paused') {
       if (typeof ACHV !== 'undefined') ACHV.event('runEnd', this);
+      if (typeof META !== 'undefined') META.award(this);
     }
     this.state = 'menu';
     this._cleanupWorld();

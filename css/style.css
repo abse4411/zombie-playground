@@ -771,3 +771,12 @@ body.touch .lu-card { max-width: 100%; width: 92%; display: flex; align-items: c
 .cr-item { display: flex; align-items: center; gap: 10px; font-size: 17px; margin: 8px 0; justify-content: center; transition: transform .25s, opacity .3s; transform: scale(.8); }
 .cr-item span { font-size: 24px; }
 .cr-item b { color: #fff; }
+
+/* ---------- 强化实验室（v10.8） ---------- */
+#meta-sp { font-size: 20px; color: #ffd76a; margin: 8px 0 14px; }
+#meta-sp b { font-size: 26px; }
+.meta-card { cursor: pointer; transition: border-color .12s, transform .12s; }
+.meta-card.afford { border-color: rgba(255,215,106,.55); }
+.meta-card.afford:hover { transform: translateY(-4px); border-color: #ffd76a; }
+.meta-cost { margin-top: 8px; font-size: 13px; color: var(--dim); }
+.meta-card.afford .meta-cost b { color: #ffd76a; }

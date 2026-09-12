@@ -426,7 +426,7 @@ class WeaponSystem {
       const first = take[0];
       hitZ = first.z; isHead = first.head; bestT = first.t;
       const calcDmg = (t2, head2) => {
-        let d2 = def.damage * this.w.dmgMult * this.p.dmgMult * (this.p.rogueAtk || 1) * (head2 ? def.headMult : 1);
+        let d2 = def.damage * this.w.dmgMult * this.p.dmgMult * (this.p.rogueAtk || 1) * (this.p.metaAtk || 1) * (head2 ? def.headMult : 1);
         // 暴击（v10.6）
         if (this.p.critChance > 0 && Math.random() < this.p.critChance) d2 *= 2;
         // 背水一战（v8.4）：生命<25% 伤害加成
@@ -534,7 +534,7 @@ class WeaponSystem {
   /* ---------- 换弹 / 切换 / 投掷 ---------- */
   // 弹雨瘾（v8.4）：连杀≥8 换弹加速
   _reloadMult() {
-    let m = this.p.reloadMult * (this.p.rogueRel || 1);
+    let m = this.p.reloadMult * (this.p.rogueRel || 1) * (this.p.metaRel || 1);
     if (this.p.bulletstormVal && this.p.killStreak >= 8) m *= (1 - this.p.bulletstormVal);
     return m;
   }

@@ -15,6 +15,7 @@ const MENU = {
     $('btn-tutorial').addEventListener('click', () => { AUDIO.uiClick(); GAME.startTutorial(); });
     $('btn-character').addEventListener('click', () => { AUDIO.uiClick(); this.show('screen-character'); CHARPREVIEW.init(document.getElementById('char-canvas')); CHARPREVIEW.show(SAVE.data.character || 'raven'); this.buildCharCards(); });
     $('btn-net').addEventListener('click', () => { AUDIO.uiClick(); this.show('screen-net'); this.initNetUI(); });
+    $('btn-meta').addEventListener('click', () => { AUDIO.uiClick(); this.buildMeta(); this.show('screen-meta'); });
     $('btn-codex').addEventListener('click', () => { AUDIO.uiClick(); this.buildCodex(); this.show('screen-codex'); });
     $('btn-help').addEventListener('click', () => { AUDIO.uiClick(); this.show('screen-help'); });
     $('btn-settings').addEventListener('click', () => { AUDIO.uiClick(); this.settingsFrom = 'menu'; this.show('screen-settings'); });
@@ -346,6 +347,31 @@ const MENU = {
       card.addEventListener('click', () => { AUDIO.uiClick(); GAME.startHunt(id, this.diff); });
       list.appendChild(card);
       drawMapPreview(card.querySelector('canvas'), m);
+    }
+  },
+
+  /* ---------- 强化实验室（v10.8 元进度） ---------- */
+  buildMeta() {
+    if (!SAVE.data.meta) SAVE.data.meta = { sp: 0, levels: {} };
+    document.querySelector('#meta-sp b').textContent = SAVE.data.meta.sp;
+    const grid = document.getElementById('meta-grid');
+    grid.innerHTML = '';
+    for (const k of META_PERKS) {
+      const lv = META.lv(k.id);
+      const maxed = lv >= k.max;
+      const cost = maxed ? 0 : k.cost(lv);
+      const afford = !maxed && SAVE.data.meta.sp >= cost;
+      const c = document.createElement('div');
+      c.className = 'codex-card meta-card' + (afford ? ' afford' : '');
+      c.innerHTML = `
+        <h4>${k.icon} ${k.name} <span class="lu-lv">${lv}/${k.max}</span></h4>
+        <p>${k.desc(lv + (maxed ? 0 : 1))}</p>
+        <div class="meta-cost">${maxed ? '✔ 已满级' : `消耗 <b>${cost}</b> SP`}</div>`;
+      c.addEventListener('click', () => {
+        if (META.buy(k.id)) { AUDIO.uiClick(); this.buildMeta(); }
+        else AUDIO.denied();
+      });
+      grid.appendChild(c);
     }
   },
 

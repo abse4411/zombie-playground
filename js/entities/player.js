@@ -131,7 +131,7 @@ class Player {
     const P = GAMECONFIG.player;
     let spd = (sprint ? P.sprintSpeed : P.walkSpeed) * this.speedMult;
     if (this.slowT > 0) { spd *= 0.55; this.slowT -= dt; }
-    spd *= this.moveMult * (this.rogueSpd || 1);
+    spd *= this.moveMult * (this.rogueSpd || 1) * (this.metaSpd || 1);
     // 背水一战（v8.4）：濒死移速
     if (this.laststandVal && this.hp <= this.maxHp * 0.25) spd *= 1.15;
 

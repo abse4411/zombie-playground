@@ -128,6 +128,7 @@ class WeaponSystem {
     if (INPUT.justPressed('Digit3')) this._cycleSlot('melee');
     if (INPUT.justPressed('KeyQ')) this._lastInv();
     if (INPUT.justPressed('KeyG')) this._throw('frag', game);
+    if (INPUT.justPressed('KeyV')) this._throw('attractor', game);
     if (INPUT.justPressed('KeyT')) this._throw('molotov', game);
     if (INPUT.justPressed('KeyR')) this._startReload();
     if (INPUT.justPressed('KeyF')) this._kick(game);

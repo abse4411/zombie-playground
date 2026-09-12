@@ -97,6 +97,27 @@ class SpawnSystem {
       if (this.budget < 30) this.budget += dt * 6;
       if (Math.random() < dt * 1.2) this.spawnOne(Math.random() < 0.8 ? 'walker' : 'runner');
     }
+    // 兽群巡游（v10.4 Days Gone）：稀有事件——15只成群从一侧横穿地图
+    D.migrateT = (D.migrateT === undefined ? rand(180, 300) : D.migrateT) - dt;
+    if (D.migrateT <= 0) {
+      D.migrateT = rand(240, 400);
+      const S = ENGINE.mapDef.size;
+      const side = randi(0, 3);
+      const z0 = rand(-S * 0.5, S * 0.5);
+      HUD.banner('🐃 兽群迁徙', '一大群感染体正在穿过——避开或诱杀');
+      AUDIO.howl(0);
+      for (let i = 0; i < 15; i++) {
+        setTimeout(() => {
+          if (!window.GAME || window.GAME.state !== 'playing') return;
+          const g4 = window.GAME;
+          const sx = side === 0 ? -S : side === 1 ? S : rand(-S * 0.6, S * 0.6);
+          const sz = side === 2 ? -S : side === 3 ? S : z0 + rand(-4, 4);
+          const z4 = new Zombie(Math.random() < 0.75 ? 'runner' : 'walker', sx, sz, g4.spawner.mults, {});
+          z4.riseT = 0; z4.state = 'chase'; z4.pos.y = 0;
+          g4.zombies.push(z4);
+        }, i * 350);
+      }
+    }
     // relax 态刷怪间隔 ×1.4
     if (D.state === 'relax') this.interval = Math.min(6, this.interval * (1 + dt * 0.02));
   }

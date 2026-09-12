@@ -291,6 +291,12 @@ const THROWABLES = {
     color: 0x3d5a3d, selfMult: 0.35,
     desc: '范围爆炸伤害，对密集尸群效果拔群。小心别炸到自己。',
   },
+  attractor: {
+    id: 'attractor', name: '声波诱饵', price: 200, pack: 2, max: 5,
+    radius: 0, dps: 0, duration: 8, fuse: 2.0, speed: 12, gravity: 13,
+    color: 0x4a6a8a, selfMult: 0,
+    desc: '往日不再式诱饵装置——落地后发出声波吸引 8 秒内所有普通感染体聚拢。配合燃烧瓶=清场连招。',
+  },
   molotov: {
     id: 'molotov', name: '燃烧瓶', price: 130, pack: 3, max: 6,
     radius: 4.2, dps: 34, duration: 7, fuse: 2.6, speed: 13, gravity: 13,

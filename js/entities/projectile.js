@@ -5,6 +5,7 @@ const PROJ_CFG = {
   bile:    { r: 0.14, c: 0x7a9a3a, e: 0x3a5a10, g: 10 },
   rock:    { r: 0.32, c: 0x5a5248, e: 0x000000, g: 13 },
   missile: { r: 0.12, c: 0x8a8f96, e: 0xff5010, g: 10 },
+  attractor: { r: 0.1, c: 0x4a6a8a, e: 0x1a3a6a, g: 13 },
   frag:    { r: 0.11, c: 0x3d5a3d, e: 0x000000, g: 13 },
   molotov: { r: 0.12, c: 0x8a4b1f, e: 0x552200, g: 13 },
   acid:    { r: 0.15, c: 0x66cc33, e: 0x2a6600, g: 9 },
@@ -90,6 +91,14 @@ class Projectile {
       AUDIO.fireIgnite();
       return;
     }
+    // 诱饵：落地→8秒声波吸引场
+    if (this.kind === 'attractor') {
+      if (this.landed) {
+        this._finish(game);
+        spawnAttractor(game, p.x, p.z, 8);
+        return;
+      }
+    }
     // 导弹：命中/落地→爆炸伤害（无酸洼）
     if (this.kind === 'missile') {
       const hitP = pd < 1.3 && p.y < 2.4;
@@ -150,6 +159,42 @@ class Projectile {
     ENGINE.scene.remove(this.mesh);
     this.mesh.geometry.dispose(); this.mesh.material.dispose();
   }
+}
+
+/* ---------- 声波诱饵场（v10.4 Days Gone） ---------- */
+const ATTRACTORS = { list: [] };
+function spawnAttractor(game, x, z, duration) {
+  // 视觉：蓝色脉冲环
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(0.5, 0.65, 24),
+    new THREE.MeshBasicMaterial({ color: 0x5aa0ff, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false })
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.set(x, 0.06, z);
+  ENGINE.scene.add(ring);
+  ATTRACTORS.list.push({ x, z, t: duration, ring });
+  AUDIO.waveHorn();
+  HUD.toast('📣 声波诱饵启动——感染体正在聚拢');
+}
+function updateAttractors(dt, game) {
+  for (const a of ATTRACTORS.list) {
+    a.t -= dt;
+    a.ring.scale.setScalar(1 + Math.sin(ENGINE.time * 6) * 0.15);
+    if (a.t <= 0) { ENGINE.scene.remove(a.ring); a.dead = true; continue; }
+    // 吸引：24m内普通尸朝诱饵移动（覆盖追击目标）
+    for (const z of game.zombies) {
+      if (z.dead || z.boss || z.type.cost >= 3 || z.state === 'rise') continue;
+      if (dist2d(z.pos.x, z.pos.z, a.x, a.z) < 24) {
+        const dx = a.x - z.pos.x, dz = a.z - z.pos.z;
+        const d = Math.hypot(dx, dz) || 1;
+        if (d > 1.2) {
+          z.pos.x += (dx / d) * z.speed * 1.3 * dt;
+          z.pos.z += (dz / d) * z.speed * 1.3 * dt;
+        }
+      }
+    }
+  }
+  ATTRACTORS.list = ATTRACTORS.list.filter(a => !a.dead);
 }
 
 /* ---------- 坦克巨石（v9.9 L4D Tank） ---------- */

@@ -42,7 +42,7 @@ class Player {
     this.storageMax = 6;
     this.current = 'secondary';
     this.lastWeapon = null;   // Q键切换上一把武器 {slot, defId}
-    this.throwables = { frag: { count: 2 }, molotov: { count: 1 } };
+    this.throwables = { frag: { count: 2 }, molotov: { count: 1 }, attractor: { count: 0 } };
     this.medkits = 2;   // 背包医疗包
     this.alive = true;
     this.lastDamageT = -99;

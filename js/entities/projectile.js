@@ -234,7 +234,9 @@ function explodeGrenade(game, x, y, z, cfg, selfMult) {
   for (const zb of game.zombies) {
     if (zb.dead) continue;
     const d = dist2d(x, z, zb.pos.x, zb.pos.z);
-    if (d < cfg.radius) {
+    // 爆炸垂直衰减（v14.1）：高差过大不波及（防爆楼层穿透）
+    const dyZ = Math.abs((y || 0) - (zb.pos.y + 0.9));
+    if (d < cfg.radius && dyZ < cfg.radius * 0.9) {
       const dmg = cfg.damage * (1 - (d / cfg.radius) * 0.55);
       // 爆风击退：从爆心向外推
       const nx = (zb.pos.x - x) / (d || 1), nz = (zb.pos.z - z) / (d || 1);
@@ -244,7 +246,8 @@ function explodeGrenade(game, x, y, z, cfg, selfMult) {
     }
   }
   const pr = cfg.radius * 0.75;
-  if (pd < pr && game.player.alive) {
+  const dyP = Math.abs((y || 0) - (game.player.pos.y + 0.9));
+  if (pd < pr && dyP < cfg.radius * 0.9 && game.player.alive) {
     game.player.takeDamage(cfg.damage * selfMult * (1 - pd / pr), game);
   }
   // 波及尸巢（v10.3 燃烧/爆炸烧巢）

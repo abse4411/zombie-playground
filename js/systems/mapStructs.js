@@ -195,6 +195,13 @@ const STRUCTS = {
   staircase(g, s) {
     const n = s.steps || 10, sh = s.stepH || 0.5, sd = s.stepD || 1.2, w = s.width || 3;
     const mat = mkMat(s.c || 0x4a5058);
+    // 导航路标（v14.2）：底端登梯点 → 链接 → 顶端到达点，丧尸高层寻路用
+    if (ENGINE.navPoints) {
+      const bot = { x: s.x - (s.dirX || 0) * 1.4, z: s.z - (s.dirZ || 0) * 1.4, y: 0 };
+      const top = { x: s.x + (s.dirX || 0) * (n * sd + 1.4), z: s.z + (s.dirZ || 0) * (n * sd + 1.4), y: n * sh, up: true };
+      bot.top = top;
+      ENGINE.navPoints.push(bot, top);
+    }
     for (let i = 0; i < n; i++) {
       const top = (i + 1) * sh;
       const step = new THREE.Mesh(new THREE.BoxGeometry(w, top, sd), mat);

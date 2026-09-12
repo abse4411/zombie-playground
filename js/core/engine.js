@@ -101,6 +101,7 @@ const ENGINE = {
     this._trackedTex.clear();
     this.mapGroup = null; this.mapDef = null;
     this.colliders = []; this.anims = []; this.buyZoneMesh = null;
+    this.navPoints = [];   // 楼梯/高台导航路标（v14.2）
     ART.resetOutlines();
   },
 
@@ -117,6 +118,8 @@ const ENGINE = {
   buildMap(def) {
     this.clearMap();
     this.mapDef = def;
+    // 地图 JSON 可选手工导航路标（v14.2 高台/楼梯引导）
+    this.navPoints = (def.nav || []).map(n => ({ x: n.x, z: n.z, y: n.y || 0 }));
     this.scene.background = new THREE.Color(def.sky);
     this.scene.fog = new THREE.FogExp2(def.fogColor, def.fogDensity);
 

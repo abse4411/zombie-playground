@@ -672,6 +672,7 @@ class WeaponSystem {
       const dx = z.pos.x - p.pos.x, dz = z.pos.z - p.pos.z;
       const d = Math.hypot(dx, dz);
       if (d > range + 0.35 * z.group.scale.x) continue;
+      if (Math.abs(z.pos.y - p.pos.y) > 2) continue;   // 高差过大（天台/楼下）不可近战（v14.1）
       if ((dx * fx + dz * fz) / (d || 1) < Math.cos(def.arc + (heavy ? 0.85 : 0.55))) continue;
       z.stagger = Math.max(z.stagger, heavy ? 1.4 : GAMECONFIG.combat.staggerTime);
       if (def.shock) this._applyShock(z, game);

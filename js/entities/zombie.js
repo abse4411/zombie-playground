@@ -542,6 +542,45 @@ class Zombie {
     const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z;
     const dist = Math.sqrt(dx * dx + dz * dz) || 0.001;
     const nx = dx / dist, nz = dz / dist;
+    // 垂直可达门（v14.1 修复）：楼上楼下不再隔空攻击 —— 近战类攻击需高差<1.6m
+    const dy = p.pos.y - this.pos.y;
+    const vNear = Math.abs(dy) < 1.6;
+    // 楼梯导航（v14.2）：玩家显著高于自己时，转向登梯路标；到梯底后沿梯爬上
+    let navSteer = null;
+    if (dy > 1.4 && ENGINE.navPoints && ENGINE.navPoints.length) {
+      this._navT = (this._navT === undefined ? 0 : this._navT) - dt;
+      const dn = this._nav ? Math.hypot(this._nav.x - this.pos.x, this._nav.z - this.pos.z) : Infinity;
+      // 正在梯上（目标是链接的顶端路标）：锁定方向直到登顶，不做重新选点（防来回 flip 摔落）
+      const onStairs = this._nav && this._nav.up;
+      // 已到梯底 → 切换为顶端路标（直接沿梯向上，绕过高差过滤）
+      if (this._nav && this._nav.top && dn < 2.2 && this.pos.y < this._nav.top.y - 0.5) {
+        this._nav = this._nav.top;
+        this._navT = 3.0;
+      }
+      if (!this._nav || (this._navT <= 0 && !onStairs) || dn < 1.2) {
+        if (onStairs && dn > 1.2) {
+          this._navT = 2.0;   // 继续沿梯向上
+        } else {
+          this._navT = 1.2;
+          let best = null, bestCost = Infinity;
+          for (const wp of ENGINE.navPoints) {
+            if (wp.y > this.pos.y + 1.2) continue;   // 只选与自己同层可达的登梯点
+            const d1 = Math.hypot(wp.x - this.pos.x, wp.z - this.pos.z);
+            const d2 = Math.hypot(wp.x - p.pos.x, wp.z - p.pos.z);
+            const cost = d1 + d2 * 1.5;
+            if (cost < bestCost) { bestCost = cost; best = wp; }
+          }
+          this._nav = best;
+        }
+      }
+      if (this._nav) {
+        const ndx = this._nav.x - this.pos.x, ndz = this._nav.z - this.pos.z;
+        const nl = Math.hypot(ndx, ndz) || 1;
+        navSteer = { x: ndx / nl, z: ndz / nl };
+      }
+    } else if (this._nav) {
+      this._nav = null;
+    }
     let mvx = nx, mvz = nz;
     let spd = this.speed * (this.buffT > 0 ? 1.45 : 1);
 
@@ -559,8 +598,12 @@ class Zombie {
       if (st.hasLOS) { st.lastX = p.pos.x; st.lastZ = p.pos.z; st.wallT = 0; }
 
       // 2) 始终朝玩家方位追（尸潮气味感知），无通行视线时叠加沿墙滑行分量
+      // 楼梯导航（v14.2）：有登梯目标时优先走向路标（刻意绕路，不做卡墙换向）
       let tx = nx, tz = nz;
-      if (!st.hasLOS) {
+      if (navSteer) {
+        tx = navSteer.x; tz = navSteer.z;
+        st.stuckT = 0; st.lastX = p.pos.x; st.lastZ = p.pos.z;
+      } else if (!st.hasLOS) {
         st.wallT += dt;
         // 侧向滑行：方向稳定避免抖动
         tx += -nz * st.side * 0.9;
@@ -621,7 +664,7 @@ class Zombie {
         this.chargeActive -= dt;
         spd = 9.5;
         mvx = this.chargeDx; mvz = this.chargeDz;
-        if (dist < cfg.attackRange && this.attackCd <= 0) {
+        if (dist < cfg.attackRange && vNear && this.attackCd <= 0) {
           if (p.alive) { p.takeDamage(this.damage * 1.5, game, this.pos); p.vel.x += this.chargeDx * 7; p.vel.z += this.chargeDz * 7; p.vel.y += 3; }
           this.chargeActive = 0;
           this.attackCd = cfg.attackRate;
@@ -719,7 +762,7 @@ class Zombie {
     if (cfg.tongue) {
       const T = cfg.tongue;
       this.tongueCd = (this.tongueCd === undefined ? rand(1, 2) : this.tongueCd) - dt;
-      if (this.tongueCd <= 0 && dist < T.range && dist > cfg.attackRange * 0.8 && p.alive) {
+      if (this.tongueCd <= 0 && dist < T.range && dist > cfg.attackRange * 0.8 && vNear && p.alive) {
         this.tongueCd = T.cd * rand(0.9, 1.15);
         this.windup = GAMECONFIG.combat.attackWindup * 0.8;
         this._tongueHit = { dmg: T.dmg, range: T.range };
@@ -821,7 +864,7 @@ class Zombie {
         if (this.bCharge > 0) {
           this.bCharge -= dt;
           spd = 10; mvx = this.bChargeDx; mvz = this.bChargeDz;
-          if (dist < cfg.attackRange + 0.8 && this.attackCd <= 0) {
+          if (dist < cfg.attackRange + 0.8 && vNear && this.attackCd <= 0) {
             if (p.alive) { p.takeDamage(this.damage * 1.5, game, this.pos); p.vel.x += this.bChargeDx * 9; p.vel.z += this.bChargeDz * 9; p.vel.y += 4; }
             this.bCharge = 0; this.attackCd = cfg.attackRate;
           }
@@ -976,7 +1019,7 @@ class Zombie {
         if (this.bLunge > 0) {
           this.bLunge -= dt;
           spd = A.lungeSpeed; mvx = this.lungeDx; mvz = this.lungeDz;
-          if (dist < cfg.attackRange + 0.6 && this.attackCd <= 0) {
+          if (dist < cfg.attackRange + 0.6 && vNear && this.attackCd <= 0) {
             if (p.alive) { p.takeDamage(this.damage * 1.6, game, this.pos); p.vel.x += this.lungeDx * 6; p.vel.z += this.lungeDz * 6; }
             this.bLunge = 0; this.attackCd = cfg.attackRate;
           }
@@ -1091,7 +1134,7 @@ class Zombie {
     this.attackCd -= dt;
     if (this.windup >= 0) {
       this.windup -= dt;
-      if (this.windup < 0 && p.alive && dist < cfg.attackRange + 0.55) {
+      if (this.windup < 0 && p.alive && dist < cfg.attackRange + 0.55 && vNear) {
         p.takeDamage(this.damage, game, this.pos);
         if (cfg.knockback) {
           p.vel.x += nx * cfg.knockback; p.vel.z += nz * cfg.knockback; p.vel.y += 3.2;
@@ -1116,17 +1159,17 @@ class Zombie {
         }
         this._tongueHit = null;
         // 连击（奔跑者/小丑/地狱犬/暴君）：概率立即补一记快速二连
-        if (cfg.combo && Math.random() < cfg.combo && p.alive && dist < cfg.attackRange + 0.55) {
+        if (cfg.combo && Math.random() < cfg.combo && p.alive && dist < cfg.attackRange + 0.55 && vNear) {
           this.windup = GAMECONFIG.combat.attackWindup * 0.55;
         }
       }
-    } else if (cfg.damage > 0 && dist < cfg.attackRange && this.attackCd <= 0 && this.stagger <= 0) {
+    } else if (cfg.damage > 0 && dist < cfg.attackRange && vNear && this.attackCd <= 0 && this.stagger <= 0) {
       this.windup = GAMECONFIG.combat.attackWindup;
       this.attackCd = cfg.attackRate * (this.boss && this.phase2Done ? GAMECONFIG.bossMech.rageRate : 1);
     }
 
     // 膨胀者近身自爆
-    if (cfg.explode && p.alive && dist < cfg.attackRange - 0.2) {
+    if (cfg.explode && p.alive && dist < cfg.attackRange - 0.2 && vNear) {
       this.takeDamage(999999, false, null, game);
       return;
     }

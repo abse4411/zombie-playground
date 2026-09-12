@@ -212,6 +212,21 @@ const HUD = {
     const gs = ENGINE.gpuStats();
     this.el.fps.textContent = `${Math.round(ENGINE._fpsEma)} FPS · ${gs.calls}dc`;
 
+    // 队友列表（联机）
+    if (typeof NET !== 'undefined' && NET.role !== 'off') {
+      const tl = document.getElementById('team-list');
+      const rows = [];
+      if (game.player) rows.push(`<div class="tm me"><b>${NET.myName}</b><span>${Math.ceil(game.player.hp)}HP</span></div>`);
+      for (const id in NET.remote) {
+        const r = NET.remote[id];
+        rows.push(`<div class="tm"><b>${r.name}</b><span>${Math.max(0, Math.round(r.hp))}HP</span></div>`);
+      }
+      if (rows.length > 1) {
+        tl.innerHTML = rows.join('');
+        tl.classList.remove('hidden');
+      } else tl.classList.add('hidden');
+    }
+
     // 准星随ADS收拢
     const ch = document.getElementById('crosshair');
     ch.style.opacity = (game.weapons.adsT > 0.85 && w && w.def.scope) ? '0' : '1';

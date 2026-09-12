@@ -427,6 +427,18 @@ button { font-family: var(--font); cursor: pointer; }
   transition: width .1s;
 }
 
+/* ---------- 联机队友列表 ---------- */
+#team-list {
+  position: absolute; left: 16px; top: 64px; z-index: 4;
+  display: flex; flex-direction: column; gap: 4px;
+}
+#team-list .tm {
+  padding: 4px 10px; background: rgba(0,0,0,.55); border-left: 3px solid var(--green);
+  font-size: 12px; color: #fff; text-shadow: 0 1px 2px #000;
+}
+#team-list .tm.me { border-left-color: var(--gold); }
+#team-list .tm span { color: var(--green); margin-left: 8px; }
+
 /* ---------- FPS ---------- */
 #fps-counter {
   position: absolute; left: 16px; top: 14px; font-size: 11px;

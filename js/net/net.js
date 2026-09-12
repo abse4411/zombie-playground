@@ -22,8 +22,12 @@ const NET = {
     };
     this.ws.onerror = () => { if (cb) { cb('无法连接服务器'); } };
     this.ws.onclose = () => {
-      if (this.role !== 'off') HUD.toast('⚠ 与服务器断开连接');
+      const wasInGame = this.inGame;
       this.reset();
+      if (wasInGame && typeof GAME !== 'undefined' && GAME.state === 'playing') {
+        HUD.toast('⚠ 与服务器断开连接，返回主菜单');
+        GAME.quitToMenu();
+      }
     };
     this.ws.onmessage = ev => {
       let msg;
@@ -106,6 +110,7 @@ const NET = {
     this._snapT = 1 / 12;
     const snap = {
       t: 'snap',
+      w: g.mode.wave || 0,
       players: [{
         id: this.myId, name: this.myName,
         x: +g.player.pos.x.toFixed(2), z: +g.player.pos.z.toFixed(2),
@@ -125,6 +130,10 @@ const NET = {
   applySnap(snap) {
     const g = GAME;
     if (!g.player || g.state !== 'playing') return;
+    // 波次显示同步（只前进不后退）
+    if (typeof snap.w === 'number' && g.mode.wave !== undefined && snap.w > g.mode.wave) {
+      g.mode.wave = snap.w;
+    }
     const seen = new Set();
     for (const s of snap.zombies) {
       seen.add(s.u);

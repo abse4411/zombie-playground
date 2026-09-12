@@ -41,7 +41,19 @@ class Game {
     this._loop = this._loop.bind(this);
   }
 
-  start() { requestAnimationFrame(this._loop); }
+  start() {
+    requestAnimationFrame(this._loop);
+    // Web Worker 时钟兜底：后台标签/最小化时以25fps继续驱动（联机房主切屏不掉线）
+    try {
+      const code = 'let id=null;onmessage=e=>{if(e.data==="start"&&!id)id=setInterval(()=>postMessage(1),40);if(e.data==="stop"&&id){clearInterval(id);id=null}};';
+      this._worker = new Worker(URL.createObjectURL(new Blob([code], { type: 'text/javascript' })));
+      this._worker.onmessage = () => {
+        // rAF 饥饿（后台标签/最小化/被节流）时由 Worker 兜底驱动
+        if (this.state === 'playing' && performance.now() - this._last > 66) this._frame(performance.now());
+      };
+      this._worker.postMessage('start');
+    } catch (e) { /* Worker 不可用则忽略 */ }
+  }
 
   /* ================= 开局 ================= */
   startHunt(mapId, diffKey) {
@@ -193,6 +205,12 @@ class Game {
   /* ================= 主循环 ================= */
   _loop(t) {
     requestAnimationFrame(this._loop);
+    this._frame(t);
+  }
+
+  /* 帧驱动（rAF + Worker时钟兜底共用）：后台标签/切屏时联机模拟不中断 */
+  _frame(t) {
+    if (t - this._last < 5) return;   // 去重：rAF与Worker双驱动
     // 帧率上限（移动端省电）：按渲染时间戳节流
     const cap = SAVE.data.settings.fpsCap;
     if (cap > 0 && t - (this._lastRender || 0) < 1000 / cap - 2) return;

@@ -15,7 +15,7 @@ const HUD = {
       hpFill: $('hp-fill'), hpText: $('hp-text'),
       armorFill: $('armor-fill'), armorText: $('armor-text'),
       moneyVal: $('money-val'), killsVal: $('kills-val'), headshotVal: $('headshot-val'),
-      throwFrag: $('throw-frag'), throwMolo: $('throw-molo'),
+      throwFrag: $('throw-frag'), throwMolo: $('throw-molo'), throwAttr: $('throw-attr'),
       weaponName: $('weapon-name'), ammoMag: $('ammo-mag'), ammoReserve: $('ammo-reserve'),
       slots: document.querySelectorAll('#slots-row .slot'),
       interact: $('interact-prompt'), reloadHint: $('reload-hint'),
@@ -199,9 +199,19 @@ const HUD = {
       mk.parentElement.classList.toggle('empty', p.medkits <= 0);
     }
 
-    // 武器
+    // 武器（v11.9：投掷槽显示投掷物名与数量）
     const w = game.weapons.w;
-    if (w) {
+    if (p.current === 'throw') {
+      const k = game.weapons._selKind();
+      if (k) {
+        const t = p.throwables[k];
+        this.el.weaponName.textContent = THROWABLES[k].name;
+        this.el.weaponName.className = '';
+        this.el.ammoMag.textContent = t.count;
+        this.el.ammoReserve.textContent = '/ ' + THROWABLES[k].max;
+        this.el.ammoMag.className = t.count === 0 ? 'empty' : '';
+      }
+    } else if (w) {
       this.el.weaponName.textContent = w.def.name + (w.lvl ? ` Lv.${w.lvl}` : '');
       this.el.weaponName.className = w.lvl ? ('wpn-lv' + w.lvl) : '';
       if (w.def.melee) {
@@ -216,6 +226,14 @@ const HUD = {
     }
     for (const s of this.el.slots) {
       const slot = s.dataset.slot;
+      if (slot === 'throw') {
+        // 投掷槽：显示当前选中投掷物与总持有数
+        const tk = game.weapons._selKind ? game.weapons._selKind() : null;
+        const total = tk ? p.throwables[tk].count : 0;
+        s.innerHTML = `<b>4</b> 💣 ${tk ? THROWABLES[tk].name : '—'}${tk ? ` ×${total}` : ''}`;
+        s.classList.toggle('active', p.current === 'throw');
+        continue;
+      }
       const inst = p.weapons[slot];
       const rackN = p.rack[slot] ? p.rack[slot].length : 0;
       s.innerHTML = `<b>${slot === 'primary' ? 1 : slot === 'secondary' ? 2 : 3}</b> ${inst ? inst.def.name : '—'}${rackN > 1 ? ` ×${rackN}` : ''}`;
@@ -223,6 +241,7 @@ const HUD = {
     }
     this.el.throwFrag.innerHTML = `💣 ×${p.throwables.frag.count} <i>${INPUT.touch ? '💣键' : '[G]'}</i>`;
     this.el.throwMolo.innerHTML = `🔥 ×${p.throwables.molotov.count} <i>${INPUT.touch ? '🧪键' : '[T]'}</i>`;
+    if (this.el.throwAttr) this.el.throwAttr.innerHTML = `🧲 ×${p.throwables.attractor.count} <i>${INPUT.touch ? '🧲键' : '[V]'}</i>`;
 
     // 模式信息
     if (game.mode) {

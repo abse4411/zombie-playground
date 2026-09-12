@@ -142,7 +142,7 @@ const LEVELUP = {
 
   pick(k) {
     const g = this.game, p = g.player;
-    if (k) {
+    if (k && k.id) {   // -1=跳过（✕按钮），仅收起面板
       p.rogueLevels[k.id] = (p.rogueLevels[k.id] || 0) + 1;
       k.apply(p);
       HUD.toast(`${k.icon} ${k.name} Lv.${p.rogueLevels[k.id]}`);

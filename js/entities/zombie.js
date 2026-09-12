@@ -403,7 +403,7 @@ class Zombie {
     // 燃烧 DoT（v7.9 火焰喷射器）：固定值持续烧灼，可刷新；再生者燃烧时暂停再生
     if (this.burnT > 0) {
       this.burnT -= dt;
-      this.hp -= this.burnDps * dt;
+      this.hp -= this.burnDps * (this.bossCfg && this.bossCfg.weakFire ? 1.5 : 1) * dt;
       if (this.type.regen) this._regenPause = Math.max(this._regenPause || 0, 0.5);
       if (!this._burnP || Math.random() < dt * 14) {
         this._burnP = 0.1;
@@ -614,7 +614,8 @@ class Zombie {
         if (this.summonT <= 0) {
           this.summonT = A.summonEvery * (phase2 ? 0.75 : 1);
           const n = (A.summonN || M.summonN) + (phase2 ? 1 : 0);
-          for (let i = 0; i < n; i++) game.spawner.spawnOne('runner');
+          const st = A.summonType || 'runner';
+          for (let i = 0; i < n; i++) game.spawner.spawnOne(st);
           HUD.killfeed('⚠ ' + this.displayName + ' 召唤了增援！', 'big');
         }
       }
@@ -683,6 +684,43 @@ class Zombie {
             p.takeDamage(12, game, this.pos);
             HUD.toast('🌀 震地冲击波——被掀翻了！');
           }
+        }
+      }
+      // 触须横扫（母体泵守护者 v8.0）：12m直线扇形击飞，前摇1s
+      if (A.tentacleEvery) {
+        this.tentCd = (this.tentCd === undefined ? rand(3, 5) : this.tentCd) - dt;
+        if (this.tentCd <= 0 && dist < 12 && dist > 2) {
+          this.tentCd = A.tentacleEvery * (phase2 ? 0.65 : 1);
+          this._tentTele = 1.0;    // 前摇计时
+          AUDIO.hordeHorn();
+          HUD.toast('⚠ 守护者蓄力触须横扫——侧移闪避！');
+        }
+      }
+      // 地刺矩阵（母体泵守护者 v8.0）：玩家位置为中心 NxN 红圈预告，1.2s后落刺
+      if (A.spikeEvery) {
+        this.spikeCd = (this.spikeCd === undefined ? rand(4, 6) : this.spikeCd) - dt;
+        if (this.spikeCd <= 0 && dist < 16) {
+          this.spikeCd = A.spikeEvery * (phase2 ? 0.65 : 1);
+          const N = (A.spikeN || 3) + (phase2 ? 1 : 0);
+          const cell = 1.6;
+          const cx = p.pos.x, cz = p.pos.z;
+          for (let ix = 0; ix < N; ix++) for (let iz = 0; iz < N; iz++) {
+            const sx = cx + (ix - (N - 1) / 2) * cell, sz = cz + (iz - (N - 1) / 2) * cell;
+            PARTICLES.spawn('smoke', sx, 0.1, sz, 3, { speed: 0.4, vy: 0.5, life: 1.1, color: [0.9, 0.2, 0.15], color2: [0.4, 0.05, 0.05] });
+          }
+          setTimeout(() => {
+            const g2 = window.GAME;
+            if (this.dead || !g2 || g2.state !== 'playing') return;
+            for (let ix = 0; ix < N; ix++) for (let iz = 0; iz < N; iz++) {
+              const sx = cx + (ix - (N - 1) / 2) * cell, sz = cz + (iz - (N - 1) / 2) * cell;
+              PARTICLES.dust(sx, 0.2, sz, 4);
+              if (g2.player.alive && dist2d(g2.player.pos.x, g2.player.pos.z, sx, sz) < 0.9) {
+                g2.player.takeDamage(A.spikeDmg || 18, g2, { x: sx, z: sz });
+              }
+            }
+            AUDIO.impact();
+          }, 1200);
+          this.spikeCd = A.spikeEvery;
         }
       }
       // 猛扑（方舟刽子手）：短促高速扑杀
@@ -779,6 +817,27 @@ class Zombie {
     } else {
       this._vy = 0;
       this.pos.y = gh;
+    }
+
+    // 触须横扫前摇结算（v8.0）
+    if (this._tentTele !== undefined && this._tentTele > 0) {
+      this._tentTele -= dt;
+      if (this._tentTele <= 0) {
+        const A2 = this.bossCfg ? this.bossCfg.attacks : {};
+        if (p.alive && dist < 12.5) {
+          const fw = Math.atan2(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
+          const bossYaw = Math.atan2(nx, nz);
+          const diff = Math.abs(((fw - bossYaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+          if (diff < 0.7) {   // 扇形±40°
+            p.takeDamage(A2.tentacleDmg || 40, game, this.pos);
+            p.vel.x += nx * 9; p.vel.z += nz * 9; p.vel.y += 4;
+            HUD.toast('💥 被触须横扫击飞！');
+          }
+        }
+        PARTICLES.dust(this.pos.x + nx * 5, 0.3, this.pos.z + nz * 5, 12);
+        AUDIO.impact();
+        this.stagger = Math.max(this.stagger, 0.6);   // 攻击后惩罚窗口
+      }
     }
 
     // ---- 攻击 ----

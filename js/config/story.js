@@ -361,7 +361,7 @@ const MISSIONS = [
       { at: 490, comp: { phantom: 5, licker: 5, runner: 16 } },
     ],
     eliteBrutes: [{ at: 220, count: 2 }, { at: 420, count: 2 }],
-    finaleBoss: { id: 'tyrant', at: 460 },
+    finaleBoss: { id: 'pumpWarden', at: 460 },   // 终章Boss：母体泵守护者（v8.0）
     intro: [
       { s: '灯塔', t: '欢迎回家，样本七号。你走过的每一条管道，都是我们铺好的路。' },
       { s: '林晚', t: '母体泵就在闸门后。炸掉它，赤潮就是无根之水。' },

@@ -148,6 +148,17 @@ const GAMECONFIG = {
       hp: 2400, speed: 3.1, dmg: 40, reward: 2400,
       attacks: { lungeEvery: 7, lungeSpeed: 12, summonEvery: 11, summonN: 3, frenzy: true },
     },
+     pumpWarden: {
+      name: '母体泵守护者', type: 'brute', scale: 2.5,
+      hp: 4800, speed: 2.0, dmg: 50, reward: 6000,
+      weakFire: true,
+      attacks: {
+        slamEvery: 7, slamDmg: 50, slamRadius: 7,
+        tentacleEvery: 6, tentacleDmg: 40,
+        spikeEvery: 9, spikeDmg: 18, spikeN: 3,
+        summonEvery: 14, summonN: 2, summonType: 'licker',
+      },
+    },
   },
   radar: { range: 55 },
   /* ---------- 感染体整体强化（v7.0）：攻击欲望/攻击距离/移速 ---------- */

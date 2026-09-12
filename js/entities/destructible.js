@@ -33,6 +33,14 @@ class Destructible {
   hit(dmg, game, byExplosion) {
     if (this.dead) return;
     this.hp -= dmg;
+    // 木制品受击晃动+木屑（v11.1）
+    if (['door', 'woodwall', 'fence', 'crate', 'barrier'].includes(this.kind)) {
+      PARTICLES.spawn('smoke', this.x + rand(-0.5, 0.5), this.cfg.h * 0.6, this.z + rand(-0.3, 0.3), 3,
+        { speed: 1.6, vy: 1.8, life: 0.5, color: [0.55, 0.42, 0.26], color2: [0.32, 0.24, 0.14] });
+      this.group.rotation.z = Math.sin(ENGINE.time * 40) * 0.03;
+      clearTimeout(this._wobT);
+      this._wobT = setTimeout(() => { this.group.rotation.z = 0; }, 90);
+    }
     if (this.kind === 'barrel') {
       // 受击闪红
       this.mesh.material.color.setHex(0xff6644);
@@ -82,6 +90,27 @@ class Destructible {
 }
 
 const DESTRUCTIBLES = {
+  door: {
+    hp: 150, w: 2.0, h: 2.8, outline: true, door: true,
+    geo: new THREE.BoxGeometry(2.0, 2.8, 0.22),
+    mat: () => {
+      const t = ART.panel(0x6a4a2e).clone(); t.needsUpdate = true; t.repeat.set(1, 1.4);
+      return new THREE.MeshStandardMaterial({ map: t, roughness: 0.85, metalness: 0.05 });
+    },
+  },
+  woodwall: {
+    hp: 200, w: 3.2, h: 2.4, outline: true,
+    geo: new THREE.BoxGeometry(3.2, 2.4, 0.3),
+    mat: () => {
+      const t = ART.panel(0x5c4428).clone(); t.needsUpdate = true; t.repeat.set(1.6, 1.2);
+      return new THREE.MeshStandardMaterial({ map: t, roughness: 0.9, metalness: 0 });
+    },
+  },
+  fence: {
+    hp: 80, w: 2.6, h: 1.4, outline: true,
+    geo: new THREE.BoxGeometry(2.6, 1.4, 0.14),
+    mat: () => new THREE.MeshStandardMaterial({ color: 0x74603e, roughness: 0.9, metalness: 0, transparent: true, opacity: 0.92 }),
+  },
   reactor: {
     hp: 260, w: 2.4, h: 3.6, outline: true,
     geo: new THREE.CylinderGeometry(1.1, 1.3, 3.6, 8),

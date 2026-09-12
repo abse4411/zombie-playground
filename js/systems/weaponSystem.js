@@ -503,6 +503,16 @@ class WeaponSystem {
       DMGNUM.spawn(z.pos.x, 1.5 * z.group.scale.x, z.pos.z, Math.round(dmg), heavy);
       hitAny = true;
     }
+    // 近战破坏场景物（v11.1）：范围内可破坏物受近战伤害（独立于丧尸命中）
+    if (game.destructibles) {
+      for (const d of game.destructibles) {
+        if (d.dead) continue;
+        const dd = dist2d(d.x, d.z, p.pos.x, p.pos.z);
+        const ddx = d.x - p.pos.x, ddz = d.z - p.pos.z;
+        const dl = Math.hypot(ddx, ddz) || 1;
+        if (dd < range + 0.6 && (ddx * fx + ddz * fz) / dl > Math.cos(def.arc + 0.5)) d.hit(dmg, game, true);
+      }
+    }
     if (hitAny) {
       game.stats.hits++;
       HUD.hitmarker(heavy);

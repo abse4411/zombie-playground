@@ -6,20 +6,26 @@
  *   溢出入背包（storage item 条目），背包也满则无法拾取（留在地上）
  * - 玩家丢弃物带拾取延迟（防自动拾取瞬间回吸）
  * ============================================================ */
+/* 掉落表（v19.7 掉落经济重排）：
+ * - 整体掉率下调（空掉落 12→22），且越贵重/越稀有的物品权重越低
+ * - 实际掉率再乘难度系数：普通×0.7 / 困难×0.85 / 噩梦×1.0（越难掉得越多）
+ * - 投掷物掉落数量 2 → 1 */
 const LOOT_TABLE = [
-  { id: 'cash',   weight: 30, rarity: 0 },   // 现金包
+  { id: 'cash',   weight: 26, rarity: 0 },   // 现金包（最常见）
   { id: 'ammo',   weight: 20, rarity: 0 },   // 弹药盒（当前武器备弹+35%）
-  { id: 'medkit', weight: 12, rarity: 1 },   // 医疗包
-  { id: 'frag',   weight: 8,  rarity: 1 },   // 手雷×2
-  { id: 'molo',   weight: 6,  rarity: 1 },   // 燃烧瓶×2
-  { id: 'armorplate', weight: 3, rarity: 1 },   // 护甲板（v18.2）
-  { id: 'ammop',  weight: 2, rarity: 1 },   // 主武器弹药袋：拾取即补满主武器（v19.6）
-  { id: 'ammos',  weight: 2, rarity: 1 },   // 副武器弹药袋：拾取即补满副武器（v19.6）
-  { id: 'adrenaline', weight: 2, rarity: 2 },   // 肾上腺素（v18.2）
-  { id: 'big',    weight: 4,  rarity: 3 },   // 大奖：现金×5
-  { id: 'weapon', weight: 6,  rarity: 2 },   // 稀有武器掉落（v9.5）
-  { id: 'none',   weight: 12, rarity: -1 },  // 显式空掉落
+  { id: 'medkit', weight: 9,  rarity: 1 },   // 医疗包
+  { id: 'frag',   weight: 5,  rarity: 1 },   // 手雷×1
+  { id: 'molo',   weight: 4,  rarity: 1 },   // 燃烧瓶×1
+  { id: 'armorplate', weight: 2,  rarity: 1 },   // 护甲板（贵）
+  { id: 'ammop',  weight: 1.6, rarity: 1 },  // 主武器弹药袋（贵）
+  { id: 'ammos',  weight: 1.6, rarity: 1 },  // 副武器弹药袋（贵）
+  { id: 'adrenaline', weight: 1.2, rarity: 2 },   // 肾上腺素（稀有）
+  { id: 'big',    weight: 2.5, rarity: 3 },  // 大奖：现金×5（史诗）
+  { id: 'weapon', weight: 3,  rarity: 2 },   // 稀有武器掉落（稀有）
+  { id: 'none',   weight: 22, rarity: -1 },  // 显式空掉落（普通难度约29%不掉落）
 ];
+/* 难度掉落系数（v19.7）：难度越高掉落越多 */
+const LOOT_DIFF_MULT = { normal: 0.7, hard: 0.85, nightmare: 1.0 };
 /* 武器掉落稀有度池（v9.5）：白60/绿25/蓝10/紫5 → 对应商城价格档 */
 const WEAPON_DROP_TIERS = [
   { rarity: 0, priceRange: [0, 1600], chance: 0.60, lvl: 0 },
@@ -171,7 +177,7 @@ class LootDrop {
   /* opts: { inst(武器实例), rarity, amount(拾取数量,默认2), delay(拾取延迟秒), toss(抛落动画) } */
   constructor(kind, x, z, value, opts = {}) {
     this.kind = kind; this.value = value || 0;
-    this.amount = opts.amount || 2;
+    this.amount = opts.amount || 1;
     this.weaponInst = opts.inst || null;
     this.pickupDelay = opts.delay || 0;
     this._tossT = opts.toss ? 0.4 : 0;
@@ -477,9 +483,13 @@ function spawnGroundDrop(game, kind, x, z, opts = {}) {
   return drop;
 }
 
-// 掷掉落表（击杀时调用；精英/Boss提高大奖权重）
+// 掷掉落表（击杀时调用；精英/Boss提高大奖权重；难度越高掉落越多 v19.7）
 function rollLoot(z, game) {
   let table = LOOT_TABLE;
+  // 难度系数：普通×0.7 / 困难×0.85 / 噩梦×1.0（乘所有非空掉落权重，空掉落不变）
+  const diffKey = (game && game.mode && game.mode.diffKey) || (game && game._missionDiff) || 'normal';
+  const diffMult = LOOT_DIFF_MULT[diffKey] !== undefined ? LOOT_DIFF_MULT[diffKey] : 0.7;
+  table = table.map(l => ({ ...l, weight: l.id === 'none' ? l.weight : l.weight * diffMult }));
   // 搜刮者 Perk：压缩空掉落权重
   const sc = game && game.player ? (game.player.perks.scavenger || 0) : 0;
   if (sc > 0) {

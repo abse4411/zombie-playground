@@ -93,17 +93,25 @@ const SHOPUI = {
             });
           }
           row.querySelector('.si-line-top').appendChild(lbtn);   // 按钮放进首行右侧（v18.3 防竖排挤压）
+          // 升级预览（v18.4）：悬浮/点击升级项 → 面板只显示受影响的属性变化
+          const showPreview = (e) => {
+            if (e && e.target && e.target.closest && e.target.closest('button')) return;   // 按钮点击走购买
+            this.renderWPreview(item.inst, L.upId, L.name);
+          };
+          row.addEventListener('mouseenter', () => this.renderWPreview(item.inst, L.upId, L.name));
+          row.addEventListener('click', showPreview);
           box.appendChild(row);
         }
         card.appendChild(box);
         this.els.items.appendChild(card);
-        // 属性面板联动（v18.3）：点卡片=展示模型+属性变化
+        // 属性面板联动（v18.3）：点卡片=展示模型+属性变化；移出卡片=恢复当前属性
         const showBench = () => {
           GUNPREVIEW.show(item.def, item.name);
           this.renderWStats(item.inst);
         };
         card.addEventListener('click', showBench);
         card.addEventListener('mouseenter', showBench);
+        card.addEventListener('mouseleave', () => this.renderWStats(item.inst));
         continue;
       }
 
@@ -168,5 +176,22 @@ const SHOPUI = {
         const cur = r.better === 0 ? `<b>${r.base}</b>` : `<b>${r.cur}</b> <i class="${cls}">${arrow}</i>`;
         return `<div class="wst-row"><span class="wst-k">${r.k}</span><span class="wst-v"><i class="wst-base">${r.base}</i>→ ${cur}</span></div>`;
       }).join('') + `</div>`;
+  },
+
+  /* 升级预览（v18.4）：悬浮/点击升级项 → 只显示该级会变化的属性 */
+  renderWPreview(inst, upId, lineName) {
+    const el = document.getElementById('gp-stats');
+    if (!el || !inst) return;
+    if (typeof weaponPreviewRows !== 'function') return;
+    const rows = weaponPreviewRows(inst, upId);
+    el.classList.remove('hidden');
+    el.innerHTML = `<div class="wst-head">升级预览 · <i>${lineName}</i>（下一级）</div>` +
+      (rows.length
+        ? `<div class="wst-grid">` + rows.map(r => {
+          const arrow = r.better > 0 ? '↑' : r.better < 0 ? '↓' : '＝';
+          const cls = r.better > 0 ? 'up' : r.better < 0 ? 'down' : 'same';
+          return `<div class="wst-row"><span class="wst-k">${r.k}</span><span class="wst-v"><i class="wst-base">${r.cur}</i>→ <b>${r.next}</b> <i class="${cls}">${arrow}</i></span></div>`;
+        }).join('') + `</div>`
+        : `<div class="wst-head">该升级不影响面板数值</div>`);
   },
 };

@@ -10,18 +10,18 @@
  * 3. 术语区分：弹匣容量=单个弹匣装弹数；备用弹药=弹匣之外携带的子弹总量
  */
 const W_UPGRADES = {
-  dmg:  { name: '威力强化',  max: 5, gain: '伤害 +8%', drawback: '', desc: '重装药弹头，单发威力更高。',
-          price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.42 * (lv + 1)) },
-  mag:  { name: '扩容弹匣',  max: 3, gain: '弹匣容量 +20%（单弹匣装弹数）', drawback: '换弹时间 +6%（长弹匣换装更慢）', desc: '加长弹匣，装得更多但换起来更慢。',
-          price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.22 * (lv + 1)) },
-  rel:  { name: '快速换弹',  max: 4, gain: '换弹时间 -10%', drawback: '', desc: '训练有素的换弹动作，快而不掉弹。',
-          price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.38 * (lv + 1)) },
-  rof:  { name: '射速强化',  max: 3, gain: '射速 +7%', drawback: '后坐力 +6%（连发更难压枪）', desc: '优化自动机循环，射速更快、枪口跳得更凶。',
+  dmg:  { name: '威力强化',  max: 5, gain: '伤害 +6%/级', drawback: '', desc: '重装药弹头，单发威力更高。',
+          price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.30 * (lv + 1)) },
+  mag:  { name: '扩容弹匣',  max: 5, gain: '弹匣容量 +2 发/级（单弹匣装弹数）', drawback: '换弹时间 +6%/级（长弹匣换装更慢）', desc: '加长弹匣，每次多装 2 发，换起来也稍慢一点。',
+          price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.16 * (lv + 1)) },
+  rel:  { name: '快速换弹',  max: 4, gain: '换弹时间 -0.08 秒/级', drawback: '', desc: '训练有素的换弹动作，快而不掉弹。',
           price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.26 * (lv + 1)) },
-  acc:  { name: '精准枪管',  max: 3, gain: '散布 -12%', drawback: '武器更重：移速 -1.5%（精加工重枪管）', desc: '浮置式重枪管，精度更高、分量也更足。',
+  rof:  { name: '射速强化',  max: 3, gain: '射速 +5%/级', drawback: '后坐力 +6%/级（连发更难压枪）', desc: '优化自动机循环，射速更快、枪口跳得更凶。',
           price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.22 * (lv + 1)) },
-  res:  { name: '备用弹药',  max: 2, gain: '备用弹药 +25%（不改变弹匣容量）', drawback: '携行更重：移速 -1%（多背的弹鼓有分量）', desc: '多带弹鼓/弹链袋——备用子弹总量更多，单弹匣不变。',
+  acc:  { name: '精准枪管',  max: 3, gain: '散布 -10%/级', drawback: '武器更重：移速 -1.5%/级（精加工重枪管）', desc: '浮置式重枪管，精度更高、分量也更足。',
           price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.20 * (lv + 1)) },
+  res:  { name: '备用弹药',  max: 3, gain: '备用弹药 +30 发/级（不改变弹匣容量）', drawback: '携行更重：移速 -1%/级（多背的弹鼓有分量）', desc: '多带弹鼓/弹链袋——备用子弹总量更多，单弹匣不变。',
+          price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.16 * (lv + 1)) },
 };
 
 /* ---------- 武器特性专属升级线（v11.11 → v18.3 代价合理化）：按 def 特征自动附加 ---------- */
@@ -91,6 +91,17 @@ function weaponStatRows(inst) {
   return rows;
 }
 
+/* ---------- 升级预览（v18.4）：指定升级线再升一级后，只返回受影响的属性行 ----------
+ * 返回 [{k, cur(当前), next(预览), better}] —— better: 1=提升 / -1=下降 */
+function weaponPreviewRows(inst, upId) {
+  const tmp = Object.create(inst);   // 原型链继承 def/方法，仅覆写 upgrades
+  tmp.upgrades = Object.assign({}, inst.upgrades, { [upId]: ((inst.upgrades && inst.upgrades[upId]) || 0) + 1 });
+  const cur = weaponStatRows(inst);
+  const nxt = weaponStatRows(tmp);
+  return cur.map((r, i) => ({ k: r.k, cur: r.cur, next: nxt[i].cur, better: nxt[i].better }))
+    .filter(r => r.cur !== r.next);
+}
+
 /* 道具槽种类顺序（v18.1）：数字键5循环切换 */
 const ITEM_KINDS = ['medkit', 'armorplate', 'ammobag', 'adrenaline'];
 
@@ -116,34 +127,35 @@ class WeaponInstance {
   get magSize() {
     if (!this.def.mag) return 0;   // 近战无弹匣概念
     let m = this.def.mag * (1 + 0.2 * this.lvl);   // 旧总等级仍生效（兼容存档）
-    if (this.upgrades.mag) m *= 1 + 0.2 * this.upgrades.mag;
+    if (this.upgrades.mag) m += 2 * this.upgrades.mag;   // v18.4：小步长，每级 +2 发
     return Math.max(1, Math.round(m));
   }
   get dmgMult() {
     let d = 1 + 0.15 * this.lvl;
-    if (this.upgrades.dmg) d *= 1 + 0.08 * this.upgrades.dmg;
+    if (this.upgrades.dmg) d *= 1 + 0.06 * this.upgrades.dmg;   // v18.4：每级 +6%
     return d;
   }
   get reloadTimeMult() {
     let r = 1;
-    if (this.upgrades.rel) r *= 1 - 0.10 * this.upgrades.rel;
+    if (this.upgrades.rel) r = Math.max(0.4, r - 0.08 * this.upgrades.rel);   // v18.4：每级 -0.08 秒（按基准1s折算）
     if (this.upgrades.mag) r *= 1 + 0.06 * this.upgrades.mag;   // 长弹匣换装更慢（v18.3 唯一保留的换弹代价）
     return r;
   }
   get rpmMult() {
     let r = 1;
-    if (this.upgrades.rof) r *= 1 + 0.07 * this.upgrades.rof;
+    if (this.upgrades.rof) r *= 1 + 0.05 * this.upgrades.rof;   // v18.4：每级 +5%
     if (this.def.melee) r *= 1 - 0.04 * (this.upgrades.rng || 0);   // 长握柄挥速代价（v18.3：近战威力不再降攻速）
     return r;
   }
   get spreadMult() {
     let s = 1;
-    if (this.upgrades.acc) s *= 1 - 0.12 * this.upgrades.acc;
+    if (this.upgrades.acc) s *= 1 - 0.10 * this.upgrades.acc;   // v18.4：每级 -10%
     return s;
   }
   get reserveMaxMult() {
+    // v18.4：每级 +30 发（等效乘区，保持调用方兼容）
     let r = 1;
-    if (this.upgrades.res) r *= 1 + 0.25 * this.upgrades.res;
+    if (this.upgrades.res && this.def.reserve) r += 30 * this.upgrades.res / this.def.reserve;
     return r;
   }
   // 后坐力乘区（v18.3：射速强化/霰弹弹丸密度的现实代价）
@@ -485,8 +497,9 @@ class WeaponSystem {
       }
     } else {
       const wantFire = def.auto ? INPUT.lmb : INPUT.consumeLmb();
-      const galeBoost = this.p.synGale && this.p.moving ? 1.25 : 1;   // 飓风枪手（v10.9）
-      if (wantFire && this.switchT <= 0 && this.reloadT <= 0 && this.cooldown <= 60 / (def.rpm * (this.p.rogueRof || 1) * (w.rpmMult || 1) * galeBoost)) {
+      // 开火门槛 = 冷却归零（v18.4 修复：旧条件 cooldown<=单发间隔 在递减一帧后恒成立，
+      // 导致全自动武器按帧率开火——标称射速低 步枪实际射速远超面板值）
+      if (wantFire && this.switchT <= 0 && this.reloadT <= 0 && this.cooldown <= 0) {
         if (w.mag <= 0) {
           if (this._emptyCd <= 0) { AUDIO.emptyClick(); this._emptyCd = 0.3; if (SAVE.data.settings.autoReload !== false) this._startReload(); }
         } else {
@@ -511,9 +524,14 @@ class WeaponSystem {
   }
 
   /* ---------- 开火与弹道（多弹丸聚合伤害 + 击退） ---------- */
+  // 单发间隔（v18.4 统一计算：飓风枪手移速加成在此生效）
+  fireInterval(def, w) {
+    const gale = (this.p.synGale && this.p.moving) ? 1.25 : 1;   // 飓风枪手（v10.9）
+    return 60 / (def.rpm * (this.p.rogueRof || 1) * (w.rpmMult || 1) * gale);
+  }
   _fire(def, w, game) {
     w.mag--;
-    this.cooldown = 60 / (def.rpm * (this.p.rogueRof || 1) * (w.rpmMult || 1));
+    this.cooldown = this.fireInterval(def, w);
     AUDIO.shot(def.sound.freq, def.sound.dur, def.sound.boom);
     this.recoilKick = Math.min(1, this.recoilKick + 0.55);
     const kick = def.recoil * (w.recoilMult || 1) * rand(0.7, 1.3);   // 后坐力乘区（v18.3：射速/弹丸密度代价）

@@ -297,20 +297,16 @@ class LootDrop {
     this.box.position.y = baseY;
     this.beam.material.opacity = 0.22 + Math.sin(ENGINE.time * 3 + this.phase) * 0.08;
     if (this.life < 4) this.group.visible = Math.sin(ENGINE.time * 8) > -0.4; // 临消闪烁
-    // 拾取规则（v18.2 重设计）：
-    // - 武器：不磁吸、不自动拾——原地躺着，按 E 亲手拾取（触发替换规则）
-    // - 消耗品（现金/弹药/大奖/计数未满的道具与投掷物）：磁吸+触碰自动拾取
-    // - 道具计数已满（将溢入背包）/投掷物已满：不自动，磁吸跟随，按 E 收取
+    // 拾取规则（v19.1）：
+    // - 武器：原地躺着不移动，按 E 亲手拾取（触发替换规则）
+    // - 可自动拾取物（现金/弹药/计数未满的道具与投掷物）：不再磁吸拖拽，
+    //   靠近 1.1m 内直接收入背包
+    // - 道具计数已满（将溢入背包）/投掷物已满：需按 E 收取
     // - 双满（计数满+背包满）：完全不可拾，列表红字提示
     const p = game.player.pos;
     const d = dist2d(this.group.position.x, this.group.position.z, p.x, p.z);
     if (!this.canCollect(game).ok) return;
-    if (!this.weaponInst && d < 2.6) {
-      const k = clamp(dt * 6, 0, 1);
-      this.group.position.x = lerp(this.group.position.x, p.x, k);
-      this.group.position.z = lerp(this.group.position.z, p.z, k);
-    }
-    if (this.autoCollects(game) && d < 0.85) this.collect(game, true);
+    if (this.autoCollects(game) && d < 1.1) this.collect(game, true);
   }
 
   /* 拾取入口（自动/E键共用）。picked=false 为过期回收。返回 'collected' | 'blocked' */

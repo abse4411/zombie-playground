@@ -1,10 +1,13 @@
 /* ============================================================
- * 支援道具系统（v16.3/v16.4）—— 战机轰炸 / 空投补给 / 攻击无人机 / 哨戒机枪
+ * 支援道具系统（v16.3 → v19.1 特效与数值全面升级）
  * 调研依据（docs/research/v16.1-mutation-support-items.md）：
  * - COD killstreak 共性结构：玩家指定 → 延迟 → 区域性效果（空袭/空投）
- * - Helldivers 2：投送前摇 + 真实友军伤害（高风险高收益）
+ * - Helldivers 2：投送前摇 + 真实友军伤害（高风险高收益）+ 降落伞空投
  * - TF2 哨戒塔：锥形索敌、弹药封顶、打完报废（一次性战术资产）
  * - 伴随无人机：跟随偏移悬停、自动索敌、持续时间限制
+ * v19.1：空袭改为轰炸机临空投弹的完整动画（飞机模型/航弹下落/落点爆炸）；
+ * 空投补给带降落伞缓降与落点标记；哨戒机枪弹尽冒烟报废后消散；
+ * 全部支援效果数值提升（范围/持续/火力）。
  * 工程要点：全部挂 game.deployments 由游戏循环驱动（暂停安全），不用裸 setTimeout
  * ============================================================ */
 
@@ -26,54 +29,155 @@ const SUPPORTFX = {
   },
 };
 
-/* ---------- 战机轰炸（v16.3）：面向玩家的40m×8m弹幕带 ----------
- * 2.5s 红色警示带闪烁（可逃离）→ 8 枚沿线形投弹，含友军伤害 */
+/* ---------- 轰炸机模型（v19.1）：双发喷气式，机头朝本地 +z ---------- */
+function buildBomber() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshLambertMaterial({ color: 0x46505a });
+  const dark = new THREE.MeshLambertMaterial({ color: 0x333b42 });
+  // 机身
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.62, 6.4, 8), mat);
+  body.rotation.x = Math.PI / 2;
+  g.add(body);
+  // 机鼻锥（+z 前方）
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.5, 8), dark);
+  nose.rotation.x = Math.PI / 2;
+  nose.position.z = 3.9;
+  g.add(nose);
+  // 座舱
+  const cockpit = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.22, 1.3),
+    new THREE.MeshLambertMaterial({ color: 0x8ab8d8, transparent: true, opacity: 0.85 }));
+  cockpit.position.set(0, 0.42, 1.9);
+  g.add(cockpit);
+  // 主翼（微上反角）
+  const wing = new THREE.Mesh(new THREE.BoxGeometry(9.4, 0.12, 1.8), mat);
+  wing.position.set(0, 0.1, 0.3);
+  g.add(wing);
+  // 双发吊舱 + 尾喷焰
+  for (const sx of [-1, 1]) {
+    const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 1.4, 8), dark);
+    pod.rotation.x = Math.PI / 2;
+    pod.position.set(sx * 2.5, -0.14, 0.4);
+    g.add(pod);
+    const glow = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.16, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffa040 }));
+    glow.rotation.x = Math.PI / 2;
+    glow.position.set(sx * 2.5, -0.14, 1.25);
+    g.add(glow);
+  }
+  // 尾翼
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.1, 0.95), mat);
+  tail.position.set(0, 0.32, 2.9);
+  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.25, 1.0), mat);
+  fin.position.set(0, 0.72, 3.0);
+  g.add(tail, fin);
+  return g;
+}
+
+/* ---------- 航弹模型 ---------- */
+function buildBomb() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.5, 6),
+    new THREE.MeshLambertMaterial({ color: 0x3d4a3a }));
+  g.add(body);
+  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.02),
+    new THREE.MeshLambertMaterial({ color: 0x2c332c }));
+  fin.position.z = -0.26;
+  g.add(fin);
+  return g;
+}
+
+/* ---------- 战机轰炸（v19.1 动画化）----------
+ * 2.2s 红色警示带闪烁 → 轰炸机从弹带前端临空，沿带投下 12 枚航弹
+ * （航弹带尾烟抛物线下落、触地爆炸），含友军伤害 */
 class AirstrikeRun {
   constructor(game) {
     const p = game.player;
-    this.t = 0; this.bombsLeft = 8; this.bombT = 0; this.dead = false;
+    this.t = 0; this.warnT = 2.2; this.dead = false;
     const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
     this.cx = p.pos.x + fx * 22; this.cz = p.pos.z + fz * 22;   // 弹带中心22m前方
     this.dirX = fx; this.dirZ = fz;
-    // 警示带：红色半透明平面（长度沿本地X）
+    this.speed = 26; this.alt = 26;
+    // 警示带：红色半透明平面（52m × 10m）
     const g = new THREE.Group();
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(40, 8),
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(52, 10),
       new THREE.MeshBasicMaterial({ color: 0xff3020, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false }));
     plane.rotation.x = -Math.PI / 2;
     plane.position.y = 0.07;
     g.add(plane);
     g.position.set(this.cx, 0, this.cz);
-    // 长轴(本地X)对齐弹幕方向
     g.rotation.y = Math.atan2(-fz, fx);
     this.group = g;
     this.warnMat = plane.material;
     ENGINE.scene.add(g);
-    HUD.toast('✈ 战机已出动——2.5秒后覆盖前方弹幕带，快离开红色区域！');
+    // 轰炸机：从弹带起点后方 46m 处进场
+    this.px = this.cx - this.dirX * 46;
+    this.pz = this.cz - this.dirZ * 46;
+    this.plane = buildBomber();
+    this.plane.position.set(this.px, this.alt, this.pz);
+    ENGINE.scene.add(this.plane);
+    this.planeSpawnT = 0;   // 进场计时（投弹节拍用）
+    this.dropGap = 0.165; this.dropT = 0; this.dropped = 0; this.drops = 12;
+    this.bombs = [];
+    HUD.toast('✈ 轰炸机已进场——2.2秒后覆盖前方弹幕带，快离开红色区域！');
     AUDIO.waveHorn();
   }
 
   update(dt, game) {
     this.t += dt;
-    if (this.t < 2.5) {
-      this.warnMat.opacity = 0.16 + 0.14 * (Math.sin(this.t * 14) > 0 ? 1 : 0);   // 危险闪烁
+    // 阶段1：警示带闪烁
+    if (this.t < this.warnT) {
+      this.warnMat.opacity = 0.16 + 0.14 * (Math.sin(this.t * 14) > 0 ? 1 : 0);
       return;
     }
-    this.warnMat.opacity = 0.34;
-    this.bombT -= dt;
-    if (this.bombsLeft > 0 && this.bombT <= 0) {
-      this.bombT = 0.22;
-      this.bombsLeft--;
-      const i = this.bombsLeft;
-      const s = -18 + (7 - i) * (36 / 7);           // 沿弹带 -18m → +18m
-      const lat = (i % 2 ? 1 : -1) * rand(0.8, 3);  // 横向抖动
-      const bx = this.cx + this.dirX * s - this.dirZ * lat;
-      const bz = this.cz + this.dirZ * s + this.dirX * lat;
-      explodeGrenade(game, bx, 0.4, bz, { damage: 150, radius: 5.5, selfMult: 1 });
-      PARTICLES.explosion(bx, 1.2, bz);
-      ENGINE.shake(0.35);
-      AUDIO.explode(dist2d(bx, bz, game.player.pos.x, game.player.pos.z));
+    this.warnMat.opacity = 0.3;
+    // 阶段2：轰炸机飞行投弹
+    this.planeSpawnT += dt;
+    this.px += this.dirX * this.speed * dt;
+    this.pz += this.dirZ * this.speed * dt;
+    this.plane.position.set(this.px, this.alt, this.pz);
+    const lookX = this.px + this.dirX * 10, lookZ = this.pz + this.dirZ * 10;
+    this.plane.lookAt(lookX, this.alt, lookZ);
+    // 投弹节拍：进场即开始，按 0.165s 间隔投满 12 枚（覆盖整条弹带）
+    this.dropT -= dt;
+    if (this.dropped < this.drops && this.planeSpawnT >= 0.15 && this.dropT <= 0) {
+      this.dropT = this.dropGap;
+      this.dropped++;
+      const lat = rand(-3.4, 3.4);   // 横向散布（覆盖10m带宽）
+      const bx = this.px - this.dirZ * lat;
+      const bz = this.pz + this.dirX * lat;
+      const mesh = buildBomb();
+      mesh.position.set(bx, this.alt - 0.9, bz);
+      ENGINE.scene.add(mesh);
+      this.bombs.push({
+        x: bx, y: this.alt - 0.9, z: bz,
+        vx: this.dirX * this.speed * 0.55, vz: this.dirZ * this.speed * 0.55, vy: -2,
+        mesh, trailT: 0,
+      });
+      AUDIO.shot(220, 0.05, 0.2, 20);
     }
-    if (this.bombsLeft <= 0 && this.t > 2.5 + 8 * 0.22 + 0.7) {
+    // 航弹下落与触地爆炸
+    for (const b of this.bombs) {
+      b.vy -= 26 * dt;
+      b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
+      b.mesh.position.set(b.x, b.y, b.z);
+      b.mesh.rotation.x += dt * 2.4; b.mesh.rotation.z += dt * 1.7;
+      b.trailT -= dt;
+      if (b.trailT <= 0) {   // 尾烟
+        b.trailT = 0.06;
+        PARTICLES.spawn('spark', b.x, b.y, b.z, 1,
+          { speed: 0.35, vy: 0.25, life: 0.35, color: [0.75, 0.75, 0.75], color2: [0.3, 0.3, 0.3] });
+      }
+      if (b.y <= 0.4) {
+        b.dead = true;
+        explodeGrenade(game, b.x, 0.4, b.z, { damage: 180, radius: 6.2, selfMult: 1 });
+        PARTICLES.explosion(b.x, 1.2, b.z);
+        ENGINE.shake(0.38);
+        AUDIO.explode(dist2d(b.x, b.z, game.player.pos.x, game.player.pos.z));
+      }
+    }
+    this.bombs = this.bombs.filter(b => !b.dead);
+    // 阶段3：投弹完毕、航弹清空、飞机飞远 → 结束
+    if (this.dropped >= this.drops && this.bombs.length === 0 && this.planeSpawnT > 4.6) {
       this.dead = true;
       this.warnMat.opacity = 0;
     }
@@ -82,22 +186,28 @@ class AirstrikeRun {
   dispose() {
     ENGINE.scene.remove(this.group);
     this.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+    ENGINE.scene.remove(this.plane);
+    this.plane.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+    for (const b of this.bombs) {
+      ENGINE.scene.remove(b.mesh);
+      b.mesh.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+    }
   }
 }
 
-/* ---------- 空投补给（v16.3）：箱体从天而降 → 全弹药+医疗×2+$600 ----------
- * 落点3米内有砸落伤害（Helldivers 式友伤风险） */
+/* ---------- 空投补给（v19.1：降落伞缓降 + 落点标记 + 内容升级）----------
+ * 全弹药 + 医疗×3 + 手雷×2/燃烧瓶×1 + $800；落点3米内砸落伤害 */
 class SupportCrate {
   constructor(game) {
     const p = game.player;
-    this.dead = false; this.landed = false;
+    this.dead = false; this.landed = false; this.t = 0;
     this.x = p.pos.x + rand(-1.5, 1.5);
     this.z = p.pos.z + rand(-1.5, 1.5);
     const S = ENGINE.mapDef.size - 2;
     this.x = clamp(this.x, -S, S); this.z = clamp(this.z, -S, S);
-    this.vy = -14;
-    // 箱体：橄榄木箱 + 红白识别条
+    this.vy = -9;
     const g = new THREE.Group();
+    // 箱体：橄榄木箱 + 红白识别条
     const box = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.9, 1.0),
       new THREE.MeshLambertMaterial({ color: 0x5a6648 }));
     const band = new THREE.Mesh(new THREE.BoxGeometry(1.18, 0.22, 1.02),
@@ -107,23 +217,50 @@ class SupportCrate {
       new THREE.MeshLambertMaterial({ color: 0xe8e2d0 }));
     top.position.y = 0.5;
     g.add(box, band, top);
+    // 降落伞（v19.1）：伞衣 + 四根伞绳
+    this.canopy = new THREE.Group();
+    const cloth = new THREE.Mesh(
+      new THREE.SphereGeometry(1.5, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+      new THREE.MeshLambertMaterial({ color: 0xd8d2c0, side: THREE.DoubleSide }));
+    this.canopy.add(cloth);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.7, 4),
+        new THREE.MeshLambertMaterial({ color: 0xc9c2ac }));
+      rope.position.set(sx * 0.5, 1.0, sz * 0.42);
+      rope.rotation.z = sx * 0.28; rope.rotation.x = -sz * 0.24;
+      this.canopy.add(rope);
+    }
+    this.canopy.position.y = 0.6;
+    g.add(this.canopy);
+    // 落点标记圈（红白虚线圆）
+    const ring = new THREE.Mesh(new THREE.RingGeometry(1.5, 1.8, 26),
+      new THREE.MeshBasicMaterial({ color: 0xff4030, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.06;
+    this.ring = ring;
+    g.add(ring);
     g.position.set(this.x, 30, this.z);
     this.group = g;
     ENGINE.scene.add(g);
-    HUD.toast('📦 空投补给已投放——注意头顶落点！');
+    HUD.toast('📦 空投补给已投放——降落伞缓降中，注意落点！');
     AUDIO.waveHorn();
   }
 
   update(dt, game) {
     const g = this.group;
+    this.t += dt;
     if (!this.landed) {
-      this.vy = Math.max(-26, this.vy - 10 * dt);
+      this.vy = Math.max(-11, this.vy - 6 * dt);
       g.position.y += this.vy * dt;
-      g.rotation.y += dt * 1.5;
+      g.rotation.y += dt * 0.8;
+      g.rotation.z = Math.sin(this.t * 1.6) * 0.06;   // 伞摆
+      this.ring.material.opacity = 0.35 + 0.25 * (Math.sin(this.t * 8) > 0 ? 1 : 0);
       if (g.position.y <= 0.48) {
         g.position.y = 0.48;
         this.landed = true;
         this.fadeT = 9;
+        this.canopy.visible = false;   // 落地收伞
+        this.ring.visible = false;
         PARTICLES.dust(this.x, 0.4, this.z, 16);
         PARTICLES.explosion(this.x, 0.6, this.z);
         ENGINE.shake(0.4);
@@ -138,16 +275,18 @@ class SupportCrate {
           p.vel.z += (p.pos.z - this.z) / dl * 6;
           p.vel.y += 2.5;
         }
-        // 补给内容：全弹药 + 医疗×2 + $600
+        // 补给内容（v19.1 升级）：全弹药 + 医疗×3 + $800 + 投掷物礼包
         for (const s of ['primary', 'secondary']) {
           for (const inst of p.rack[s]) {
             inst.reserve = Math.floor(inst.def.reserve * p.reserveMult);
             inst.mag = inst.magSize;
           }
         }
-        p.medkits = Math.min(GAMECONFIG.inventory.medkitMax, p.medkits + 2);
-        p.addMoney(600);
-        HUD.banner('📦 空投补给到手', '全弹药补满 · 医疗包×2 · $600');
+        p.medkits = Math.min(GAMECONFIG.inventory.medkitMax, p.medkits + 3);
+        p.throwables.frag.count = Math.min(THROWABLES.frag.max, p.throwables.frag.count + 2);
+        p.throwables.molotov.count = Math.min(THROWABLES.molotov.max, p.throwables.molotov.count + 1);
+        p.addMoney(800);
+        HUD.banner('📦 空投补给到手', '全弹药补满 · 医疗包×3 · 手雷×2 · 燃烧瓶×1 · $800');
         AUDIO.purchase();
       }
     } else {
@@ -163,11 +302,11 @@ class SupportCrate {
   }
 }
 
-/* ---------- 攻击无人机（v16.4）：伴飞25秒，索敌18m双联机枪点射 ---------- */
+/* ---------- 攻击无人机（v19.1：35s / 索敌22m / 火力升级）---------- */
 class SupportDrone {
   constructor(game) {
     const p = game.player;
-    this.life = 25; this.fireT = 0.8; this.phase = rand(0, TAU); this.dead = false;
+    this.life = 35; this.fireT = 0.8; this.phase = rand(0, TAU); this.dead = false;
     const g = new THREE.Group();
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.12, 0.5),
       new THREE.MeshLambertMaterial({ color: 0x3a4148 }));
@@ -198,7 +337,7 @@ class SupportDrone {
     g.position.set(p.pos.x, p.pos.y + 3.2, p.pos.z + 1.5);
     this.group = g;
     ENGINE.scene.add(g);
-    HUD.toast('🛸 攻击无人机已升空——伴飞25秒自动索敌');
+    HUD.toast('🛸 攻击无人机已升空——伴飞35秒自动索敌');
   }
 
   update(dt, game) {
@@ -218,16 +357,16 @@ class SupportDrone {
     // 低电量闪烁
     this.group.visible = this.life > 0 || Math.sin(this.life * 20) > 0;
 
-    // 索敌：18m内最近感染体
+    // 索敌：22m内最近感染体（v19.1）
     this.fireT -= dt;
-    let best = null, bd = 18;
+    let best = null, bd = 22;
     for (const z of game.zombies) {
       if (z.dead || z.state === 'rise') continue;
       const d = dist2d(z.pos.x, z.pos.z, g.position.x, g.position.z);
       if (d < bd) { bd = d; best = z; }
     }
     if (best && this.life > 0 && this.fireT <= 0) {
-      this.fireT = 0.5;
+      this.fireT = 0.4;
       // 枪口 → 目标胸口 曳光
       const mz = { x: g.position.x, y: g.position.y - 0.06, z: g.position.z };
       const ty = best.pos.y + 1.1 * best.group.scale.x;
@@ -237,7 +376,7 @@ class SupportDrone {
         { speed: 1.2, vy: 0.5, life: 0.1, color: [1, 0.85, 0.4], color2: [0.9, 0.5, 0.1] });
       AUDIO.shot(300, 0.04, 0.25, bd);
       const isHead = Math.random() < 0.25;   // 25%概率打中头部
-      best.takeDamage(isHead ? 40 : 22, isHead, { x: best.pos.x, y: ty, z: best.pos.z }, game, null);
+      best.takeDamage(isHead ? 48 : 28, isHead, { x: best.pos.x, y: ty, z: best.pos.z }, game, null);
     }
     // 撤离：升空飞走
     if (this.life <= 0) {
@@ -255,14 +394,14 @@ class SupportDrone {
   }
 }
 
-/* ---------- 哨戒机枪（v16.4）：120°扇形索敌16m，150发弹链打完报废 ---------- */
+/* ---------- 哨戒机枪（v19.1：150°扇形20m、240发、弹尽冒烟消散）---------- */
 class SentryGun {
   constructor(game) {
     const p = game.player;
     const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
     this.baseYaw = Math.atan2(fx, fz);
     this.yaw = this.baseYaw;
-    this.ammo = 150; this.fireT = 0.6; this.life = 60; this.dead = false; this.downed = false;
+    this.ammo = 240; this.fireT = 0.6; this.life = 75; this.dead = false; this.downed = false; this.downT = 0;
     const S = ENGINE.mapDef.size - 2;
     this.x = clamp(p.pos.x + fx * 1.6, -S, S);
     this.z = clamp(p.pos.z + fz * 1.6, -S, S);
@@ -297,29 +436,40 @@ class SentryGun {
     this.head = head; this.led = led;
     g.add(head);
     g.position.set(this.x, 0, this.z);
+    // 部署尘土
+    PARTICLES.dust(this.x, 0.3, this.z, 10);
     this.group = g;
     ENGINE.scene.add(g);
-    HUD.toast('🔫 哨戒机枪已部署——150发弹链，扇形自动索敌');
+    HUD.toast('🔫 哨戒机枪已部署——240发弹链，150°扇形自动索敌');
     AUDIO.purchase();
   }
 
   update(dt, game) {
+    // 弹尽/到寿：冒烟 → 缩小消散 → 移除（v19.1 修复：弹尽后不再永驻场景）
     if (this.downed) {
-      this.life -= dt;
+      this.downT -= dt;
       this.led.material.color.setHex(0xff3020);
-      if (this.life < 59) { this.dead = true; }
+      if (Math.random() < dt * 9) {
+        PARTICLES.spawn('spark', this.x, 1.25, this.z, 1,
+          { speed: 0.5, vy: 1.3, life: 0.55, color: [0.42, 0.42, 0.42], color2: [0.14, 0.14, 0.14] });
+      }
+      this.group.scale.setScalar(Math.max(0.01, this.downT / 1.2));
+      if (this.downT <= 0) {
+        this.dead = true;
+        HUD.toast('🔫 哨戒机枪已报废回收');
+      }
       return;
     }
     this.life -= dt;
-    // 索敌：120°扇形（±60°）内最近目标
-    let best = null, bd = 16;
+    // 索敌：150°扇形（±75°）内最近目标（v19.1 扩大）
+    let best = null, bd = 20;
     for (const z of game.zombies) {
       if (z.dead || z.state === 'rise') continue;
       const d = dist2d(z.pos.x, z.pos.z, this.x, this.z);
       if (d > bd || d < 0.5) continue;
       const ang = Math.atan2(z.pos.x - this.x, z.pos.z - this.z);
       const diff = Math.abs(((ang - this.baseYaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-      if (diff < Math.PI / 3) { bd = d; best = z; }
+      if (diff < Math.PI * 75 / 180) { bd = d; best = z; }
     }
     // 枪头转向
     const want = best ? Math.atan2(best.pos.x - this.x, best.pos.z - this.z) : this.baseYaw;
@@ -328,21 +478,25 @@ class SentryGun {
     // 开火
     this.fireT -= dt;
     if (best && this.ammo > 0 && this.fireT <= 0) {
-      this.fireT = 0.12;
+      this.fireT = 0.11;
       this.ammo--;
       const mz = { x: this.x, y: 1.15, z: this.z };
       const ty = best.pos.y + 1.0 * best.group.scale.x;
       const end = { x: best.pos.x, y: ty, z: best.pos.z };
       if (typeof TRACERS !== 'undefined') TRACERS.fire(mz, end);
       AUDIO.shot(190, 0.045, 0.3, bd);
-      const isHead = Math.random() < 0.18;
-      best.takeDamage(isHead ? 32 : 18, isHead, { x: best.pos.x, y: ty, z: best.pos.z }, game, null);
+      const isHead = Math.random() < 0.22;
+      best.takeDamage(isHead ? 40 : 22, isHead, { x: best.pos.x, y: ty, z: best.pos.z }, game, null);
       if (this.ammo <= 0) {
         this.downed = true;
-        HUD.toast('🔫 哨戒机枪弹链打空——已停机');
+        this.downT = 1.2;
+        HUD.toast('🔫 哨戒机枪弹链打空——冒烟报废中');
       }
     }
-    if (this.life <= 0) this.dead = true;
+    if (this.life <= 0) {
+      this.downed = true;
+      this.downT = 1.2;
+    }
   }
 
   dispose() {

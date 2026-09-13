@@ -18,7 +18,7 @@ const GAMECONFIG = {
   economy: {
     startMoney: 800,     // 初始资金
     headshotBonus: 15,   // 爆头额外奖励
-    rewardGlobalMult: 1.6, // 全局赏金倍率（提高爆率）
+    rewardGlobalMult: 0.65, // 全局赏金倍率（v20.4 大幅下调：基础击杀收入约4折，靠连杀补回）
     waveBonusBase: 150,  // 波次清空基础奖励
     waveBonusPerWave: 50,
     healPrice: 400,      // 全体治疗
@@ -89,11 +89,17 @@ const GAMECONFIG = {
     exhaustedRecover: 0.3,  // 疲劳后需回到30%才能再次冲刺
   },
 
-  /* ---------- 连杀系统 ---------- */
+  /* ---------- 连杀系统（v20.4 贪婪循环重做：激进压尸潮总收入反超旧版，苟着则只有约4成） ---------- */
   streak: {
-    window: 4.5,        // 连杀计时窗口(秒)
-    bonusEvery: 5,      // 每5连杀发奖金
-    bonusAmount: 120,
+    window: 4.5,         // 连杀计时窗口(秒)
+    multPerKill: 0.1,    // 每连杀数提供的奖金乘数（第10杀=+100%）
+    maxMult: 2.0,        // 奖金乘数上限（+200%，连杀狂潮强化可突破）
+    milestones: [        // 里程碑爆赏（每次连杀恰好转过该数时发放一次）
+      { at: 10,  amount: 50 },
+      { at: 25,  amount: 120 },
+      { at: 50,  amount: 300 },
+      { at: 100, amount: 800 },
+    ],
   },
 
   /* ---------- 导演系统（World War Z 式随机事件） ---------- */

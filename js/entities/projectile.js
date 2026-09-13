@@ -7,6 +7,7 @@ const PROJ_CFG = {
   missile: { r: 0.12, c: 0x8a8f96, e: 0xff5010, g: 10 },
   attractor: { r: 0.1, c: 0x4a6a8a, e: 0x1a3a6a, g: 13 },
   frag:    { r: 0.11, c: 0x3d5a3d, e: 0x000000, g: 13 },
+  impact:  { r: 0.11, c: 0x8a2a2a, e: 0xff4030, g: 13 },
   molotov: { r: 0.12, c: 0x8a4b1f, e: 0x552200, g: 13 },
   acid:    { r: 0.15, c: 0x66cc33, e: 0x2a6600, g: 9 },
   gl:      { r: 0.13, c: 0x334422, e: 0x223311, g: 11 },  // 榴弹
@@ -19,6 +20,16 @@ function pointBlocked(x, y, z) {
   return false;
 }
 
+/* 玩家投掷物强化乘区（v20.4 狩猎强化：威力/范围/持续），敌方的弹不受影响 */
+function throwMult(game) {
+  const p = game && game.player;
+  return {
+    dmg: (p && p.throwDmg) || 1,
+    rad: (p && p.throwRad) || 1,
+    dur: (p && p.throwDur) || 1,
+  };
+}
+
 class Projectile {
   constructor(kind, x, y, z, vx, vy, vz, opts = {}) {
     this.kind = kind;
@@ -26,6 +37,7 @@ class Projectile {
     this.r = c.r; this.g = c.g;
     this.vx = vx; this.vy = vy; this.vz = vz;
     this.fuse = opts.fuse !== undefined ? opts.fuse : 3;
+    this.armT = opts.armT || 0;   // 冲击引信保险期（极爆手雷 v20.4，RGN式）
     this.opts = opts;
     this.dead = false; this.landed = false;
     this.mesh = new THREE.Mesh(
@@ -41,6 +53,8 @@ class Projectile {
   update(dt, game) {
     const p = this.pos;
     this.fuse -= dt;
+    if (this.armT > 0) this.armT -= dt;
+    this.wallHit = false;   // 每帧重置：movement 段置位、同帧消费（防保险期旧命中残留）
     this.vy -= this.g * dt;
 
     // 分轴移动 + 撞墙反弹（手雷弹开继续引信倒计时；燃烧瓶 wallHit 即炸）
@@ -73,8 +87,9 @@ class Projectile {
           const dx2 = zb.pos.x - p.x, dz2 = zb.pos.z - p.z;
           if (dx2 * dx2 + dz2 * dz2 < 0.42 && p.y < zb.pos.y + 1.9 * zb.group.scale.x) {
             this._finish(game);
-            if (this.kind === 'gl') explodeGrenade(game, p.x, p.y, p.z, { damage: 120, radius: 6 * (this.opts.radiusMult || 1), selfMult: 0.4 * (1 + (this.opts.selfBonus || 0)) });
-            else explodeGrenade(game, p.x, p.y, p.z, THROWABLES.frag);
+            const M = throwMult(game);
+            if (this.kind === 'gl') explodeGrenade(game, p.x, p.y, p.z, { damage: 120 * M.dmg, radius: 6 * M.rad * (this.opts.radiusMult || 1), selfMult: 0.4 * (1 + (this.opts.selfBonus || 0)) });
+            else explodeGrenade(game, p.x, p.y, p.z, { damage: THROWABLES.frag.damage * M.dmg, radius: THROWABLES.frag.radius * M.rad, selfMult: THROWABLES.frag.selfMult });
             return;
           }
         }
@@ -83,15 +98,35 @@ class Projectile {
     // M79榴弹：碰炸（墙/地/碰到即炸）
     if (this.kind === 'gl' && (this.wallHit || p.y <= this.r + 0.01 || this.fuse <= 0)) {
       this._finish(game);
-      explodeGrenade(game, p.x, p.y, p.z, { damage: 120, radius: 6 * (this.opts.radiusMult || 1), selfMult: 0.4 * (1 + (this.opts.selfBonus || 0)) });
+      const M = throwMult(game);
+      explodeGrenade(game, p.x, p.y, p.z, { damage: 120 * M.dmg, radius: 6 * M.rad * (this.opts.radiusMult || 1), selfMult: 0.4 * (1 + (this.opts.selfBonus || 0)) });
       return;
+    }
+    // 极爆手雷（v20.4 RGN式冲击引信）：保险期(1.2s)内正常弹跳，解除后碰丧尸/墙/地立即爆炸，4s备份引信
+    if (this.kind === 'impact' && this.armT <= 0) {
+      let hitZ = null;
+      for (const zb of game.zombies) {
+        if (zb.dead || zb.state === 'rise') continue;
+        const dx2 = zb.pos.x - p.x, dz2 = zb.pos.z - p.z;
+        if (dx2 * dx2 + dz2 * dz2 < 0.42 && p.y < zb.pos.y + 1.9 * zb.group.scale.x) { hitZ = true; break; }
+      }
+      if (hitZ || this.wallHit || p.y <= this.r + 0.01 || this.fuse <= 0) {
+        const M = throwMult(game);
+        this._finish(game);
+        explodeGrenade(game, p.x, p.y, p.z, { damage: THROWABLES.impact.damage * M.dmg, radius: THROWABLES.impact.radius * M.rad, selfMult: THROWABLES.impact.selfMult });
+        return;
+      }
     }
 
     const pd = dist2d(p.x, p.z, game.player.pos.x, game.player.pos.z);
 
     if (this.kind === 'frag' && this.fuse <= 0) {
       this._finish(game);
-      explodeGrenade(game, p.x, p.y, p.z, (this.opts.R && this.opts.R.damage) ? this.opts.R : THROWABLES.frag);
+      if (this.opts.R && this.opts.R.damage) explodeGrenade(game, p.x, p.y, p.z, this.opts.R);
+      else {
+        const M = throwMult(game);
+        explodeGrenade(game, p.x, p.y, p.z, { damage: THROWABLES.frag.damage * M.dmg, radius: THROWABLES.frag.radius * M.rad, selfMult: THROWABLES.frag.selfMult });
+      }
       return;
     }
     // 燃烧瓶：碰到丧尸立即碎裂起火（v20.3——碰到东西就炸：墙/地/丧尸，不再穿身飞过）
@@ -100,16 +135,18 @@ class Projectile {
         if (zb.dead || zb.state === 'rise') continue;
         const dx2 = zb.pos.x - p.x, dz2 = zb.pos.z - p.z;
         if (dx2 * dx2 + dz2 * dz2 < 0.42 && p.y < zb.pos.y + 1.9 * zb.group.scale.x) {
+          const M = throwMult(game);
           this._finish(game);
-          spawnFireZone(game, p.x, p.z, THROWABLES.molotov);
+          spawnFireZone(game, p.x, p.z, { dps: THROWABLES.molotov.dps * M.dmg, radius: THROWABLES.molotov.radius * M.rad, duration: THROWABLES.molotov.duration * M.dur });
           AUDIO.fireIgnite();
           return;
         }
       }
     }
     if (this.kind === 'molotov' && (this.landed || this.wallHit || this.fuse <= 0)) {
+      const M = throwMult(game);
       this._finish(game);
-      spawnFireZone(game, p.x, p.z, THROWABLES.molotov);
+      spawnFireZone(game, p.x, p.z, { dps: THROWABLES.molotov.dps * M.dmg, radius: THROWABLES.molotov.radius * M.rad, duration: THROWABLES.molotov.duration * M.dur });
       AUDIO.fireIgnite();
       return;
     }
@@ -117,7 +154,7 @@ class Projectile {
     if (this.kind === 'attractor') {
       if (this.landed) {
         this._finish(game);
-        spawnAttractor(game, p.x, p.z, 8);
+        spawnAttractor(game, p.x, p.z, 8 * throwMult(game).dur);
         return;
       }
     }

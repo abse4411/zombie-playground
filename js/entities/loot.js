@@ -15,6 +15,7 @@ const LOOT_TABLE = [
   { id: 'ammo',   weight: 20, rarity: 0 },   // 弹药盒（当前武器备弹+35%）
   { id: 'medkit', weight: 9,  rarity: 1 },   // 医疗包
   { id: 'frag',   weight: 5,  rarity: 1 },   // 手雷×1
+  { id: 'impact', weight: 2.2, rarity: 2 },  // 极爆手雷×1（稀有，v20.4）
   { id: 'molo',   weight: 4,  rarity: 1 },   // 燃烧瓶×1
   { id: 'armorplate', weight: 2,  rarity: 1 },   // 护甲板（贵）
   { id: 'ammop',  weight: 1.6, rarity: 1 },  // 主武器弹药袋（贵）
@@ -99,6 +100,19 @@ const LOOT_MODELS = {
     g.add(body, neck, ring);
     return g;
   },
+  impact: () => {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), new THREE.MeshStandardMaterial({ color: 0x8a2a2a, roughness: 0.45, emissive: 0x400a0a, emissiveIntensity: 0.5 }));
+    body.scale.y = 1.25;
+    const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.112, 0.112, 0.04, 12), new THREE.MeshStandardMaterial({ color: 0xe8b83a }));
+    stripe.position.y = 0.02;
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.06, 8), new THREE.MeshStandardMaterial({ color: 0x8a8f96, metalness: 0.8 }));
+    neck.position.y = 0.14;
+    const led = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff5040 }));
+    led.position.y = 0.18;
+    g.add(body, stripe, neck, led);
+    return g;
+  },
   molo: () => {
     const g = new THREE.Group();
     const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.09, 0.24, 10), new THREE.MeshStandardMaterial({ color: 0x7a5a2a, roughness: 0.4, transparent: true, opacity: 0.85, emissive: 0x502800, emissiveIntensity: 0.3 }));
@@ -153,7 +167,7 @@ const LOOT_MODELS = {
 };
 const LOOT_LABELS = {
   cash: '💵 现金', ammo: '🔸 弹药盒', medkit: '🧪 医疗包',
-  frag: '💣 手雷', molo: '🔥 燃烧瓶', attractor: '🧲 声波诱饵',
+  frag: '💣 手雷', impact: '💣 极爆手雷', molo: '🔥 燃烧瓶', attractor: '🧲 声波诱饵',
   armorplate: '🛡 护甲板', ammop: '🟢 主武器弹药', ammos: '🔵 副武器弹药', adrenaline: '⚡ 肾上腺素',
   big: '⭐ 大奖奖金',
 };
@@ -245,7 +259,7 @@ class LootDrop {
   name() {
     if (this.weaponInst) return `${['◆', '◆◆', '◆◆◆', '◆◆◆◆'][this.rarity]} ${this.weaponInst.def.name}${this.weaponInst.lvl ? ' Lv.' + this.weaponInst.lvl : ''}`;
     const base = LOOT_LABELS[this.kind] || '📦 物资';
-    if (this.kind === 'frag' || this.kind === 'molo') return `${base}×${this.amount}`;
+    if (this.kind === 'frag' || this.kind === 'molo' || this.kind === 'impact') return `${base}×${this.amount}`;
     return base;
   }
 
@@ -263,7 +277,7 @@ class LootDrop {
     }
     // v18.6 修复：掉落种类 'molo' 需映射到投掷物键 'molotov'，查表也用映射后的键
     // （旧代码 THROWABLES['molo'] 为 undefined → '.max' 抛错 → 整帧更新中断）
-    const tb = { frag: 'frag', molo: 'molotov', attractor: 'attractor' }[this.kind];
+    const tb = { frag: 'frag', impact: 'impact', molo: 'molotov', attractor: 'attractor' }[this.kind];
     if (tb) {
       const tDef = THROWABLES[tb];
       const tCur = p.throwables[tb];
@@ -386,6 +400,10 @@ class LootDrop {
       case 'frag':
         p.throwables.frag.count = Math.min(THROWABLES.frag.max, p.throwables.frag.count + this.amount);
         HUD.pickup(`💣 手雷 ×${this.amount}`, this.rarity);
+        break;
+      case 'impact':
+        p.throwables.impact.count = Math.min(THROWABLES.impact.max, p.throwables.impact.count + this.amount);
+        HUD.pickup(`💣 极爆手雷 ×${this.amount}`, this.rarity);
         break;
       case 'molo':
         p.throwables.molotov.count = Math.min(THROWABLES.molotov.max, p.throwables.molotov.count + this.amount);

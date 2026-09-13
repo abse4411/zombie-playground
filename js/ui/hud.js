@@ -98,9 +98,10 @@ const HUD = {
     this._hmT = setTimeout(() => h.classList.remove('show', 'head'), 95);
   },
 
-  streak(n) {
+  streak(n, mult) {
     const s = this.el.streak;
-    s.textContent = `${n} 连杀！`;
+    const m = (mult || 1).toFixed(1);
+    s.textContent = m !== '1.0' ? `${n} 连杀 · 奖金×${m}` : `${n} 连杀！`;
     s.classList.remove('hidden', 'pop');
     void s.offsetWidth;
     s.classList.add('pop');

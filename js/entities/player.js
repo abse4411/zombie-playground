@@ -44,7 +44,7 @@ class Player {
     this.storageMax = 6;
     this.current = 'secondary';
     this.lastWeapon = null;   // Q键切换上一把武器 {slot, defId}
-    this.throwables = { frag: { count: 2 }, molotov: { count: 1 }, attractor: { count: 0 } };
+    this.throwables = { frag: { count: 2 }, molotov: { count: 1 }, attractor: { count: 0 }, impact: { count: 0 } };
     // 道具栏（v18.1）：5键槽位字段道具（医疗包计数沿用 medkits，其余在此）
     this.items = { armorplate: 0, adrenaline: 0 };   // v19.6：弹药袋改为拾取即用
     this.itemSel = 'medkit';     // 道具槽当前选中
@@ -111,6 +111,9 @@ class Player {
 
   update(dt, game) {
     if (!this.alive) return;
+
+    // 战地急救（v20.4 肉鸽强化）：每秒回血
+    if (this.hpRegen > 0 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + this.hpRegen * dt);
 
     // ---- 视角 ----
     const m = INPUT.consumeMouse();

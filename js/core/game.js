@@ -148,7 +148,7 @@ class Game {
         kills: p.kills, headshots: p.headshots, moneyEarned: p.moneyEarned,
         perks: Object.assign({}, p.perks), medkits: p.medkits, medkitHeal: p.medkitHeal,
         items: Object.assign({}, p.items), slotMax: Object.assign({}, p.slotMax),
-        throwables: { frag: p.throwables.frag.count, molotov: p.throwables.molotov.count, attractor: p.throwables.attractor.count },
+        throwables: { frag: p.throwables.frag.count, molotov: p.throwables.molotov.count, attractor: p.throwables.attractor.count, impact: p.throwables.impact.count },
         stamina: p.stamina,
         current: p.current,
         rack: {
@@ -228,6 +228,7 @@ class Game {
     p.throwables.frag.count = sv.player.throwables.frag;
     p.throwables.molotov.count = sv.player.throwables.molotov;
     p.throwables.attractor.count = sv.player.throwables.attractor;
+    if (sv.player.throwables.impact !== undefined) p.throwables.impact.count = sv.player.throwables.impact;
     p.recomputePerks();
     p.stamina = Math.min(sv.player.stamina !== undefined ? sv.player.stamina : p.maxStamina, p.maxStamina);
     p.pos.set(sv.player.x, sv.player.y, sv.player.z);
@@ -838,7 +839,12 @@ class Game {
     if (p.current === 'melee') { this._meleeKillCount++; const d = SAVE.data; d.bestMeleeKills = Math.max(d.bestMeleeKills || 0, this._meleeKillCount); }
     if (this._fragWindowT > 0) { const d = SAVE.data; d.totalFragKills = (d.totalFragKills || 0) + 1; }
     if (z.burnT !== undefined && z.burnT > -99 && z._burnDeath) { const d = SAVE.data; d.totalBurnKills = (d.totalBurnKills || 0) + 1; }
-    const total = z.reward + (headshot ? GAMECONFIG.economy.headshotBonus : 0);
+    // 连杀结算（v20.4）：先叠连杀数再算钱——基础赏金已大幅下调，连杀乘区负责补回
+    this.streakT = GAMECONFIG.streak.window + (p.streakWinBonus || 0);
+    this.killStreak++;
+    { const d = SAVE.data; d.bestStreak = Math.max(d.bestStreak || 0, this.killStreak); }
+    const streakMult = 1 + Math.min(GAMECONFIG.streak.maxMult + (p.streakCapBonus || 0), this.killStreak * GAMECONFIG.streak.multPerKill);
+    const total = Math.round((z.reward + (headshot ? GAMECONFIG.economy.headshotBonus : 0)) * streakMult);
     p.addMoney(total);
     SAVE.data.totalKills++;
     if (p.kills % 25 === 0) SAVE.commit();
@@ -853,15 +859,15 @@ class Game {
       AUDIO.victory();
     }
 
-    // 连杀
-    this.streakT = GAMECONFIG.streak.window;
-    this.killStreak++;
-    { const d = SAVE.data; d.bestStreak = Math.max(d.bestStreak || 0, this.killStreak); }
-    if (this.killStreak >= 3) HUD.streak(this.killStreak);
-    if (this.killStreak % GAMECONFIG.streak.bonusEvery === 0) {
-      p.addMoney(GAMECONFIG.streak.bonusAmount);
-      HUD.toast(`🔥 ${this.killStreak} 连杀！奖金 +$${GAMECONFIG.streak.bonusAmount}`);
-      AUDIO.streak();
+    // 连杀播报 + 里程碑爆赏（v20.4：10/25/50/100 节点额外奖金）
+    if (this.killStreak >= 3) HUD.streak(this.killStreak, streakMult);
+    for (const ms of GAMECONFIG.streak.milestones) {
+      if (this.killStreak === ms.at) {
+        const amt = Math.round(ms.amount * (p.cashMult || 1));
+        p.addMoney(amt);
+        HUD.toast(`🏆 ${ms.at} 连杀里程碑！奖金 +$${amt}`);
+        AUDIO.streak();
+      }
     }
 
     // 手雷击杀统计（挑战任务用）

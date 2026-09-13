@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>丧尸游乐场 · Zombie Playground</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧟</text></svg>">
-<link rel="stylesheet" href="css/style.css?v=20.3">
+<link rel="stylesheet" href="css/style.css?v=20.4">
 </head>
 <body>
 <div id="boot-screen">
@@ -249,7 +249,7 @@
       <button id="btn-settings">⚙ 设置</button>
     </div>
     <div id="menu-stats"></div>
-    <div class="menu-footer">黎明会机密档案 · 赤潮事件记录 v20.3</div>
+    <div class="menu-footer">黎明会机密档案 · 赤潮事件记录 v20.4</div>
   </div>
 </div>
 
@@ -391,7 +391,8 @@
       <p>💡 爆头有额外资金加成，近战与爆炸同样给钱——敢于近身搏杀的猎人才富得起来。</p>
       <p>💡 尖啸者的嚎叫会召唤尸潮，吐酸者会远程吐酸，膨胀者死亡会自爆——学会排优先级。</p>
       <p>💡 装甲暴兵正面有重甲，绕后攻击或使用高穿透武器。被包围时 F 脚踢 + C 闪避可以脱身。</p>
-      <p>💡 连续快速击杀会触发连杀奖金；狩猎模式中留意"尸潮突袭"与"空投补给"事件。</p>
+      <p>💡 连杀经济：击杀基础赏金已大幅下调，4.5秒内连续击杀每杀奖金最高×3（10连杀即翻倍），10/25/50/100连杀有里程碑爆赏——激进压尸潮才是赚钱王道。狩猎模式中留意"尸潮突袭"与"空投补给"事件。</p>
+      <p>💡 极爆手雷：掷出1.2秒解除保险后碰丧尸/墙/地立即爆炸；普通手雷引信约4秒且碰墙弹回。局内强化可叠投掷物伤害/范围/持续、支援火力、击退、连杀奖金等新强化。</p>
       <p>💡 经验宝石：击杀掉落的彩色宝石（蓝→绿→紫→金，个头越大经验越多），靠近自动吸附。拾取升级会弹出三选一局内强化（火力/攻速/暴击/磁吸等），左下角紫条为升级进度。精英与变异感染体掉落更大颗的宝石。</p>
       <p>💡 强化实验室：商城"升级台"悬停或点击升级项可在武器模型旁预览属性变化；威力/弹匣/换弹全武器通用，射速等特性强化按武器定位设上限。</p>
       <p>💡 变异情景：狩猎第3波起每波可能抽到全局修正（铁皮进化/狂潮尸海/血色赏金等）——顶部信息栏会显示当前情景，负面强化必配赏金补偿，提前换枪布雷应对。</p>
@@ -532,57 +533,57 @@
 <div id="toast" class="hidden"></div>
 
 <!-- ==================== 脚本（按依赖顺序加载） ==================== -->
-<script src="js/lib/three.min.js?v=20.3"></script>
+<script src="js/lib/three.min.js?v=20.4"></script>
 <!-- 配置层 -->
-<script src="js/config/gameConfig.js?v=20.3"></script>
-<script src="js/core/resources.js?v=20.3"></script>
-<script src="js/systems/mapStructs.js?v=20.3"></script>
+<script src="js/config/gameConfig.js?v=20.4"></script>
+<script src="js/core/resources.js?v=20.4"></script>
+<script src="js/systems/mapStructs.js?v=20.4"></script>
 <!-- 核心层 -->
-<script src="js/core/utils.js?v=20.3"></script>
-<script src="js/core/artkit.js?v=20.3"></script>
-<script src="js/core/audio.js?v=20.3"></script>
-<script src="js/core/input.js?v=20.3"></script>
-<script src="js/core/touch.js?v=20.3"></script>
-<script src="js/core/particles.js?v=20.3"></script>
-<script src="js/core/collision.js?v=20.3"></script>
-<script src="js/core/engine.js?v=20.3"></script>
+<script src="js/core/utils.js?v=20.4"></script>
+<script src="js/core/artkit.js?v=20.4"></script>
+<script src="js/core/audio.js?v=20.4"></script>
+<script src="js/core/input.js?v=20.4"></script>
+<script src="js/core/touch.js?v=20.4"></script>
+<script src="js/core/particles.js?v=20.4"></script>
+<script src="js/core/collision.js?v=20.4"></script>
+<script src="js/core/engine.js?v=20.4"></script>
 <!-- 实体层 -->
-<script src="js/entities/fpbody.js?v=20.3"></script>
-<script src="js/entities/player.js?v=20.3"></script>
-<script src="js/entities/zombie.js?v=20.3"></script>
-<script src="js/entities/projectile.js?v=20.3"></script>
-<script src="js/entities/combatFx.js?v=20.3"></script>
-<script src="js/entities/support.js?v=20.3"></script>
-<script src="js/entities/loot.js?v=20.3"></script>
-<script src="js/entities/destructible.js?v=20.3"></script>
-<script src="js/entities/supplyCrate.js?v=20.3"></script>
-    <script src="js/entities/nest.js?v=20.3"></script>
-    <script src="js/entities/roguelite.js?v=20.3"></script>
+<script src="js/entities/fpbody.js?v=20.4"></script>
+<script src="js/entities/player.js?v=20.4"></script>
+<script src="js/entities/zombie.js?v=20.4"></script>
+<script src="js/entities/projectile.js?v=20.4"></script>
+<script src="js/entities/combatFx.js?v=20.4"></script>
+<script src="js/entities/support.js?v=20.4"></script>
+<script src="js/entities/loot.js?v=20.4"></script>
+<script src="js/entities/destructible.js?v=20.4"></script>
+<script src="js/entities/supplyCrate.js?v=20.4"></script>
+    <script src="js/entities/nest.js?v=20.4"></script>
+    <script src="js/entities/roguelite.js?v=20.4"></script>
 <!-- 系统层 -->
-<script src="js/systems/gunModels.js?v=20.3"></script>
-    <script src="js/systems/weaponSystem.js?v=20.3"></script>
-<script src="js/systems/spawnSystem.js?v=20.3"></script>
-<script src="js/systems/shopSystem.js?v=20.3"></script>
-<script src="js/systems/saveSystem.js?v=20.3"></script>
-<script src="js/systems/achvSystem.js?v=20.3"></script>
+<script src="js/systems/gunModels.js?v=20.4"></script>
+    <script src="js/systems/weaponSystem.js?v=20.4"></script>
+<script src="js/systems/spawnSystem.js?v=20.4"></script>
+<script src="js/systems/shopSystem.js?v=20.4"></script>
+<script src="js/systems/saveSystem.js?v=20.4"></script>
+<script src="js/systems/achvSystem.js?v=20.4"></script>
 <!-- UI层 -->
-<script src="js/ui/hud.js?v=20.3"></script>
-<script src="js/ui/damageNumbers.js?v=20.3"></script>
-<script src="js/ui/gunPreview.js?v=20.3"></script>
-    <script src="js/ui/codexPreview.js?v=20.3"></script>
-    <script src="js/ui/shopUI.js?v=20.3"></script>
-<script src="js/ui/storyUI.js?v=20.3"></script>
-<script src="js/ui/backpack.js?v=20.3"></script>
-<script src="js/ui/charPreview.js?v=20.3"></script>
-    <script src="js/ui/menuScene.js?v=20.3"></script>
-<script src="js/ui/menu.js?v=20.3"></script>
+<script src="js/ui/hud.js?v=20.4"></script>
+<script src="js/ui/damageNumbers.js?v=20.4"></script>
+<script src="js/ui/gunPreview.js?v=20.4"></script>
+    <script src="js/ui/codexPreview.js?v=20.4"></script>
+    <script src="js/ui/shopUI.js?v=20.4"></script>
+<script src="js/ui/storyUI.js?v=20.4"></script>
+<script src="js/ui/backpack.js?v=20.4"></script>
+<script src="js/ui/charPreview.js?v=20.4"></script>
+    <script src="js/ui/menuScene.js?v=20.4"></script>
+<script src="js/ui/menu.js?v=20.4"></script>
 <!-- 模式层 -->
-<script src="js/modes/huntMode.js?v=20.3"></script>
-<script src="js/modes/encounterMode.js?v=20.3"></script>
-<script src="js/modes/tutorialMode.js?v=20.3"></script>
+<script src="js/modes/huntMode.js?v=20.4"></script>
+<script src="js/modes/encounterMode.js?v=20.4"></script>
+<script src="js/modes/tutorialMode.js?v=20.4"></script>
 <!-- 主循环 -->
-<script src="js/net/net.js?v=20.3"></script>
-<script src="js/core/game.js?v=20.3"></script>
-<script src="js/main.js?v=20.3"></script>
+<script src="js/net/net.js?v=20.4"></script>
+<script src="js/core/game.js?v=20.4"></script>
+<script src="js/main.js?v=20.4"></script>
 </body>
 </html>

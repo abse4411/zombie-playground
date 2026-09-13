@@ -89,6 +89,16 @@ function buildBomb() {
 /* ---------- 战机轰炸（v19.1 动画化）----------
  * 2.2s 红色警示带闪烁 → 轰炸机从弹带前端临空，沿带投下 12 枚航弹
  * （航弹带尾烟抛物线下落、触地爆炸），含友军伤害 */
+/* 支援强化乘区（v20.4 火力协调：伤害/范围/持续） */
+function supportMult(game) {
+  const p = game && game.player;
+  return {
+    dmg: (p && p.supDmg) || 1,
+    rad: (p && p.supRad) || 1,
+    dur: (p && p.supDur) || 1,
+  };
+}
+
 class AirstrikeRun {
   constructor(game) {
     const p = game.player;
@@ -169,7 +179,8 @@ class AirstrikeRun {
       }
       if (b.y <= 0.4) {
         b.dead = true;
-        explodeGrenade(game, b.x, 0.4, b.z, { damage: 180, radius: 6.2, selfMult: 1 });
+        const SM = supportMult(game);
+        explodeGrenade(game, b.x, 0.4, b.z, { damage: 180 * SM.dmg, radius: 6.2 * SM.rad, selfMult: 1 });
         PARTICLES.explosion(b.x, 1.2, b.z);
         ENGINE.shake(0.38);
         AUDIO.explode(dist2d(b.x, b.z, game.player.pos.x, game.player.pos.z));
@@ -306,7 +317,7 @@ class SupportCrate {
 class SupportDrone {
   constructor(game) {
     const p = game.player;
-    this.life = 35; this.fireT = 0.8; this.phase = rand(0, TAU); this.dead = false;
+    this.life = 35 * supportMult(game).dur; this.fireT = 0.8; this.phase = rand(0, TAU); this.dead = false;
     const g = new THREE.Group();
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.12, 0.5),
       new THREE.MeshLambertMaterial({ color: 0x3a4148 }));
@@ -376,7 +387,7 @@ class SupportDrone {
         { speed: 1.2, vy: 0.5, life: 0.1, color: [1, 0.85, 0.4], color2: [0.9, 0.5, 0.1] });
       AUDIO.shot(300, 0.04, 0.25, bd);
       const isHead = Math.random() < 0.25;   // 25%概率打中头部
-      best.takeDamage(isHead ? 48 : 28, isHead, { x: best.pos.x, y: ty, z: best.pos.z }, game, null);
+      best.takeDamage((isHead ? 48 : 28) * supportMult(game).dmg, isHead, { x: best.pos.x, y: ty, z: best.pos.z }, game, null);
     }
     // 撤离：升空飞走
     if (this.life <= 0) {
@@ -401,7 +412,7 @@ class SentryGun {
     const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
     this.baseYaw = Math.atan2(fx, fz);
     this.yaw = this.baseYaw;
-    this.ammo = 240; this.fireT = 0.6; this.life = 75; this.dead = false; this.downed = false; this.downT = 0;
+    this.ammo = Math.round(240 * supportMult(game).dur); this.fireT = 0.6; this.life = 75; this.dead = false; this.downed = false; this.downT = 0;
     const S = ENGINE.mapDef.size - 2;
     this.x = clamp(p.pos.x + fx * 1.6, -S, S);
     this.z = clamp(p.pos.z + fz * 1.6, -S, S);
@@ -486,7 +497,7 @@ class SentryGun {
       if (typeof TRACERS !== 'undefined') TRACERS.fire(mz, end);
       AUDIO.shot(190, 0.045, 0.3, bd);
       const isHead = Math.random() < 0.22;
-      best.takeDamage(isHead ? 40 : 22, isHead, { x: best.pos.x, y: ty, z: best.pos.z }, game, null);
+      best.takeDamage((isHead ? 40 : 22) * supportMult(game).dmg, isHead, { x: best.pos.x, y: ty, z: best.pos.z }, game, null);
       if (this.ammo <= 0) {
         this.downed = true;
         this.downT = 1.2;

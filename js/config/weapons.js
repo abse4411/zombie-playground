@@ -295,9 +295,15 @@ const WEAPONS = {
 const THROWABLES = {
   frag: {
     id: 'frag', name: '破片手雷', price: 160, pack: 3, max: 8,
-    damage: 150, radius: 6.5, fuse: 1.7, speed: 11, gravity: 13,
+    damage: 150, radius: 6.5, fuse: 4, speed: 11, gravity: 13,
     color: 0x3d5a3d, selfMult: 0.35,
-    desc: '范围爆炸伤害，对密集尸群效果拔群。小心别炸到自己。',
+    desc: '延时引信约4秒（M67军规），碰墙会弹回——可以往墙角扔反弹炸尸群。',
+  },
+  impact: {
+    id: 'impact', name: '极爆手雷', price: 220, pack: 2, max: 6,
+    damage: 120, radius: 5.2, fuse: 4, armT: 1.2, speed: 13, gravity: 13,
+    color: 0x8a2a2a, selfMult: 0.3,
+    desc: '苏制RGN冲击引信：掷出1.2秒解除保险后，碰丧尸/墙/地面立即爆炸，不用等引信。',
   },
   attractor: {
     id: 'attractor', name: '声波诱饵', price: 200, pack: 2, max: 5,

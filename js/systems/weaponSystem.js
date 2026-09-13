@@ -9,6 +9,9 @@
  *    精加工枪管/重弹头→武器更重、长握柄→挥速稍慢
  * 3. 术语区分：弹匣容量=单个弹匣装弹数；备用弹药=弹匣之外携带的子弹总量
  */
+/* 投掷物种类顺序（v20.4 加入极爆手雷）：4键循环/选中顺延共用 */
+const THROW_KINDS = ['frag', 'impact', 'molotov', 'attractor'];
+
 const W_UPGRADES = {
   dmg:  { name: '威力强化',  max: 5, gain: '伤害 +6%/级', drawback: '', desc: '重装药弹头，单发威力更高。',
           price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.30 * (lv + 1)) },
@@ -825,7 +828,7 @@ class WeaponSystem {
     // 加长握柄（v11.11）：范围 +0.25m/级；配重锤头：击退 +18%/级
     const range = def.range + ((wi.upgrades && wi.upgrades.rng) || 0) * 0.25 + (heavy ? 0.4 : 0);
     const dmg = def.damage * this.w.dmgMult * p.dmgMult * (heavy ? 2.2 : 1);
-    const kbPow = GAMECONFIG.feel.kbMelee * (heavy ? 2.2 : 1) * (1 + 0.18 * ((wi.upgrades && wi.upgrades.knb) || 0));
+    const kbPow = GAMECONFIG.feel.kbMelee * (heavy ? 2.2 : 1) * (1 + 0.18 * ((wi.upgrades && wi.upgrades.knb) || 0)) * ((this.p && this.p.knbMult) || 1);
     let hitAny = false;
     game.stats.shots++;
     for (const z of game.zombies) {
@@ -1025,21 +1028,21 @@ class WeaponSystem {
   /* ---------- 投掷武器槽（v11.9） ---------- */
   _anyThrowOwned() {
     const t = this.p.throwables;
-    return !!(t && (t.frag.count > 0 || t.molotov.count > 0 || t.attractor.count > 0));
+    return !!(t && THROW_KINDS.some(k => t[k] && t[k].count > 0));
   }
 
   // 当前选中的投掷物（选中数量耗尽时自动顺延到下一种）
   _selKind() {
     const t = this.p.throwables;
     if (t[this._throwSel] && t[this._throwSel].count > 0) return this._throwSel;
-    for (const k of ['frag', 'molotov', 'attractor']) if (t[k].count > 0) { this._throwSel = k; return k; }
+    for (const k of THROW_KINDS) if (t[k] && t[k].count > 0) { this._throwSel = k; return k; }
     return null;
   }
 
   // Digit4 / 循环：掏出或切换下一种持有中的投掷物
   _cycleThrow() {
     if (!this._anyThrowOwned()) { AUDIO.emptyClick(); HUD.toast('没有投掷物——可在商城补给'); return; }
-    const kinds = ['frag', 'molotov', 'attractor'].filter(k => this.p.throwables[k].count > 0);
+    const kinds = THROW_KINDS.filter(k => this.p.throwables[k] && this.p.throwables[k].count > 0);
     let idx = kinds.indexOf(this._throwSel);
     if (this.p.current === 'throw') idx = (idx + 1) % kinds.length;   // 已掏出：切换种类
     else idx = Math.max(0, idx);
@@ -1348,7 +1351,7 @@ class WeaponSystem {
     let vx = dir.x * spd, vy = dir.y * spd + 2.6 * (0.5 + power * 0.5), vz = dir.z * spd;
     let x = origin.x + dir.x * 0.5, y = origin.y - 0.08, z = origin.z + dir.z * 0.5;
     const step = 1 / 60, arr = this.trajLine.geometry.attributes.position.array;
-    const shatter = this.chargeThrow === 'molotov';   // 燃烧瓶碰墙即碎：预测线截断在墙面（v20.3）
+    const shatter = this.chargeThrow === 'molotov' || this.chargeThrow === 'impact';   // 燃烧瓶/极爆手雷碰墙即爆：预测线截断在墙面（v20.3/v20.4）
     let n = 0, lx = x, ly = y, lz = z;
     for (let i = 0; i < 96 * 2 && n < 96; i++) {
       vy -= cfg.gravity * step;
@@ -1394,7 +1397,7 @@ class WeaponSystem {
     game.projectiles.push(new Projectile(kind,
       origin.x + dir.x * 0.5, origin.y - 0.08, origin.z + dir.z * 0.5,
       dir.x * spd, dir.y * spd + 2.6 * (0.5 + (power || 0.75) * 0.5), dir.z * spd,
-      { fuse: cfg.fuse }));
+      { fuse: cfg.fuse, armT: cfg.armT || 0 }));
   }
 
   /* ---------- 第一人称动画 ---------- */

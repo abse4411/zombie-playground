@@ -79,7 +79,7 @@ const XPGEMS = {
     this._tipAcc = (this._tipAcc || 0) + xp;
     this._tipBest = Math.max(this._tipBest || 0, tier || 0);
     if (!(this._tipT > 0)) this._tipT = 0.6;
-    p.xp += xp;
+    p.xp += xp * (p.xpMult || 1);   // 快速学习乘区（v20.4）
     while (p.xp >= p.xpNext) {
       p.xp -= p.xpNext;
       p.level++;
@@ -103,6 +103,16 @@ const ROGUE_PERKS = [
   { id: 'r_rel',    name: '快手',     icon: '🧤', max: 5, desc: '换弹速度 +2%',      apply: p => p.rogueRel = (p.rogueRel || 1) - 0.02 },
   { id: 'r_crit',   name: '弱点洞察', icon: '🎯', max: 5, desc: '暴击率 +2%（2倍伤害）', apply: p => p.critChance = (p.critChance || 0) + 0.02 },
   { id: 'r_cash',   name: '贪婪',     icon: '💰', max: 6, desc: '金钱获取 +2%',     apply: p => p.cashMult = (p.cashMult || 1) + 0.02 },
+  /* ---- v20.4 扩展池：投掷物 / 支援 / 击退 / 连杀 / 续航（同样小步 1~2 点/级） ---- */
+  { id: 'r_thdmg',  name: '破片装药', icon: '🧨', max: 8, desc: '投掷物伤害 +3%',   apply: p => p.throwDmg = (p.throwDmg || 1) + 0.03 },
+  { id: 'r_thrad',  name: '冲击扩容', icon: '📣', max: 6, desc: '投掷物范围 +4%',   apply: p => p.throwRad = (p.throwRad || 1) + 0.04 },
+  { id: 'r_thdur',  name: '延时烈焰', icon: '⏳', max: 6, desc: '投掷物持续效果 +6%', apply: p => p.throwDur = (p.throwDur || 1) + 0.06 },
+  { id: 'r_sup',    name: '火力协调', icon: '🛰', max: 6, desc: '支援伤害/范围/持续 +2%', apply: p => { p.supDmg = (p.supDmg || 1) + 0.02; p.supRad = (p.supRad || 1) + 0.02; p.supDur = (p.supDur || 1) + 0.02; } },
+  { id: 'r_knb',    name: '蛮力冲击', icon: '🦾', max: 6, desc: '爆炸与近战击退 +6%', apply: p => p.knbMult = (p.knbMult || 1) + 0.06 },
+  { id: 'r_streak', name: '连杀狂潮', icon: '🔥', max: 5, desc: '连杀窗口 +0.3s、奖金上限 +0.2', apply: p => { p.streakWinBonus = (p.streakWinBonus || 0) + 0.3; p.streakCapBonus = (p.streakCapBonus || 0) + 0.2; } },
+  { id: 'r_regen',  name: '战地急救', icon: '🩹', max: 5, desc: '每秒回复 0.6 生命', apply: p => p.hpRegen = (p.hpRegen || 0) + 0.6 },
+  { id: 'r_xp',     name: '快速学习', icon: '📘', max: 5, desc: '经验获取 +4%',     apply: p => p.xpMult = (p.xpMult || 1) + 0.04 },
+  { id: 'r_res',    name: '深弹链',   icon: '🎒', max: 5, desc: '备用弹药上限 +10%', apply: p => p.reserveMult = (p.reserveMult || 1) + 0.1 },
 ];
 
 const LEVELUP = {

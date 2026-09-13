@@ -922,7 +922,13 @@ class WeaponSystem {
   }
 
   /* ---------- 武器架装备（v4.5） ---------- */
+  // 切枪/掏出时清除残留的左键点击边沿（v19.2）：
+  // 全自动武器按住射击期间 lmbEdge 不被消费，带着残留边沿切到投掷/道具槽
+  // 会在切换动画结束后立刻误触发蓄力投掷/道具使用——表现为"按4有时自动丢雷"
+  _flushClickEdge() { INPUT.lmbEdge = false; }
+
   _equip(slot, inst) {
+    this._flushClickEdge();
     if (!this.p.weapons[slot] && !inst) return;
     if (this.p.weapons[slot] && this.p.current === slot && !inst) return;
     this._rememberLast();
@@ -945,6 +951,7 @@ class WeaponSystem {
 
   // 槽位键：多件武器时循环装备该槽位的武器架
   _cycleSlot(slot) {
+    this._flushClickEdge();
     const rack = this.p.rack[slot];
     if (!rack || !rack.length) { AUDIO.emptyClick(); return; }
     if (rack.length === 1) { this._equip(slot); return; }
@@ -1037,6 +1044,7 @@ class WeaponSystem {
   }
 
   _equipThrowKind(kind) {
+    this._flushClickEdge();
     this._throwSel = kind;
     this._rememberLast();
     this.p.current = 'throw';
@@ -1085,6 +1093,7 @@ class WeaponSystem {
   }
 
   _equipItemKind(kind) {
+    this._flushClickEdge();
     this.p.itemSel = kind;
     this._rememberLast();
     this.p.current = 'item';
@@ -1111,6 +1120,7 @@ class WeaponSystem {
   /* ---------- 赤手空拳（v18.2） ---------- */
   // 全部武器丢光后的徒手状态：复用近战管线，攻击消耗体力
   _enterFist() {
+    this._flushClickEdge();
     this.p.current = 'fist';
     this.switchT = 0.3; this.reloadT = 0; this.adsT = 0;
     this.swingT = -1; this._fireKick = 0;

@@ -297,7 +297,7 @@ const THROWABLES = {
     id: 'frag', name: '破片手雷', price: 160, pack: 3, max: 8,
     damage: 150, radius: 6.5, fuse: 4, speed: 11, gravity: 13,
     color: 0x3d5a3d, selfMult: 0.35,
-    desc: '延时引信约4秒（M67军规），碰墙会弹回——可以往墙角扔反弹炸尸群。',
+    desc: '延时引信约4秒（M67军规），碰墙、碰丧尸都会弹开——引信走完才炸，往尸群脚下扔。',
   },
   impact: {
     id: 'impact', name: '极爆手雷', price: 220, pack: 2, max: 6,

@@ -78,20 +78,33 @@ class Projectile {
 
     if (this.kind === 'molotov') PARTICLES.flames(p.x, p.y, p.z, 1);
     if (this.kind === 'acid' && Math.random() < 0.4) PARTICLES.acidSplash(p.x, p.y, p.z);
-    // 破片手雷 / M79榴弹：碰到丧尸立即引爆（直接命中不再穿身飞过）
+    // M79榴弹：碰到丧尸立即引爆（高速碰炸引信）
     // 敌方手雷（v15.3）：opts.R 提供独立伤害/半径（军阀小Boss），且不做碰炸（避免炸到周围尸群/自己）
-    if (this.kind === 'frag' || this.kind === 'gl') {
-      if (!this.opts.R) {
-        for (const zb of game.zombies) {
-          if (zb.dead || zb.state === 'rise') continue;
-          const dx2 = zb.pos.x - p.x, dz2 = zb.pos.z - p.z;
-          if (dx2 * dx2 + dz2 * dz2 < 0.42 && p.y < zb.pos.y + 1.9 * zb.group.scale.x) {
-            this._finish(game);
-            const M = throwMult(game);
-            if (this.kind === 'gl') explodeGrenade(game, p.x, p.y, p.z, { damage: 120 * M.dmg, radius: 6 * M.rad * (this.opts.radiusMult || 1), selfMult: 0.4 * (1 + (this.opts.selfBonus || 0)) });
-            else explodeGrenade(game, p.x, p.y, p.z, { damage: THROWABLES.frag.damage * M.dmg, radius: THROWABLES.frag.radius * M.rad, selfMult: THROWABLES.frag.selfMult });
-            return;
-          }
+    if (this.kind === 'gl' && !this.opts.R) {
+      for (const zb of game.zombies) {
+        if (zb.dead || zb.state === 'rise') continue;
+        const dx2 = zb.pos.x - p.x, dz2 = zb.pos.z - p.z;
+        if (dx2 * dx2 + dz2 * dz2 < 0.42 && p.y < zb.pos.y + 1.9 * zb.group.scale.x) {
+          this._finish(game);
+          const M = throwMult(game);
+          explodeGrenade(game, p.x, p.y, p.z, { damage: 120 * M.dmg, radius: 6 * M.rad * (this.opts.radiusMult || 1), selfMult: 0.4 * (1 + (this.opts.selfBonus || 0)) });
+          return;
+        }
+      }
+    }
+    // 破片手雷碰丧尸：弹开（v20.5 修复——M67延时引信不应触身即爆，像撞到软障碍一样反弹，引信走完才炸）
+    if (this.kind === 'frag') {
+      for (const zb of game.zombies) {
+        if (zb.dead || zb.state === 'rise') continue;
+        const dx = p.x - zb.pos.x, dz = p.z - zb.pos.z;
+        const d2 = dx * dx + dz * dz, rr = 0.38 + this.r;
+        if (d2 < rr * rr && d2 > 1e-6 && p.y < zb.pos.y + 1.9 * zb.group.scale.x) {
+          const d = Math.sqrt(d2), nx = dx / d, nz = dz / d;
+          p.x = zb.pos.x + nx * rr; p.z = zb.pos.z + nz * rr;   // 推出重叠
+          const dot = this.vx * nx + this.vz * nz;
+          if (dot < 0) { this.vx -= 1.55 * dot * nx; this.vz -= 1.55 * dot * nz; }   // 沿法线反弹（约0.78恢复系数）
+          this.vx *= 0.75; this.vz *= 0.75;
+          break;
         }
       }
     }

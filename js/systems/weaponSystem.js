@@ -13,37 +13,37 @@
 const THROW_KINDS = ['frag', 'impact', 'molotov', 'attractor'];
 
 const W_UPGRADES = {
-  dmg:  { name: '威力强化',  max: 5, gain: '伤害 +6%/级', drawback: '', desc: '重装药弹头，单发威力更高。',
+  dmg:  { name: '威力强化',  max: 10, gain: '伤害 +3%/级', drawback: '', desc: '重装药弹头，单发威力更高。',
           price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.30 * (lv + 1)) },
-  mag:  { name: '扩容弹匣',  max: 5, gain: '弹匣容量 +2 发/级（单弹匣装弹数）', drawback: '换弹时间 +6%/级（长弹匣换装更慢）', desc: '加长弹匣，每次多装 2 发，换起来也稍慢一点。',
+  mag:  { name: '扩容弹匣',  max: 10, gain: '弹匣容量 +1 发/级（单弹匣装弹数）', drawback: '换弹时间 +3%/级（长弹匣换装更慢）', desc: '加长弹匣，每次多装 1 发，换起来也稍慢一点。',
           price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.16 * (lv + 1)) },
-  rel:  { name: '快速换弹',  max: 4, gain: '换弹时间 -0.08 秒/级', drawback: '', desc: '训练有素的换弹动作，快而不掉弹。',
+  rel:  { name: '快速换弹',  max: 8, gain: '换弹时间 -0.04 秒/级', drawback: '', desc: '训练有素的换弹动作，快而不掉弹。',
           price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.26 * (lv + 1)) },
-  rof:  { name: '攻速',     max: 3, gain: '攻速 +7%/级', drawback: '', desc: '近战专用：挥击更快。枪械射速线已取消（v19.3）。',
+  rof:  { name: '攻速',     max: 6, gain: '攻速 +3.5%/级', drawback: '', desc: '近战专用：挥击更快。枪械射速线已取消（v19.3）。',
           price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.22 * (lv + 1)) },
-  acc:  { name: '精准枪管',  max: 3, gain: '散布 -10%/级', drawback: '武器更重：移速 -1.5%/级（精加工重枪管）', desc: '浮置式重枪管，精度更高、分量也更足。',
+  acc:  { name: '精准枪管',  max: 6, gain: '散布 -5%/级', drawback: '武器更重：移速 -0.75%/级（精加工重枪管）', desc: '浮置式重枪管，精度更高、分量也更足。',
           price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.20 * (lv + 1)) },
-  res:  { name: '备用弹药',  max: 3, gain: '备用弹药 +30 发/级（不改变弹匣容量）', drawback: '携行更重：移速 -1%/级（多背的弹鼓有分量）', desc: '多带弹鼓/弹链袋——备用子弹总量更多，单弹匣不变。',
+  res:  { name: '备用弹药',  max: 6, gain: '备用弹药 +15 发/级（不改变弹匣容量）', drawback: '携行更重：移速 -0.5%/级（多背的弹鼓有分量）', desc: '多带弹鼓/弹链袋——备用子弹总量更多，单弹匣不变。',
           price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.16 * (lv + 1)) },
 };
 
 /* ---------- 武器特性专属升级线（v11.11 → v18.3 代价合理化）：按 def 特征自动附加 ---------- */
 const W_SPECIALS = {
-  pel: { name: '弹丸密度', max: 2, gain: '弹丸 +1',        drawback: '后坐力 +8%（一次喷更多弹丸）', desc: '单发装填更多弹丸，面伤害更高。',
+  pel: { name: '弹丸密度', max: 4, gain: '弹丸 +1',        drawback: '后坐力 +8%（一次喷更多弹丸）', desc: '单发装填更多弹丸，面伤害更高。',
         price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.3 * (lv + 1)) },
-  psc: { name: '穿甲弹芯', max: 2, gain: '穿透 +1',        drawback: '武器更重：移速 -1.5%（重金属弹头）', desc: '重金属弹芯，可多穿透一名目标。',
+  psc: { name: '穿甲弹芯', max: 4, gain: '穿透 +1',        drawback: '武器更重：移速 -0.75%（重金属弹头）', desc: '重金属弹芯，可多穿透一名目标。',
         price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.32 * (lv + 1)) },
-  rng: { name: '加长握柄', max: 2, gain: '范围 +0.25m',    drawback: '攻速 -4%（长柄挥动更慢）', desc: '加长打击半径，挥速略降。',
+  rng: { name: '加长握柄', max: 5, gain: '范围 +0.1m',    drawback: '攻速 -2%（长柄挥动更慢）', desc: '加长打击半径，挥速略降。',
         price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.26 * (lv + 1)) },
-  knb: { name: '配重锤头', max: 2, gain: '击退 +18%',      drawback: '武器更重：移速 -1%（锤头有分量）', desc: '加重锤头，撞飞效果更强。',
+  knb: { name: '配重锤头', max: 4, gain: '击退 +9%',      drawback: '武器更重：移速 -1%（锤头有分量）', desc: '加重锤头，撞飞效果更强。',
         price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.24 * (lv + 1)) },
-  blk: { name: '高爆装药', max: 2, gain: '爆炸半径 +12%',  drawback: '自伤 +10%（离爆心太近照样疼）', desc: '更多装药——爆炸更猛，站太近也更疼。',
+  blk: { name: '高爆装药', max: 4, gain: '爆炸半径 +6%',  drawback: '自伤 +5%（离爆心太近照样疼）', desc: '更多装药——爆炸更猛，站太近也更疼。',
         price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.34 * (lv + 1)) },
-  bur: { name: '稠化燃料', max: 2, gain: '灼烧 +25%/s',    drawback: '直伤 -4%（燃点优先）', desc: '燃料更黏，烧得更狠、直烧略降。',
+  bur: { name: '稠化燃料', max: 4, gain: '灼烧 +12%/s',    drawback: '直伤 -2%（燃点优先）', desc: '燃料更黏，烧得更狠、直烧略降。',
         price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.28 * (lv + 1)) },
-  hop: { name: '超导线圈', max: 2, gain: '链跳 +1',        drawback: '链电威力 -3%（分给更多目标）', desc: '电弧可多跳跃一名目标，单跳威力略降。',
+  hop: { name: '超导线圈', max: 4, gain: '链跳 +1',        drawback: '链电威力 -3%（分给更多目标）', desc: '电弧可多跳跃一名目标，单跳威力略降。',
         price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.34 * (lv + 1)) },
-  frz: { name: '深寒制剂', max: 2, gain: '冻结 +1s',       drawback: '武器更重：移速 -1%（冷却剂罐）', desc: '冷冻介质更足，冻得更久、背罐更沉。',
+  frz: { name: '深寒制剂', max: 4, gain: '冻结 +0.5s',       drawback: '武器更重：移速 -0.5%（冷却剂罐）', desc: '冷冻介质更足，冻得更久、背罐更沉。',
         price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.28 * (lv + 1)) },
 };
 
@@ -57,7 +57,7 @@ function getUpgradeLines(def) {
   };
   if (def.melee) return [
     mk('dmg'),   // 近战威力同样无代价（v18.3）
-    mk('rof', { name: '攻速', drawback: '', gain: '攻速 +7%' }),
+    mk('rof', { name: '攻速', drawback: '', gain: '攻速 +3.5%' }),
     mk('rng'), mk('knb'),
   ];
   // v19.3：取消枪械"射速强化"线——射速是武器定位的核心标识，不做升级成长
@@ -86,22 +86,22 @@ function lineMaxFor(def, id) {
   if (!def || def.melee) return base;
   switch (id) {
     case 'rof':
-      if ((def.rpm || 0) >= 900) return Math.min(base, 1);
-      if ((def.rpm || 0) >= 700) return Math.min(base, 2);
+      if ((def.rpm || 0) >= 900) return Math.min(base, 2);
+      if ((def.rpm || 0) >= 700) return Math.min(base, 4);
       return base;
     case 'acc':
-      if ((def.spread || 1) <= 0.008) return Math.min(base, 1);
-      if ((def.spread || 1) <= 0.015) return Math.min(base, 2);
+      if ((def.spread || 1) <= 0.008) return Math.min(base, 2);
+      if ((def.spread || 1) <= 0.015) return Math.min(base, 4);
       return base;
     case 'res':
-      if ((def.reserve || 0) >= 250) return Math.min(base, 1);
-      if ((def.reserve || 0) >= 180) return Math.min(base, 2);
+      if ((def.reserve || 0) >= 250) return Math.min(base, 2);
+      if ((def.reserve || 0) >= 180) return Math.min(base, 4);
       return base;
     case 'pel':
-      if ((def.pellets || 1) >= 8) return Math.min(base, 1);
+      if ((def.pellets || 1) >= 8) return Math.min(base, 2);
       return base;
     case 'psc':
-      if ((def.pierce || 0) >= 2) return Math.min(base, 1);
+      if ((def.pierce || 0) >= 2) return Math.min(base, 2);
       return base;
   }
   return base;
@@ -119,8 +119,8 @@ function weaponStatRows(inst) {
   if (def.melee) {
     add('伤害', def.damage, Math.round(def.damage * inst.dmgMult * 10) / 10, v => v, false);
     add('攻速', Math.round(def.rpm / 10 * 10) / 10, Math.round(def.rpm * inst.rpmMult / 10 * 10) / 10, v => v, true);
-    add('攻击范围', def.range, Math.round((def.range + ((inst.upgrades && inst.upgrades.rng) || 0) * 0.25) * 10) / 10, v => v + 'm', false);
-    const kb = 1 + 0.18 * ((inst.upgrades && inst.upgrades.knb) || 0);
+    add('攻击范围', def.range, Math.round((def.range + ((inst.upgrades && inst.upgrades.rng) || 0) * 0.1) * 10) / 10, v => v + 'm', false);
+    const kb = 1 + 0.09 * ((inst.upgrades && inst.upgrades.knb) || 0);   // v20.8
     add('击退', 1, Math.round(kb * 100) / 100, v => '×' + v, false);
   } else {
     add('单发伤害', def.damage * (def.pellets || 1), Math.round(def.damage * inst.dmgMult * ((def.pellets || 1) + ((inst.upgrades && inst.upgrades.pel) || 0)) * 10) / 10, v => v, false);
@@ -175,37 +175,37 @@ class WeaponInstance {
   get magSize() {
     if (!this.def.mag) return 0;   // 近战无弹匣概念
     let m = this.def.mag * (1 + 0.2 * this.lvl);   // 旧总等级仍生效（兼容存档）
-    if (this._lv('mag')) m += 2 * this._lv('mag');   // v18.4：小步长，每级 +2 发
+    if (this._lv('mag')) m += 1 * this._lv('mag');   // v20.8：微步长，每级 +1 发
     return Math.max(1, Math.round(m));
   }
   get dmgMult() {
     let d = 1 + 0.15 * this.lvl;
-    if (this._lv('dmg')) d *= 1 + 0.06 * this._lv('dmg');   // v18.4：每级 +6%
+    if (this._lv('dmg')) d *= 1 + 0.03 * this._lv('dmg');   // v20.8：每级 +3%
     return d;
   }
   get reloadTimeMult() {
     let r = 1;
-    if (this._lv('rel')) r = Math.max(0.4, r - 0.08 * this._lv('rel'));   // v18.4：每级 -0.08 秒（按基准1s折算）
-    if (this._lv('mag')) r *= 1 + 0.06 * this._lv('mag');   // 长弹匣换装更慢（v18.3 唯一保留的换弹代价）
+    if (this._lv('rel')) r = Math.max(0.4, r - 0.04 * this._lv('rel'));   // v20.8：每级 -0.04 秒（按基准1s折算）
+    if (this._lv('mag')) r *= 1 + 0.03 * this._lv('mag');   // 长弹匣换装更慢（v18.3 唯一保留的换弹代价）
     return r;
   }
   get rpmMult() {
     let r = 1;
     // v19.3：枪械射速线已取消，rof 加成仅近战"攻速"线保留
-    if (this.def.melee && this._lv('rof')) r *= 1 + 0.07 * this._lv('rof');
+    if (this.def.melee && this._lv('rof')) r *= 1 + 0.035 * this._lv('rof');
     if (this.def.melee) r *= 1 - 0.04 * (this.upgrades.rng || 0);   // 长握柄挥速代价（v18.3：近战威力不再降攻速）
     return r;
   }
   get spreadMult() {
     let s = 1;
-    if (this._lv('acc')) s *= 1 - 0.10 * this._lv('acc');   // v18.4：每级 -10%
+    if (this._lv('acc')) s *= 1 - 0.05 * this._lv('acc');   // v20.8：每级 -5%
     return s;
   }
   get reserveMaxMult() {
     // v18.4：每级 +30 发（等效乘区，保持调用方兼容）
     let r = 1;
     const lv = this._lv('res');
-    if (lv && this.def.reserve) r += 30 * lv / this.def.reserve;
+    if (lv && this.def.reserve) r += 15 * lv / this.def.reserve;   // v20.8：每级 +15 发
     return r;
   }
   // 后坐力乘区（v18.3：霰弹弹丸密度的现实代价；v19.3 枪械射速线移除后仅剩弹丸密度）
@@ -214,10 +214,10 @@ class WeaponInstance {
   }
   // 移速代价乘区（v18.3：精准枪管/穿甲弹芯/配重锤头/备用弹药/深寒罐的重量代价）
   get movePenalty() {
-    return 1 - 0.015 * this._lv('acc') - 0.015 * this._lv('psc') - 0.01 * this._lv('knb') - 0.01 * this._lv('res') - 0.01 * this._lv('frz');
+    return 1 - 0.0075 * this._lv('acc') - 0.0075 * this._lv('psc') - 0.005 * this._lv('knb') - 0.005 * this._lv('res') - 0.005 * this._lv('frz');   // v20.8 减半
   }
   // 灼烧 dps 乘区（稠化燃料）
-  get burnMult() { return 1 + 0.25 * ((this.upgrades && this.upgrades.bur) || 0); }
+  get burnMult() { return 1 + 0.125 * ((this.upgrades && this.upgrades.bur) || 0); }   // v20.8：每级 +12.5%
   // 满级精通：全部可用升级线满级（v11.11）
   get mastery() {
     if (this._mastery) return true;
@@ -499,7 +499,7 @@ class WeaponSystem {
           game.projectiles.push(new Projectile('gl',
             origin.x + dir.x * 0.5, origin.y - 0.08, origin.z + dir.z * 0.5,
             dir.x * 16, dir.y * 16 + 1.5, dir.z * 16,
-            { fuse: 3, radiusMult: 1 + 0.12 * blkLv, selfBonus: 0.1 * blkLv }));
+            { fuse: 3, radiusMult: 1 + 0.06 * blkLv, selfBonus: 0.05 * blkLv }));
         }
       }
     } else
@@ -686,7 +686,7 @@ class WeaponSystem {
       }
       // 冰冻（冬霜之刺）：命中减速；深寒制剂+1s/级（v11.11）
       if (def.frost && !isNetClient) {
-        z.slowT = Math.max(z.slowT || 0, 3 + ((w.upgrades && w.upgrades.frz) || 0));
+        z.slowT = Math.max(z.slowT || 0, 3 + 0.5 * ((w.upgrades && w.upgrades.frz) || 0));   // v20.8：每级 +0.5s
         PARTICLES.spawn('smoke', z.pos.x, 1.1 * z.group.scale.x, z.pos.z, 3,
           { speed: 0.5, vy: 0.4, life: 0.6, color: [0.7, 0.9, 1], color2: [0.3, 0.5, 0.8] });
       }
@@ -701,7 +701,7 @@ class WeaponSystem {
         game.projectiles.push(new Projectile('gl',
           origin.x + dirV.x * 0.5, origin.y - 0.05, origin.z + dirV.z * 0.5,
           dirV.x * 14, dirV.y * 14 + 2.2, dirV.z * 14,
-          { fuse: 4, radiusMult: 1 + 0.12 * blkLv, selfBonus: 0.1 * blkLv }));
+          { fuse: 4, radiusMult: 1 + 0.06 * blkLv, selfBonus: 0.05 * blkLv }));
       }
     }
 
@@ -825,10 +825,10 @@ class WeaponSystem {
     const p = this.p;
     const wi = this.w;
     const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
-    // 加长握柄（v11.11）：范围 +0.25m/级；配重锤头：击退 +18%/级
-    const range = def.range + ((wi.upgrades && wi.upgrades.rng) || 0) * 0.25 + (heavy ? 0.4 : 0);
+    // 加长握柄（v11.11）：范围 +0.1m/级（v20.8）；配重锤头：击退 +9%/级
+    const range = def.range + ((wi.upgrades && wi.upgrades.rng) || 0) * 0.1 + (heavy ? 0.4 : 0);
     const dmg = def.damage * this.w.dmgMult * p.dmgMult * (heavy ? 2.2 : 1);
-    const kbPow = GAMECONFIG.feel.kbMelee * (heavy ? 2.2 : 1) * (1 + 0.18 * ((wi.upgrades && wi.upgrades.knb) || 0)) * ((this.p && this.p.knbMult) || 1);
+    const kbPow = GAMECONFIG.feel.kbMelee * (heavy ? 2.2 : 1) * (1 + 0.09 * ((wi.upgrades && wi.upgrades.knb) || 0)) * ((this.p && this.p.knbMult) || 1);   // v20.8：每级 +9%
     let hitAny = false;
     game.stats.shots++;
     for (const z of game.zombies) {

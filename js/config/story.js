@@ -215,6 +215,7 @@ const MISSIONS = [
       { at: 450, comp: { armored: 6, phantom: 3, bloater: 5 } },
     ],
     eliteBrutes: [{ at: 200, count: 2 }, { at: 380, count: 2 }, { at: 470, count: 3 }],
+    scenario: 'ironhide',   // 变异情景：铁皮进化（v16.1）
     finaleBoss: { id: 'colossus', at: 460 },   // 幕末Boss：灯塔巨像（v6.9）
     finaleHorde: { at: 380, tanks: 1 },
     intro: [
@@ -311,6 +312,7 @@ const MISSIONS = [
     ],
     eliteBrutes: [{ at: 200, count: 1 }, { at: 400, count: 2 }],
     minibosses: [{ at: 300, id: 'banshee' }],   // 小Boss：下水道的声波回音（v15.4）
+    hordes: [{ at: 180, n: 16, types: ['walker', 'runner', 'stalker'] }],   // 尸潮爆发：下水道涌出（v16.2）
     intro: [
       { s: '林晚', t: '原初株的活性衰减曲线指向这里——城市地下排水枢纽。所有赤潮变体，都是从这管子里的水流出去的。' },
       { s: '老周', t: '这地方又湿又臭还长眼睛……我说的不是灯。渡鸦，管好你的六点钟方向。' },
@@ -368,6 +370,8 @@ const MISSIONS = [
       { at: 490, comp: { phantom: 5, licker: 5, runner: 16 } },
     ],
     eliteBrutes: [{ at: 220, count: 2 }, { at: 420, count: 2 }],
+    scenario: 'bounty',   // 变异情景：血色赏金（v16.1）
+    hordes: [{ at: 150, n: 18 }],   // 尸潮爆发（v16.2）
     finaleBoss: { id: 'pumpWarden', at: 460 },   // 终章Boss：母体泵守护者（v8.0）
     finaleHorde: { at: 390, tanks: 2 },
     intro: [
@@ -469,6 +473,7 @@ const MISSIONS = [
       { at: 470, comp: { tank: 1, licker: 5, runner: 14 } },
     ],
     eliteBrutes: [{ at: 180, count: 2 }, { at: 400, count: 2 }],
+    scenario: 'bloodlust',   // 变异情景：嗜血狂怒（v16.1）
     finaleHorde: { at: 480, tanks: 1 },
     intro: [
       { s: '老周', t: '焊死的钢门，三道。方舟是想把我们钉死在街这头。' },

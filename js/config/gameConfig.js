@@ -214,6 +214,52 @@ const GAMECONFIG = {
   // 狩猎模式小Boss轮换阵容（第4波起每3波一个）
   minibossRoster: ['warlord', 'ironwall', 'banshee'],
 
+  /* ---------- 变异情景（v16.1）：全局情景修正（Back 4 Blood Corruption 式） ----------
+   * 风险=回报配对：每条强化都附带赏金补偿。狩猎模式第3波起每波随机抽取（60%），
+   * 持续整波；遭遇战可通过任务数据 scenario 字段固定触发。
+   */
+  scenarios: [
+    { id: 'ironhide', icon: '🛡', name: '铁皮进化', desc: '全体感染体生命 +40% —— 赏金 +25%', hp: 1.4, reward: 1.25 },
+    { id: 'hunger', icon: '💨', name: '饥渴潮涌', desc: '全体感染体移速 +25% —— 赏金 +30%', speed: 1.25, reward: 1.3 },
+    { id: 'bloodlust', icon: '🩸', name: '嗜血狂怒', desc: '全体感染体伤害 +25%、攻击欲望强化 —— 赏金 +30%', dmg: 1.25, aggro: 1.3, reward: 1.3 },
+    { id: 'tide', icon: '🌊', name: '狂潮尸海', desc: '同屏上限 +50%、刷怪提速 —— 开波尸潮爆发', cap: 1.5, interval: 0.65, burst: true, reward: 1.35 },
+    { id: 'womb', icon: '☣', name: '变异温床', desc: '变异感染体概率 +22% —— 赏金 +40%', mutate: 0.22, reward: 1.4 },
+    { id: 'bounty', icon: '💰', name: '血色赏金', desc: '赏金翻倍 —— 但它们也硬得可怕', reward: 2.0, hp: 1.3 },
+    { id: 'elite', icon: '💀', name: '猎王领地', desc: '小Boss 提前登岛、精英频出 —— 赏金 +35%', mutate: 0.1, miniAtWave: 4, reward: 1.35 },
+  ],
+
+  /* ---------- 尸潮爆发（v16.2）：一次性大规模合围 ---------- */
+  hordeBurst: {
+    warnTime: 3,          // 警报倒计时（秒）
+    baseN: 12, perWave: 1.4, maxN: 34,   // 数量 = base + wave×perWave
+    ringMin: 16, ringMax: 26,            // 玩家周围环形刷新带
+    stagger: 0.12,                        // 逐个落地间隔
+  },
+
+  /* ---------- 支援道具（v16.3）：背包点击使用，商城售卖 ---------- */
+  supports: {
+    airstrike: {
+      id: 'airstrike', icon: '✈', name: '战机轰炸', max: 2, pack: 1, price: 2600,
+      desc: '标记前方40米×8米弹幕带，2.5秒后战机沿带投弹8枚——注意自己别站在弹着区里。',
+      stats: [['单弹伤害', 150], ['弹幕带', '40m × 8m'], ['前摇', '2.5s']],
+    },
+    supply: {
+      id: 'supply', icon: '📦', name: '空投补给', max: 3, pack: 1, price: 1800,
+      desc: '呼叫补给箱空投至身边：全弹药补满 + 医疗包×2 + 现金。落地有小额砸落伤害。',
+      stats: [['内容', '全弹药+医疗×2+$600'], ['落地', '半径3m击倒']],
+    },
+    drone: {
+      id: 'drone', icon: '🛸', name: '攻击无人机', max: 2, pack: 1, price: 3200,
+      desc: '武装无人机伴飞25秒：自动索敌18米内感染体，双联机枪点射（爆头按2倍计）。',
+      stats: [['持续', '25s'], ['索敌', '18m'], ['火力', '22 dmg / 0.5s']],
+    },
+    sentry: {
+      id: 'sentry', icon: '🔫', name: '哨戒机枪', max: 2, pack: 1, price: 2400,
+      desc: '部署自动哨戒塔：120°扇形自动索敌16米，150发弹链打完自毁。占好位置比什么都强。',
+      stats: [['弹药', '150发'], ['扇形', '120° / 16m'], ['火力', '18 dmg / 0.12s']],
+    },
+  },
+
   radar: { range: 55 },
   /* ---------- 感染体整体强化（v7.0）：攻击欲望/攻击距离/移速 ---------- */
   zombieAggro: {

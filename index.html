@@ -186,6 +186,10 @@
         <div class="bp-row"><span>💰 现金</span><b id="bp-cash">$0</b></div>
       </div>
       <div class="bp-sec">
+        <div class="bp-sec-title">🛠 支援道具 <i>（点击使用）</i></div>
+        <div id="bp-support"></div>
+      </div>
+      <div class="bp-sec">
         <div class="bp-sec-title">📊 本局统计</div>
         <div id="bp-stats" class="bp-stats-grid"></div>
       </div>
@@ -487,55 +491,56 @@
 <div id="toast" class="hidden"></div>
 
 <!-- ==================== 脚本（按依赖顺序加载） ==================== -->
-<script src="js/lib/three.min.js?v=15.4"></script>
+<script src="js/lib/three.min.js?v=16.4"></script>
 <!-- 配置层 -->
-<script src="js/config/gameConfig.js?v=15.4"></script>
-<script src="js/core/resources.js?v=15.4"></script>
-<script src="js/systems/mapStructs.js?v=15.4"></script>
+<script src="js/config/gameConfig.js?v=16.4"></script>
+<script src="js/core/resources.js?v=16.4"></script>
+<script src="js/systems/mapStructs.js?v=16.4"></script>
 <!-- 核心层 -->
-<script src="js/core/utils.js?v=15.4"></script>
-<script src="js/core/artkit.js?v=15.4"></script>
-<script src="js/core/audio.js?v=15.4"></script>
-<script src="js/core/input.js?v=15.4"></script>
-<script src="js/core/touch.js?v=15.4"></script>
-<script src="js/core/particles.js?v=15.4"></script>
-<script src="js/core/collision.js?v=15.4"></script>
-<script src="js/core/engine.js?v=15.4"></script>
+<script src="js/core/utils.js?v=16.4"></script>
+<script src="js/core/artkit.js?v=16.4"></script>
+<script src="js/core/audio.js?v=16.4"></script>
+<script src="js/core/input.js?v=16.4"></script>
+<script src="js/core/touch.js?v=16.4"></script>
+<script src="js/core/particles.js?v=16.4"></script>
+<script src="js/core/collision.js?v=16.4"></script>
+<script src="js/core/engine.js?v=16.4"></script>
 <!-- 实体层 -->
-<script src="js/entities/fpbody.js?v=15.4"></script>
-<script src="js/entities/player.js?v=15.4"></script>
-<script src="js/entities/zombie.js?v=15.4"></script>
-<script src="js/entities/projectile.js?v=15.4"></script>
-<script src="js/entities/combatFx.js?v=15.4"></script>
-<script src="js/entities/loot.js?v=15.4"></script>
-<script src="js/entities/destructible.js?v=15.4"></script>
-<script src="js/entities/supplyCrate.js?v=15.4"></script>
-    <script src="js/entities/nest.js?v=15.4"></script>
-    <script src="js/entities/roguelite.js?v=15.4"></script>
+<script src="js/entities/fpbody.js?v=16.4"></script>
+<script src="js/entities/player.js?v=16.4"></script>
+<script src="js/entities/zombie.js?v=16.4"></script>
+<script src="js/entities/projectile.js?v=16.4"></script>
+<script src="js/entities/combatFx.js?v=16.4"></script>
+<script src="js/entities/support.js?v=16.4"></script>
+<script src="js/entities/loot.js?v=16.4"></script>
+<script src="js/entities/destructible.js?v=16.4"></script>
+<script src="js/entities/supplyCrate.js?v=16.4"></script>
+    <script src="js/entities/nest.js?v=16.4"></script>
+    <script src="js/entities/roguelite.js?v=16.4"></script>
 <!-- 系统层 -->
-<script src="js/systems/gunModels.js?v=15.4"></script>
-    <script src="js/systems/weaponSystem.js?v=15.4"></script>
-<script src="js/systems/spawnSystem.js?v=15.4"></script>
-<script src="js/systems/shopSystem.js?v=15.4"></script>
-<script src="js/systems/saveSystem.js?v=15.4"></script>
+<script src="js/systems/gunModels.js?v=16.4"></script>
+    <script src="js/systems/weaponSystem.js?v=16.4"></script>
+<script src="js/systems/spawnSystem.js?v=16.4"></script>
+<script src="js/systems/shopSystem.js?v=16.4"></script>
+<script src="js/systems/saveSystem.js?v=16.4"></script>
 <!-- UI层 -->
-<script src="js/ui/hud.js?v=15.4"></script>
-<script src="js/ui/damageNumbers.js?v=15.4"></script>
-<script src="js/ui/gunPreview.js?v=15.4"></script>
-    <script src="js/ui/codexPreview.js?v=15.4"></script>
-    <script src="js/ui/shopUI.js?v=15.4"></script>
-<script src="js/ui/storyUI.js?v=15.4"></script>
-<script src="js/ui/backpack.js?v=15.4"></script>
-<script src="js/ui/charPreview.js?v=15.4"></script>
-    <script src="js/ui/menuScene.js?v=15.4"></script>
-<script src="js/ui/menu.js?v=15.4"></script>
+<script src="js/ui/hud.js?v=16.4"></script>
+<script src="js/ui/damageNumbers.js?v=16.4"></script>
+<script src="js/ui/gunPreview.js?v=16.4"></script>
+    <script src="js/ui/codexPreview.js?v=16.4"></script>
+    <script src="js/ui/shopUI.js?v=16.4"></script>
+<script src="js/ui/storyUI.js?v=16.4"></script>
+<script src="js/ui/backpack.js?v=16.4"></script>
+<script src="js/ui/charPreview.js?v=16.4"></script>
+    <script src="js/ui/menuScene.js?v=16.4"></script>
+<script src="js/ui/menu.js?v=16.4"></script>
 <!-- 模式层 -->
-<script src="js/modes/huntMode.js?v=15.4"></script>
-<script src="js/modes/encounterMode.js?v=15.4"></script>
-<script src="js/modes/tutorialMode.js?v=15.4"></script>
+<script src="js/modes/huntMode.js?v=16.4"></script>
+<script src="js/modes/encounterMode.js?v=16.4"></script>
+<script src="js/modes/tutorialMode.js?v=16.4"></script>
 <!-- 主循环 -->
-<script src="js/net/net.js?v=15.4"></script>
-<script src="js/core/game.js?v=15.4"></script>
-<script src="js/main.js?v=15.4"></script>
+<script src="js/net/net.js?v=16.4"></script>
+<script src="js/core/game.js?v=16.4"></script>
+<script src="js/main.js?v=16.4"></script>
 </body>
 </html>

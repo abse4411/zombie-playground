@@ -7,6 +7,7 @@ const SHOP = {
     { id: 'secondary', name: '🔫 副武器' },
     { id: 'melee', name: '🔪 近战' },
     { id: 'throw', name: '💣 投掷物' },
+    { id: 'support', name: '🛠 支援' },
     { id: 'upgrade', name: '🔧 升级台' },
     { id: 'perk', name: '💉 强化' },
     { id: 'supply', name: '🩹 补给' },
@@ -81,6 +82,20 @@ const SHOP = {
           stats: t.damage
             ? [['爆炸', t.damage], ['半径', t.radius + 'm'], ['持有', `${cur.count}/${t.max}`]]
             : [['灼烧', t.dps + '/s'], ['时长', t.duration + 's'], ['持有', `${cur.count}/${t.max}`]],
+        });
+      }
+    } else if (tabId === 'support') {
+      // 支援道具（v16.3）：限购次数制，背包中点击使用
+      for (const id in GAMECONFIG.supports) {
+        const S = GAMECONFIG.supports[id];
+        const cur = p.supports[id] || 0;
+        items.push({
+          kind: 'support', id,
+          name: `${S.icon} ${S.name} ×${S.pack}`,
+          desc: S.desc,
+          price: S.price,
+          state: cur >= S.max ? 'maxed' : 'buy',
+          stats: [...S.stats, ['持有', `${cur}/${S.max}`]],
         });
       }
     } else if (tabId === 'perk') {
@@ -207,6 +222,13 @@ const SHOP = {
       case 'throw': {
         const t = THROWABLES[item.id];
         p.throwables[item.id].count = Math.min(t.max, p.throwables[item.id].count + t.pack);
+        break;
+      }
+      case 'support': {
+        // 支援道具入库（v16.3）
+        const S = GAMECONFIG.supports[item.id];
+        p.supports[item.id] = Math.min(S.max, (p.supports[item.id] || 0) + S.pack);
+        HUD.toast(`${S.icon} ${S.name} 已入背包——打开背包 [Tab] 点击使用`);
         break;
       }
       case 'perk': {

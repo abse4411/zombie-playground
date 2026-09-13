@@ -20,6 +20,7 @@ class Game {
     this.acidPools = [];
     this.loots = [];
     this.destructibles = [];
+    this.deployments = [];   // 支援道具实体（轰炸/空投/无人机/哨戒，v16.3）
     this.stats = { shots: 0, hits: 0 };
     this.interactText = null;
     this._last = performance.now();
@@ -302,6 +303,7 @@ class Game {
     this.player.spawnAt(mapDef);
     this.weapons = new WeaponSystem(this.player);
     this.spawner = new SpawnSystem(this);
+    this.deployments = [];
     this.mode = makeMode();
     this.stats = { shots: 0, hits: 0 };
     this._growlT = 2; this._beatT = 0;
@@ -609,6 +611,10 @@ class Game {
     // 掉落物
     for (const l of this.loots) l.update(dt, this);
     this.loots = this.loots.filter(l => !l.dead);
+
+    // 支援道具实体（v16.3）：轰炸引导/空投箱/无人机/哨戒塔
+    for (const d of this.deployments) d.update(dt, this);
+    this.deployments = this.deployments.filter(d => !d.dead);
 
     // 补给箱靠近提示与开启（自动开启式探索）
     this.interactText = null;
@@ -918,6 +924,8 @@ class Game {
     this.fireZones = []; this.acidPools = [];
     for (const l of this.loots) l.dispose();
     this.loots = [];
+    for (const d of this.deployments) d.dispose();   // 支援实体释放（v16.3）
+    this.deployments = [];
     for (const d of this.destructibles) if (!d.dead) d.dispose();
     this.destructibles = [];
     if (this.playerBody) {

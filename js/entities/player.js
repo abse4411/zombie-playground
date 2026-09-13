@@ -43,6 +43,8 @@ class Player {
     this.current = 'secondary';
     this.lastWeapon = null;   // Q键切换上一把武器 {slot, defId}
     this.throwables = { frag: { count: 2 }, molotov: { count: 1 }, attractor: { count: 0 } };
+    // 支援道具库存（v16.3）：背包点击使用；开局送1发战机轰炸供体验
+    this.supports = { airstrike: 1, supply: 0, drone: 0, sentry: 0 };
     this.medkits = 2;   // 背包医疗包
     this.alive = true;
     this.lastDamageT = -99;

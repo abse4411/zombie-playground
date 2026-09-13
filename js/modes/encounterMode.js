@@ -12,6 +12,10 @@ class EncounterMode {
     this.wavePtr = 0;
     this.brutePtr = 0;
     this.miniPtr = 0;   // 小Boss脚本指针（v15.4）
+    this.hordePtr = 0;  // 尸潮爆发脚本指针（v16.2）
+    // 固定变异情景（v16.1）：任务数据 scenario 字段
+    this.scenario = this.m.scenario ? (GAMECONFIG.scenarios || []).find(s => s.id === this.m.scenario) || null : null;
+    this._mutBonus = (this.scenario && this.scenario.mutate) || 0;
     this.finaleSpawned = false;   // 幕末Boss（v6.9）
     this.finaleHordeSpawned = false;   // L4D finale尸潮（v9.9）
     // CSOL大灾变式阶段制（v10.0）：defend→destroy→boss
@@ -42,6 +46,15 @@ class EncounterMode {
 
   start() {
     HUD.banner(this.m.name, this.m.objective);
+    // 变异情景开场播报（v16.1）
+    if (this.scenario) {
+      setTimeout(() => {
+        if (window.GAME && window.GAME.mode === this) {
+          HUD.banner(this.scenario.icon + ' 变异情景 · ' + this.scenario.name, this.scenario.desc);
+          AUDIO.hordeHorn();
+        }
+      }, 2600);
+    }
     SAVE.data.totalRuns++;
     SAVE.commit();
     if (!this.skipIntro) {
@@ -59,13 +72,14 @@ class EncounterMode {
 
     // 按时间表投放波次
     while (this.wavePtr < m.waves.length && m.waves[this.wavePtr].at <= this.elapsed) {
-      // 难度倍率（v8.5）：章节难度 × 玩家选择难度
+      // 难度倍率（v8.5）：章节难度 × 玩家选择难度 × 变异情景（v16.1）
       const df = DIFFICULTIES[GAME._missionDiff] || DIFFICULTIES.normal;
+      const sc = this.scenario || {};
       g.spawner.setMults({
-        hp: m.hpMult * df.hp,
-        speed: (1 + (m.hpMult - 1) * 0.15) * df.speed,
-        dmg: (1 + (m.hpMult - 1) * 0.3) * df.dmg,
-        reward: m.rewardMult * df.reward,
+        hp: m.hpMult * df.hp * (sc.hp || 1),
+        speed: (1 + (m.hpMult - 1) * 0.15) * df.speed * (sc.speed || 1),
+        dmg: (1 + (m.hpMult - 1) * 0.3) * df.dmg * (sc.dmg || 1),
+        reward: m.rewardMult * df.reward * (sc.reward || 1),
       });
       g.spawner.addComposition(m.waves[this.wavePtr].comp);
       // 武装人类波次播报（v15.2）：敌人里有活人枪手时给出战术提示
@@ -93,6 +107,14 @@ class EncounterMode {
         AUDIO.scream(0);
         ENGINE.shake(0.35);
         this.brutePtr++;
+      }
+    }
+
+    // 尸潮爆发脚本（v16.2）：到点警报合围
+    if (m.hordes) {
+      while (this.hordePtr < m.hordes.length && m.hordes[this.hordePtr].at <= this.elapsed) {
+        g.spawner.hordeBurst(m.hordes[this.hordePtr].n, { types: m.hordes[this.hordePtr].types });
+        this.hordePtr++;
       }
     }
 
@@ -159,6 +181,7 @@ class EncounterMode {
     const allSpawned = this.wavePtr >= m.waves.length
       && (!m.eliteBrutes || this.brutePtr >= m.eliteBrutes.length)
       && (!m.minibosses || this.miniPtr >= m.minibosses.length)
+      && (!m.hordes || this.hordePtr >= m.hordes.length)
       && (!m.finaleBoss || (this.finaleSpawned && !g.boss));
     if (allSpawned && g.spawner.exhausted() && g.aliveZombies() === 0 && this.elapsed > 12) {
       this.win(true);

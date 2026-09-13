@@ -11,6 +11,7 @@ const BACKPACK = {
       meds: $('bp-meds'), frags: $('bp-frags'), molos: $('bp-molos'),
       cash: $('bp-cash'), stats: $('bp-stats'),
       equip: $('bp-equip'), storage: $('bp-storage'), cap: $('bp-cap'),
+      support: $('bp-support'),
     };
     this.els.close.addEventListener('click', () => this.close());
   },
@@ -106,6 +107,31 @@ const BACKPACK = {
       }
       this.els.storage.appendChild(row);
     });
+    // 支援道具（v16.3）：点击使用（与投掷物按键即抛区分）
+    this.els.support.innerHTML = '';
+    if (typeof GAMECONFIG !== 'undefined' && GAMECONFIG.supports) {
+      for (const id in GAMECONFIG.supports) {
+        const S = GAMECONFIG.supports[id];
+        const n = (p.supports && p.supports[id]) || 0;
+        const row = document.createElement('div');
+        row.className = 'bp-w in-storage';
+        row.innerHTML = `<span class="bp-slot">${S.icon}</span><b>${S.name}</b>
+          <span class="bp-ammo">×${n}</span>`;
+        row.title = S.desc;
+        const btn = document.createElement('button');
+        btn.textContent = '使用';
+        btn.disabled = n <= 0;
+        btn.addEventListener('click', () => {
+          if (SUPPORTFX.use(id, g)) {
+            AUDIO.uiClick();
+            HUD.toast(`${S.icon} ${S.name} 已启用！`);
+            this.render();
+          }
+        });
+        row.appendChild(btn);
+        this.els.support.appendChild(row);
+      }
+    }
     // 统计
     this.els.stats.innerHTML = `
       <span>击杀 <b>${p.kills}</b></span><span>爆头 <b>${p.headshots}</b></span>

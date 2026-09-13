@@ -1713,10 +1713,16 @@ class Zombie {
     if (game.player.synVampire && !this.dummy && game.player.alive) game.player.hp = Math.min(game.player.maxHp, game.player.hp + 1);
     if (typeof XPGEMS !== 'undefined' && !this.dummy) XPGEMS.drop(this.pos.x, 0.6, this.pos.z, this.boss ? 30 : this.type.cost >= 3 ? 8 : this.type.cost >= 2 ? 4 : 2);
     if (!this.dummy && typeof CHESTS !== 'undefined' && (this.boss || this.affix)) CHESTS.drop(this.pos.x, this.pos.z, this.boss ? 2 : 1);
-    // 小Boss保底掉落（v15.3）：Boss级补给箱 + 击杀播报
+    // 小Boss保底掉落（v15.3）：Boss级补给箱 + 击杀播报 + 概率支援道具（v16.3）
     if (this.mini && typeof CHESTS !== 'undefined') {
       CHESTS.drop(this.pos.x, this.pos.z, 2);
       HUD.killfeed('🏆 小Boss已击杀：' + this.mini.name + ' —— 掉落补给箱', 'big');
+      if (GAMECONFIG.supports && Math.random() < 0.45 && game.player) {
+        const ids = Object.keys(GAMECONFIG.supports);
+        const sd = GAMECONFIG.supports[choice(ids)];
+        game.player.supports[sd.id] = Math.min(sd.max, (game.player.supports[sd.id] || 0) + 1);
+        HUD.toast(`🎁 ${sd.icon} 小Boss掉落支援道具：${sd.name}（背包 [Tab] 点击使用）`);
+      }
     }
     if (typeof spawnLoot !== 'undefined' && !this.dummy) spawnLoot(game, this);
     if (this.type.deathPool) spawnAcidPool(game, this.pos.x, this.pos.z, { poolDps: 12, poolRadius: 2.6, poolTime: 5 });

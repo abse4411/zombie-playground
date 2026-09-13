@@ -175,8 +175,9 @@ class SpawnSystem {
     // 变异感染体判定（v6.9→v7.0）：概率随章节进度与波次递增（14%基础→45%上限），变异可叠加至4个
     const wv = this.game.mode.wave !== undefined ? this.game.mode.wave : (this.game.mode.wavePtr || 0);
     const chapter = this.game.mode.idx || 0;
+    const sc = this.game.mode && this.game.mode.scenario;   // 变异情景加成（v16.1）
     if (!opts.boss && !opts.mini && !opts.dummy && !ZOMBIE_TYPES[typeId].human && ZOMBIE_TYPES[typeId].cost < 10 && wv >= 4) {
-      const mutChance = Math.min(0.45, GAMECONFIG.elites.chance + wv * 0.012 + chapter * 0.03);
+      const mutChance = Math.min(sc ? 0.62 : 0.45, GAMECONFIG.elites.chance + wv * 0.012 + chapter * 0.03 + (sc && sc.mutate || 0));
       if (Math.random() < mutChance) {
         const pool = GAMECONFIG.elites.list.slice();
         const extra = (Math.random() < 0.3 ? 1 : 0) + (Math.random() < 0.12 ? 1 : 0) + (Math.random() < 0.05 ? 1 : 0);
@@ -186,6 +187,8 @@ class SpawnSystem {
       }
     }
     const zb = new Zombie(typeId, sx, sz, this.mults, opts);
+    // 嗜血狂怒情景（v16.1）：攻击欲望强化（attackRate 越小出手越频繁）
+    if (sc && sc.aggro) zb.type.attackRate /= sc.aggro;
     // 血月强化
     const wm = this.game.weatherMult;
     if (wm) {
@@ -221,5 +224,32 @@ class SpawnSystem {
       HUD.showBossBar(zb.displayName);
     }
     return zb;
+  }
+
+  /* ---------- 尸潮爆发（v16.2）：警报倒计时后一次性环形合围 ----------
+   * 演出三件套：全屏横幅 + 警报号角 + 震屏；数量随波次成长，环形均匀落地 */
+  hordeBurst(n, opts = {}) {
+    if (typeof NET !== 'undefined' && NET.role === 'client') return;
+    const HB = GAMECONFIG.hordeBurst;
+    n = Math.min(HB.maxN, Math.round(n || HB.baseN));
+    HUD.banner('🚨 尸潮爆发警报', `感染体正从四面八方合围 —— ${HB.warnTime} 秒后抵达！`);
+    AUDIO.hordeHorn();
+    AUDIO.scream(0);
+    ENGINE.shake(0.35);
+    for (let i = 0; i < n; i++) {
+      setTimeout(() => {
+        const g2 = window.GAME;
+        if (!g2 || g2.state !== 'playing' || !g2.spawner || g2.spawner !== this) return;
+        const p = this.game.player.pos;
+        const a = (i / n) * TAU + rand(-0.35, 0.35);   // 环形均匀分布+抖动
+        const r = rand(HB.ringMin, HB.ringMax);
+        const S = ENGINE.mapDef.size - 2;
+        const sx = clamp(p.x + Math.cos(a) * r, -S, S);
+        const sz = clamp(p.z + Math.sin(a) * r, -S, S);
+        const pool = opts.types || ['walker', 'runner', 'walker'];
+        const zb = this.spawnOne(choice(pool), sx, sz, { burst: true });
+        if (zb) { zb.riseT = 0.18; PARTICLES.dust(sx, 0.5, sz, 9); }
+      }, HB.warnTime * 1000 + i * HB.stagger * 1000);
+    }
   }
 }

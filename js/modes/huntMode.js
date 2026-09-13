@@ -29,14 +29,19 @@ class HuntMode {
     this.directorT = rand(GAMECONFIG.director.minDelay, GAMECONFIG.director.maxDelay);
     const roll = Math.random();
     if (roll < 0.5 && g.aliveZombies() < g.spawner.cap * 0.7) {
-      // 尸潮突袭：成群奔跑者涌来
-      const n = Math.round(GAMECONFIG.director.hordeBase + this.wave * GAMECONFIG.director.hordePerWave);
-      const list = [];
-      for (let i = 0; i < n; i++) list.push(Math.random() < 0.6 ? 'runner' : 'walker');
-      g.spawner.queue.push(...list);
-      g.spawner.active = true;
-      HUD.banner('⚠ 尸潮突袭', '它们从四面八方涌来！');
-      AUDIO.hordeHorn();
+      if (this.wave >= 5 && Math.random() < 0.4) {
+        // 尸潮爆发（v16.2）：警报后一次性环形合围
+        g.spawner.hordeBurst(GAMECONFIG.hordeBurst.baseN + this.wave * GAMECONFIG.hordeBurst.perWave);
+      } else {
+        // 尸潮突袭：成群奔跑者涌来
+        const n = Math.round(GAMECONFIG.director.hordeBase + this.wave * GAMECONFIG.director.hordePerWave);
+        const list = [];
+        for (let i = 0; i < n; i++) list.push(Math.random() < 0.6 ? 'runner' : 'walker');
+        g.spawner.queue.push(...list);
+        g.spawner.active = true;
+        HUD.banner('⚠ 尸潮突袭', '它们从四面八方涌来！');
+        AUDIO.hordeHorn();
+      }
     } else if (roll < 0.75) {
       // 空投资金
       const amt = GAMECONFIG.director.airdropMoney;
@@ -65,6 +70,28 @@ class HuntMode {
       if (this.timer <= 0) {
         this.wave++;
         g.spawner.setHuntWave(this.wave, this.diff);
+        // 变异情景（v16.1）：第3波起每波60%抽取，持续整波（风险=回报配对）
+        this.scenario = null; this._mutBonus = 0;
+        if (this.wave >= 3 && Math.random() < 0.6) {
+          const S = choice(GAMECONFIG.scenarios);
+          this.scenario = S;
+          this._mutBonus = S.mutate || 0;
+          const m2 = g.spawner.mults;
+          if (S.hp) m2.hp *= S.hp;
+          if (S.speed) m2.speed = Math.min(GAMECONFIG.hunt.maxSpeedMult * 1.25, m2.speed * S.speed);
+          if (S.dmg) m2.dmg *= S.dmg;
+          if (S.reward) m2.reward *= S.reward;
+          if (S.cap) g.spawner.cap = Math.min(GAMECONFIG.hunt.maxCap, Math.round(g.spawner.cap * S.cap));
+          if (S.interval) g.spawner.interval = Math.max(GAMECONFIG.hunt.spawnIntervalMin, g.spawner.interval * S.interval);
+          const self2 = this;
+          setTimeout(() => {
+            const g3 = window.GAME;
+            if (!g3 || g3.state !== 'playing' || g3.mode !== self2) return;
+            HUD.banner(S.icon + ' 变异情景 · ' + S.name, S.desc);
+            AUDIO.hordeHorn();
+            if (S.burst) g3.spawner.hordeBurst(GAMECONFIG.hordeBurst.baseN + this.wave * GAMECONFIG.hordeBurst.perWave * 0.7);
+          }, 1400);
+        }
         this.state = 'combat';
         // Boss 波：每5波暴君Ω登场
         if (this.wave % GAMECONFIG.boss.everyWaves === 0) {
@@ -80,7 +107,9 @@ class HuntMode {
         SAVE.recordHunt(this.mapId, this.wave, g.player.kills);
         if (typeof ACHV !== 'undefined') ACHV.event('wave', g, this.wave);
         // 小Boss（v15.4）：第4波起每3波轮换登场（延迟2.5s让玩家先接敌）
-        if (this.wave >= 4 && (this.wave - 4) % 3 === 0 && GAMECONFIG.minibossRoster) {
+        // 猎王领地情景（v16.1）：从第4波起每2波必出
+        const miniByScenario = this.scenario && this.scenario.miniAtWave && this.wave >= this.scenario.miniAtWave && this.wave % 2 === 0;
+        if (GAMECONFIG.minibossRoster && ((this.wave >= 4 && (this.wave - 4) % 3 === 0) || miniByScenario)) {
           const roster = GAMECONFIG.minibossRoster;
           const mbId = roster[Math.floor(this.wave / 3) % roster.length];
           const self = this;
@@ -116,6 +145,7 @@ class HuntMode {
 
   getTopInfo() {
     const g = this.game;
+    const scTxt = this.scenario ? ` ${this.scenario.icon}${this.scenario.name}` : '';
     if (this.state === 'intermission') {
       return {
         wave: `休整 ${Math.ceil(this.timer)}s`,
@@ -123,7 +153,7 @@ class HuntMode {
       };
     }
     return {
-      wave: `第 ${this.wave} 波`,
+      wave: `第 ${this.wave} 波${scTxt}`,
       objective: `剩余丧尸 ≈ ${g.aliveZombies() + g.spawner.remaining()} · 尽可能多地击杀`,
     };
   }

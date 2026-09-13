@@ -45,19 +45,6 @@ const MENU = {
       HUD.toast(`画质：${GAMECONFIG.quality[q] ? GAMECONFIG.quality[q].name : '自动'}`);
     }));
 
-    // 自动拾取地面武器（v18.2）：默认开启
-    const apBtns = document.querySelectorAll('.ap-btn');
-    const savedAp = SAVE.data.settings.autoPickup === false ? 'off' : 'on';
-    apBtns.forEach(b => b.classList.toggle('active', b.dataset.ap === savedAp));
-    apBtns.forEach(b => b.addEventListener('click', () => {
-      const on = b.dataset.ap === 'on';
-      SAVE.data.settings.autoPickup = on;
-      SAVE.commit();
-      apBtns.forEach(x => x.classList.toggle('active', x === b));
-      AUDIO.uiClick();
-      HUD.toast(on ? '自动拾取地面武器：开启' : '自动拾取关闭——靠近按 E 拾取');
-    }));
-
     document.querySelectorAll('.btn-back').forEach(b =>
       b.addEventListener('click', () => { AUDIO.uiClick(); this.show('screen-menu'); }));
 

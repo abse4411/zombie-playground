@@ -48,6 +48,16 @@ function upgradeDef(id) { return W_UPGRADES[id] || W_SPECIALS[id]; }
 /* 道具槽种类顺序（v18.1）：数字键5循环切换 */
 const ITEM_KINDS = ['medkit', 'armorplate', 'ammobag', 'adrenaline'];
 
+/* 赤手空拳（v18.2）：全部武器丢光后的徒手状态——左键轻击/右键重击，消耗体力 */
+const FIST_DEF = {
+  id: 'fist', name: '赤手空拳', slot: 'melee', melee: true,
+  damage: 10, rpm: 150, range: 1.5, arc: 0.55,
+  weight: 1.05, len: 0.25, price: 0,
+  mag: 0, reserve: 0, reloadTime: 0,
+  sound: { freq: 320, dur: 0.05, boom: 0.15 },
+  desc: '没有武器时的最后手段——轻击快而省力，重击击退更强但更耗体力。',
+};
+
 class WeaponInstance {
   constructor(def) {
     this.def = def;
@@ -159,7 +169,11 @@ class WeaponSystem {
     ENGINE.camera.add(this.muzzleLight);
   }
 
-  get w() { return this.p.weapons[this.p.current]; }
+  get w() {
+    // 赤手空拳（v18.2）：徒手状态返回虚拟拳套实例，复用整条近战管线
+    if (this.p.current === 'fist') return this._fistW || (this._fistW = new WeaponInstance(FIST_DEF));
+    return this.p.weapons[this.p.current];
+  }
 
   // 槽位全空兜底（旧版继承存档引用了已不存在/改名的武器时）：自动补一把P92
   _ensureFallbackWeapon() {
@@ -210,6 +224,8 @@ class WeaponSystem {
     if (this.p.current === 'throw') { this._buildThrowViewmodel(this._selKind()); return; }
     // 道具槽（v18.1）：手持道具模型
     if (this.p.current === 'item') { this._buildItemViewmodel(this._selItem()); return; }
+    // 赤手空拳（v18.2）：徒手双拳模型
+    if (this.p.current === 'fist') { this._buildFistViewmodel(); return; }
     if (!this.w) this._ensureFallbackWeapon();
     const def = this.w.def;
     const g = new THREE.Group();
@@ -300,7 +316,8 @@ class WeaponSystem {
       if (INPUT.rmb && !this._prevRmb) this._holsterFromItem();
       this._prevRmb = INPUT.rmb;
     }
-    if (p.current !== 'throw' && p.current !== 'item') this._prevRmb = INPUT.rmb;
+    // 注意：_prevRmb 只在投掷/道具/近战分支内更新（v18.2 修复——
+    // 若在此处统一刷新会提前消费 RMB 边沿，导致近战重击永远无法触发）
     // 弹道预览弧（v11.9）：投掷槽蓄力时实时重算抛物线+落点环
     if (this.chargeThrow && this._chargeFromSlot) this._updateTraj();
     else this._hideTraj();
@@ -381,28 +398,42 @@ class WeaponSystem {
     } else
     // 开火
     if (def.melee) {
-      // 轻击 LMB；重击 RMB（近战时右键无ADS占用）——触屏用🎯键
+      /* 近战攻击设计（v18.2）：
+       * 轻击 [左键]：转速=武器rpm，伤害×1，基础击退/硬直——持续输出的主力
+       * 重击 [右键]：0.16s 前摇蓄力后落锤，伤害×2.2、击退×2.2、硬直1.4s、
+       *              攻速×0.5、范围+0.4m——控制/破盾用，可被切枪取消
+       * 赤手空拳：轻击耗体力10、重击18，体力不足无法挥拳 */
       const heavyEdge = INPUT.rmb && !this._prevRmb;
       this._prevRmb = INPUT.rmb;
       const wantFire = def.continuous ? INPUT.lmb : INPUT.consumeLmb();
       if (this.swingT >= 0) { this.swingT += dt; if (this.swingT > this._swingDur) this.swingT = -1; }
-      if (this.cooldown <= 0 && this.switchT <= 0) {
-        if (heavyEdge) {
-          // 重击：前摇短促、伤害x2.2、击退x2.2、硬直1.4s
-          this.cooldown = 60 / (def.rpm * 0.5);
-          this._swingDur = 0.55;
-          this.swingT = 0;
-          this._heavySwing = true;
-          if (typeof GAME !== 'undefined' && GAME.playerBody) bodyAct(GAME.playerBody, 'swing', 0.5);
+      // 重击前摇结算：蓄力完成→落锤
+      if (this._heavyPending > 0) {
+        this._heavyPending -= dt;
+        if (this._heavyPending <= 0) {
           this._meleeHit(def, game, true);
-          ENGINE.shake(0.1);
+          ENGINE.shake(0.16);
+          this.cooldown = 60 / (def.rpm * 0.5);
+        }
+      }
+      if (this._heavyPending <= 0 && this.cooldown <= 0 && this.switchT <= 0) {
+        if (heavyEdge) {
+          if (this._fistStamina(GAMECONFIG.fist.heavyCost)) {
+            this._heavyPending = GAMECONFIG.fist.windup;   // 前摇：延迟落锤
+            this._swingDur = 0.55;
+            this.swingT = 0;
+            this._heavySwing = true;
+            if (typeof GAME !== 'undefined' && GAME.playerBody) bodyAct(GAME.playerBody, 'swing', 0.5);
+          }
         } else if (wantFire) {
-          this.cooldown = 60 / (def.rpm * (this.p.rogueRof || 1) * (this.w.rpmMult || 1));   // 近战攻速受升级代价影响（v11.11）
-          this._swingDur = 0.3;
-          this.swingT = 0;
-          this._heavySwing = false;
-          if (typeof GAME !== 'undefined' && GAME.playerBody) bodyAct(GAME.playerBody, 'swing', 0.32);
-          this._meleeHit(def, game, false);
+          if (this._fistStamina(GAMECONFIG.fist.lightCost)) {
+            this.cooldown = 60 / (def.rpm * (this.p.rogueRof || 1) * (this.w.rpmMult || 1));   // 近战攻速受升级代价影响（v11.11）
+            this._swingDur = 0.3;
+            this.swingT = 0;
+            this._heavySwing = false;
+            if (typeof GAME !== 'undefined' && GAME.playerBody) bodyAct(GAME.playerBody, 'swing', 0.32);
+            this._meleeHit(def, game, false);
+          }
         }
       }
     } else {
@@ -794,7 +825,7 @@ class WeaponSystem {
     this.switchT = 0.38; this.reloadT = 0; this.adsT = 0;
     // 转管预热（v8.4 minigun）：切换时间加长
     if (this.w.def.spinup) this.switchT = this.w.def.spinup;
-    this.swingT = -1; this._fireKick = 0;
+    this.swingT = -1; this._fireKick = 0; this._heavyPending = 0;
     this._buildViewmodel();
     AUDIO.weaponSwitch();
   }
@@ -918,6 +949,7 @@ class WeaponSystem {
     else if (this.p.weapons.secondary) this._equip('secondary');
     else if (this.p.weapons.primary) this._equip('primary');
     else if (this.p.weapons.melee) this._equip('melee');
+    else this._enterFist();   // 一把武器都不剩：徒手（v18.2）
   }
 
   /* ---------- 道具槽（v18.1）：医疗包/护甲板/弹药袋/肾上腺素 ---------- */
@@ -966,11 +998,59 @@ class WeaponSystem {
     else if (this.p.weapons.secondary) this._equip('secondary');
     else if (this.p.weapons.primary) this._equip('primary');
     else if (this.p.weapons.melee) this._equip('melee');
+    else this._enterFist();   // 一把武器都不剩：徒手（v18.2）
+  }
+
+  /* ---------- 赤手空拳（v18.2） ---------- */
+  // 全部武器丢光后的徒手状态：复用近战管线，攻击消耗体力
+  _enterFist() {
+    this.p.current = 'fist';
+    this.switchT = 0.3; this.reloadT = 0; this.adsT = 0;
+    this.swingT = -1; this._fireKick = 0;
+    this.chargeThrow = null;
+    this._buildViewmodel();
+    AUDIO.weaponSwitch();
+    HUD.pickup('✊ 赤手空拳——左键轻击 / 右键重击（消耗体力）', 1);
+  }
+
+  // 徒手挥拳的体力门槛：不足时拒绝攻击并节流提示
+  _fistStamina(cost) {
+    if (this.p.current !== 'fist') return true;
+    if (this.p.stamina < cost) {
+      if (!this._fistTipT || this._fistTipT <= 0) {
+        this._fistTipT = 1.2;
+        HUD.toast('💨 体力不足，无法挥拳');
+        AUDIO.emptyClick();
+      }
+      return false;
+    }
+    this.p.stamina -= cost;
+    return true;
+  }
+
+  _buildFistViewmodel() {
+    this._disposeViewmodel();
+    const g = new THREE.Group();
+    const skin = ART.mat(0xc09a74, { roughness: 0.7 });
+    const sleeve = ART.mat(0x3a4236, {});
+    for (const side of [-1, 1]) {
+      const fist = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.085, 0.11), skin);
+      fist.position.set(side * 0.15, -0.15, -0.3);
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.075, 0.18), sleeve);
+      arm.position.set(side * 0.16, -0.17, -0.21);
+      arm.rotation.x = 0.15;
+      g.add(fist, arm);
+    }
+    this.viewmodel = g;
+    ENGINE.camera.add(g);
+    ENGINE.scene.add(ENGINE.camera);
   }
 
   /* ---------- G键丢弃（v18.2） ---------- */
   _dropCurrent(game) {
     const p = this.p;
+    // 徒手状态：没有可丢弃的东西
+    if (p.current === 'fist') { AUDIO.emptyClick(); return; }
     // 投掷槽：丢出当前选中投掷物 ×1
     if (p.current === 'throw') {
       const kind = this._selKind();
@@ -1000,11 +1080,9 @@ class WeaponSystem {
       else { const nk = this._selItem(); if (nk && nk !== ik) this._buildItemViewmodel(nk); }
       return;
     }
-    // 武器：丢出手中武器（抛出一段距离）
+    // 武器：丢出手中武器（抛出一段距离）——全部武器都可以丢，包括最后一把
     const w = this.w;
     if (!w) { AUDIO.emptyClick(); return; }
-    const total = ['primary', 'secondary', 'melee'].reduce((n, s) => n + (p.rack[s] ? p.rack[s].length : 0), 0);
-    if (total <= 1) { HUD.toast('⚠ 不能丢弃最后一把武器'); AUDIO.emptyClick(); return; }
     const slot = p.current;
     const idx = p.rack[slot] ? p.rack[slot].indexOf(w) : -1;
     if (idx >= 0) p.rack[slot].splice(idx, 1);
@@ -1013,10 +1091,10 @@ class WeaponSystem {
     spawnGroundDrop(game, 'weapon', pos.x, pos.z, { inst: w, rarity: rarityForPrice(w.def.price), delay: 1.2, toss: true });
     HUD.pickup(`🗑 已丢弃 ${w.def.name}`, 0);
     AUDIO.uiClick();
-    // 切到下一把可用武器（全空由兜底补枪）
+    // 切到下一把可用武器；全空 → 赤手空拳（v18.2）
     const nextSlot = ['primary', 'secondary', 'melee'].find(s => p.weapons[s]);
     if (nextSlot) this._equip(nextSlot);
-    else this._ensureFallbackWeapon();
+    else this._enterFist();
   }
 
   // 手持道具模型（极简风格与投掷槽一致）

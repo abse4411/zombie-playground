@@ -290,11 +290,22 @@ const META = {
   // 局末结算：击杀/波次/评级→SP
   award(game) {
     const p = game.player;
-    const sp = Math.round(p.kills * 1.2 + (game.mode.wave || 0) * 8 + (game.mode.rating === 'S' ? 60 : game.mode.rating === 'A' ? 35 : 15));
+    const m = game.mode;
+    const kills = p.kills || 0;
+    // 完成波数：进行中的波不算（波间结算期则当前波已完整打完）（v18.2）
+    let completedWaves = 0;
+    if (m && m.wave) completedWaves = Math.max(0, m.wave - (m.state === 'intermission' ? 0 : 1));
+    const rating = (m && m.rating) || '';
+    // 有效进度门槛（v18.2）：无击杀、无完成波次、无评级（刚进局就放弃）→ 不发放SP
+    if (kills <= 0 && completedWaves <= 0 && !rating) return 0;
+    let sp = Math.round(kills * 1.2 + completedWaves * 8);
+    if (rating === 'S') sp += 60;
+    else if (rating === 'A') sp += 35;
+    else if (rating) sp += 15;
     if (!SAVE.data.meta) SAVE.data.meta = { sp: 0, levels: {} };
     SAVE.data.meta.sp += sp;
     SAVE.commit();
-    if (sp > 5) HUD.toast(`🧬 猎杀点数 +${sp}（强化实验室可用）`);
+    if (sp > 0) HUD.toast(`🧬 猎杀点数 +${sp}（强化实验室可用）`);
     return sp;
   },
 

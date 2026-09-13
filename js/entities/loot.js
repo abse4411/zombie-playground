@@ -172,7 +172,8 @@ class LootDrop {
     this.phase = rand(0, TAU);
     const rarity = this.weaponInst ? (opts.rarity !== undefined ? opts.rarity : 1)
       : (opts.rarity !== undefined ? opts.rarity : (LOOT_TABLE.find(l => l.id === kind)?.rarity ?? 0));
-    const color = LOOT_RARITY_COLORS[rarity];
+    this.rarity = Math.max(0, Math.min(3, rarity | 0));   // 先赋值再建标牌（修复标签"undefined"前缀）
+    const color = LOOT_RARITY_COLORS[this.rarity];
     this.group = new THREE.Group();
     // 专属模型（v8.9）：现金捆/弹药盒/医疗箱/手雷/燃烧瓶/枪械（v18.2 修复：武器模型在构造期传入即渲染）
     const modelHolder = new THREE.Group();
@@ -235,6 +236,23 @@ class LootDrop {
     return base;
   }
 
+  // 是否适合自动拾取（v18.2 重设计）：只自动拾取"不会占用背包容量"的东西
+  // - 武器：一律需按 E 亲手拾取（替换规则不变）
+  // - 道具（医疗包/护甲板/弹药袋/肾上腺素）：计数未满→自动；已满（拾取将溢入背包）→需按 E
+  // - 投掷物：计数已满时不自动吞掉（避免浪费），需按 E
+  // - 现金/弹药盒/大奖：永远自动
+  autoCollects(game) {
+    if (this.weaponInst) return false;
+    const p = game.player;
+    if (LOOT_ITEM_KINDS.includes(this.kind)) {
+      const cap = this.kind === 'medkit' ? GAMECONFIG.inventory.medkitMax : GAMECONFIG.items[this.kind].max;
+      return p.itemCount(this.kind) < cap;
+    }
+    const tb = { frag: 'frag', molo: 'molotov', attractor: 'attractor' }[this.kind];
+    if (tb) return p.throwables[tb].count < THROWABLES[this.kind].max;
+    return true;
+  }
+
   // 容量检查（v18.2）：返回 {ok, reason}——武器永不受阻（自动替换），道具满则溢出背包判定
   canCollect(game) {
     if (!this.weaponInst && LOOT_ITEM_KINDS.includes(this.kind)) {
@@ -272,17 +290,20 @@ class LootDrop {
     this.box.position.y = baseY;
     this.beam.material.opacity = 0.22 + Math.sin(ENGINE.time * 3 + this.phase) * 0.08;
     if (this.life < 4) this.group.visible = Math.sin(ENGINE.time * 8) > -0.4; // 临消闪烁
-    // 磁吸拾取：武器类受自动拾取开关控制（v18.2），耗材保持原磁吸
+    // 拾取规则（v18.2 重设计）：
+    // - 武器：不磁吸、不自动拾——原地躺着，按 E 亲手拾取（触发替换规则）
+    // - 消耗品（现金/弹药/大奖/计数未满的道具与投掷物）：磁吸+触碰自动拾取
+    // - 道具计数已满（将溢入背包）/投掷物已满：不自动，磁吸跟随，按 E 收取
+    // - 双满（计数满+背包满）：完全不可拾，列表红字提示
     const p = game.player.pos;
     const d = dist2d(this.group.position.x, this.group.position.z, p.x, p.z);
-    if (this.weaponInst && SAVE.data.settings.autoPickup === false) return;   // 关闭自动拾取：仅 E 键
-    if (!this.canCollect(game).ok) return;   // 容量不足：不磁吸不自动拾（列表红字提示，E 也不可拾）
-    if (d < 2.6) {
+    if (!this.canCollect(game).ok) return;
+    if (!this.weaponInst && d < 2.6) {
       const k = clamp(dt * 6, 0, 1);
       this.group.position.x = lerp(this.group.position.x, p.x, k);
       this.group.position.z = lerp(this.group.position.z, p.z, k);
     }
-    if (d < 0.85) this.collect(game, true);
+    if (this.autoCollects(game) && d < 0.85) this.collect(game, true);
   }
 
   /* 拾取入口（自动/E键共用）。picked=false 为过期回收。返回 'collected' | 'blocked' */

@@ -203,7 +203,8 @@ class Game {
     p.rack = rack;
     p.weapons = { primary: rack.primary[0] || null, secondary: rack.secondary[0] || null, melee: rack.melee[0] || null };
     const cur = sv.player.current;
-    if (cur === 'throw' || cur === 'item') p.current = cur;   // 虚拟槽直接恢复（v18.1）
+    // 恢复时存档侧已补默认武器，'fist' 不保留（虚拟槽仅投掷/道具直接恢复）
+    if (cur === 'throw' || cur === 'item') p.current = cur;
     else p.current = (p.weapons[cur]) ? cur : (['secondary', 'primary', 'melee'].find(sl => p.weapons[sl]) || 'secondary');
     // 仓库
     p.storage = (sv.player.storage || []).map(it => it && it.kind === 'weapon'
@@ -757,6 +758,7 @@ class Game {
     const rows = [];
     for (const l of this.loots) {
       if (l.dead || l.life <= 0 || l.pickupDelay > 0) continue;
+      if (l.autoCollects(this)) continue;   // 自动拾取物不进列表（靠近触碰即收）
       const d = dist2d(l.group.position.x, l.group.position.z, p.pos.x, p.pos.z);
       if (d > 2.6) continue;
       rows.push({ l, d });
@@ -764,7 +766,7 @@ class Game {
     rows.sort((a, b) => a.d - b.d);
     const top = rows.slice(0, 4);
     this._pickupEaten = false;
-    // E 拾取最近的可拾物（武器/道具/耗材均可用 E 手动拾）
+    // E 拾取最近的手动物品（武器替换 / 溢出道具入背包）
     if (p.alive && top.length && INPUT.justPressed('KeyE')) {
       for (const r of top) {
         if (r.l.collect(this, true) === 'collected') { this._pickupEaten = true; break; }
@@ -774,8 +776,7 @@ class Game {
     const shown = this._pickupEaten ? [] : top;
     HUD.renderPickupList(shown.map(r => {
       const cc = r.l.canCollect(this);
-      const auto = r.l.weaponInst ? SAVE.data.settings.autoPickup !== false : true;
-      return { name: r.l.name(), rarity: r.l.rarity, ok: cc.ok, reason: cc.reason, auto, nearest: r === top[0] };
+      return { name: r.l.name(), rarity: r.l.rarity, ok: cc.ok, reason: cc.reason, nearest: r === top[0] };
     }));
   }
 

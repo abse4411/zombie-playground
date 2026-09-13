@@ -160,7 +160,7 @@ const HUD = {
       const col = '#' + LOOT_RARITY_COLORS[r.rarity || 0].toString(16).padStart(6, '0');
       let right = '';
       if (!r.ok) right = `<i class="pk-block">⚠ ${r.reason || '无法拾取'}</i>`;
-      else if (r.nearest && !r.auto) right = '<i class="pk-key">E 拾取</i>';
+      else if (r.nearest) right = '<i class="pk-key">E 拾取</i>';
       return `<div class="pk-row${r.ok ? '' : ' pk-no'}">
         <span class="pk-dot" style="background:${col};box-shadow:0 0 6px ${col}"></span>
         <b>${r.name}</b>${right}</div>`;
@@ -251,7 +251,14 @@ const HUD = {
         this.el.ammoMag.className = cnt === 0 ? 'empty' : '';
       }
     } else if (w) {
-      if (w.mastery) {   // 满级精通（v11.11）：金色★名
+      if (w.def.id === 'fist') {
+        // 赤手空拳（v18.2）：弹药区显示体力
+        this.el.weaponName.textContent = '✊ 赤手空拳';
+        this.el.weaponName.className = '';
+        this.el.ammoMag.textContent = Math.round(p.stamina);
+        this.el.ammoReserve.textContent = '体力';
+        this.el.ammoMag.className = p.stamina < GAMECONFIG.fist.lightCost ? 'empty' : '';
+      } else if (w.mastery) {   // 满级精通（v11.11）：金色★名
         this.el.weaponName.textContent = '★ ' + w.def.name;
         this.el.weaponName.className = 'mastery';
       } else {

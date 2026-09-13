@@ -603,7 +603,7 @@ const MENU = {
             stats: tstats,
             desc: t.desc,
           });
-          CODEXPREVIEW._clear();
+          CODEXPREVIEW.showThrowable(t.id);   // v20.9 修复：投掷物图鉴显示3D模型
           CODEXPREVIEW.renderSync();
         });
         grid.appendChild(c);

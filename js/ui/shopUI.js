@@ -103,6 +103,18 @@ const SHOPUI = {
           box.appendChild(row);
         }
         card.appendChild(box);
+        // 出售（v20.9）：回收武器换现金（栏位仅剩一把时拒绝）
+        if (item.sellPrice) {
+          const sellBtn = document.createElement('button');
+          sellBtn.className = 'si-line-btn poor';
+          sellBtn.style.marginTop = '6px';
+          sellBtn.textContent = `出售回收 +$\${item.sellPrice}`;
+          sellBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (SHOP.sell(this.game, 'weapon', item.def.id)) { this.render(); HUD.update(this.game); }
+          });
+          card.appendChild(sellBtn);
+        }
         this.els.items.appendChild(card);
         // 属性面板联动（v18.3）：点卡片=展示模型+属性变化；移出卡片=恢复当前属性
         const showBench = () => {

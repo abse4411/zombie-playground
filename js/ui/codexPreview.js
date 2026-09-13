@@ -70,6 +70,27 @@ const CODEXPREVIEW = {
     this.camera.lookAt(0, 0.9, 0);
   },
 
+  // 投掷物3D展示（v20.9 修复图鉴无模型）：复用 loot.js 的掉落物构建器
+  showThrowable(kind) {
+    if (!this.renderer) return;
+    this._resize();
+    this._clear();
+    const builder = (typeof LOOT_MODELS !== 'undefined') && LOOT_MODELS[kind === 'molotov' ? 'molo' : kind];
+    if (!builder) return;
+    const g = builder();
+    g.rotation.y = 0.6;
+    this.model = g;
+    this.scene.add(g);
+    const box = new THREE.Box3().setFromObject(g);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const sc = 1.9 / (Math.max(size.x, size.y, size.z) || 1);
+    g.scale.setScalar(sc);
+    g.position.set(-center.x * sc, -center.y * sc + 0.9, -center.z * sc);
+    this.camera.position.set(0, 1.15, 2.2);
+    this.camera.lookAt(0, 0.9, 0);
+  },
+
   _clear() {
     if (this.model) { disposeObject3D(this.model); this.scene.remove(this.model); this.model = null; }
     this.camera.position.set(0, 1.3, 3.4);

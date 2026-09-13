@@ -62,7 +62,7 @@ const SHOP = {
             kind: 'upbench', id: 'bench_' + inst.def.id, def: inst.def, slot, inst,
             name: `${inst.def.name}${star}`,
             desc: inst.def.desc,
-            price: 0, state: 'bench', lines,
+            price: 0, state: 'bench', lines, sellPrice: this.sellPriceForWeapon(inst),
             stats: inst.def.melee
               ? [['伤害', Math.round(inst.def.damage * inst.dmgMult)], ['范围', (inst.def.range + ((inst.upgrades && inst.upgrades.rng) || 0) * 0.25).toFixed(1) + 'm']]
               : [['伤害', Math.round(inst.def.damage * inst.dmgMult) * ((inst.def.pellets || 1) + ((inst.upgrades && inst.upgrades.pel) || 0))], ['弹匣', inst.magSize], ['换弹', (inst.def.reloadTime * inst.reloadTimeMult).toFixed(1) + 's']],
@@ -194,6 +194,55 @@ const SHOP = {
       }
     }
     return items;
+  },
+
+  // 出售回收价（v20.9）：武器上限原价50%，品质等级越高折得越多（每级-4%，下限30%）；道具40%
+  sellPriceForWeapon(inst) {
+    const tier = inst.tierLevel || 0;
+    const mult = Math.max(0.3, 0.5 - tier * 0.04);
+    return Math.max(50, Math.round(inst.def.price * mult / 10) * 10);
+  },
+  sellPriceForItem(id) {
+    const def = GAMECONFIG.items[id];
+    return def ? Math.max(20, Math.round(def.price * 0.4 / 10) * 10) : 0;
+  },
+
+  // 出售（v20.9）：武器（升级台卡片）/ 道具（道具卡片）
+  sell(game, kind, id) {
+    const p = game.player;
+    if (kind === 'weapon') {
+      let inst = null, slot = null;
+      for (const sl of ['primary', 'secondary', 'melee']) {
+        const found = p.rack[sl].find(r => r.def.id === id);
+        if (found) { inst = found; slot = sl; break; }
+      }
+      if (!inst) return false;
+      if (p.rack[slot].length <= 1) { AUDIO.denied(); HUD.toast('该栏位只剩这一把武器，不能出售'); return false; }
+      const price = this.sellPriceForWeapon(inst);
+      p.rack[slot] = p.rack[slot].filter(r => r !== inst);
+      if (p.weapons[slot] === inst) {
+        p.weapons[slot] = p.rack[slot][p.rack[slot].length - 1] || null;
+        if (p.current === slot && game.weapons) {
+          if (p.weapons[slot]) game.weapons._equip(slot);
+          else game.weapons._cycle(['secondary', 'primary', 'melee'].find(s2 => p.weapons[s2]) ? 1 : 0);
+        }
+      }
+      if (p.storage) p.storage = p.storage.filter(it => !(it && it.kind === 'weapon' && it.inst === inst));
+      p.addMoney(price);
+      HUD.pickup(`💵 出售 \${inst.def.name} +$\${price}`, 1);
+      AUDIO.purchase();
+      return true;
+    }
+    if (kind === 'item') {
+      if ((p.items[id] || 0) <= 0) return false;
+      const price = this.sellPriceForItem(id);
+      p.items[id]--;
+      p.addMoney(price);
+      HUD.pickup(`💵 出售 \${GAMECONFIG.items[id].name} +$\${price}`, 1);
+      AUDIO.purchase();
+      return true;
+    }
+    return false;
   },
 
   buy(game, item) {

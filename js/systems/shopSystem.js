@@ -59,7 +59,7 @@ const SHOP = {
           }
           const star = inst.mastery ? ' ★精通' : (inst.tierLevel ? ` · 强化${inst.tierLevel}级` : '');
           items.push({
-            kind: 'upbench', id: 'bench_' + inst.def.id, def: inst.def, slot,
+            kind: 'upbench', id: 'bench_' + inst.def.id, def: inst.def, slot, inst,
             name: `${inst.def.name}${star}`,
             desc: inst.def.desc,
             price: 0, state: 'bench', lines,

@@ -408,9 +408,25 @@ button { font-family: var(--font); cursor: pointer; }
   border-bottom: 1px solid var(--line); background: rgba(0,0,0,.25); height: 150px;
 }
 #gun-preview { width: 300px; height: 150px; flex: none; }
-#gp-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+#gp-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1; }
 #gp-name { font-size: 20px; font-weight: 800; color: #ffd76a; text-shadow: 0 2px 0 #000; }
 #gp-hint { font-size: 12px; color: var(--dim); }
+/* 武器属性面板（v18.3）：基础 → 升级后当前值 */
+#gp-stats { min-height: 0; overflow-y: auto; }
+#gp-stats .wst-head { font-size: 11.5px; letter-spacing: 2px; color: var(--dim); margin-bottom: 4px; }
+#gp-stats .wst-head i { font-style: normal; color: #9fb4c8; }
+#gp-stats .wst-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; }
+#gp-stats .wst-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  font-size: 11.5px; border-bottom: 1px dashed rgba(255,255,255,.08); padding: 2px 0; }
+#gp-stats .wst-k { color: var(--dim); }
+#gp-stats .wst-v { color: #c8d0da; white-space: nowrap; }
+#gp-stats .wst-base { font-style: normal; color: #7a828c; font-size: 10.5px; }
+#gp-stats i.up { font-style: normal; color: #52d273; }
+#gp-stats i.down { font-style: normal; color: #ff8a8a; }
+#gp-stats i.same { font-style: normal; color: var(--dim); }
+/* 升级台：无副作用行（v18.3） */
+.si-line-desc .si-drawback { color: #e8a13a; }
+.si-line-desc .si-nodraw { color: #52d273; }
 #shop-items {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
   gap: 10px; padding: 14px 20px 20px; overflow-y: auto;
@@ -437,8 +453,9 @@ button { font-family: var(--font); cursor: pointer; }
 
 /* 升级工作台（v11.10） */
 .si-lines { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
-.si-line { border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.25); padding: 6px 8px; display: flex; align-items: center; gap: 8px; }
+.si-line { border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.25); padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
 .si-line-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.si-line-top .si-line-btn { margin-left: auto; }
 .si-line-name { color: #fff; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
 .si-line-dots { color: var(--gold); font-size: 11px; letter-spacing: 2px; white-space: nowrap; }
 .si-line-dots i { color: rgba(255,255,255,.18); font-style: normal; }

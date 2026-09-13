@@ -76,7 +76,7 @@ const SHOPUI = {
           const dots = '●'.repeat(L.lv) + '<i>' + '○'.repeat(L.max - L.lv) + '</i>';
           row.innerHTML = `<div class="si-line-top"><span class="si-line-name">${L.name}</span>
             <span class="si-line-dots${L.maxed ? ' maxed' : ''}">${dots}</span></div>
-            <div class="si-line-desc"><b>${L.gain}</b>｜代价：${L.drawback}</div>`;
+            <div class="si-line-desc"><b>${L.gain}</b>｜${L.drawback ? `<span class="si-drawback">代价：${L.drawback}</span>` : '<span class="si-nodraw">无副作用</span>'}</div>`;
           const lbtn = document.createElement('button');
           if (L.maxed) {
             lbtn.textContent = '已满级';
@@ -92,11 +92,18 @@ const SHOPUI = {
               }
             });
           }
-          row.appendChild(lbtn);
+          row.querySelector('.si-line-top').appendChild(lbtn);   // 按钮放进首行右侧（v18.3 防竖排挤压）
           box.appendChild(row);
         }
         card.appendChild(box);
         this.els.items.appendChild(card);
+        // 属性面板联动（v18.3）：点卡片=展示模型+属性变化
+        const showBench = () => {
+          GUNPREVIEW.show(item.def, item.name);
+          this.renderWStats(item.inst);
+        };
+        card.addEventListener('click', showBench);
+        card.addEventListener('mouseenter', showBench);
         continue;
       }
 
@@ -126,10 +133,13 @@ const SHOPUI = {
         btn.classList.add('maxed');
       }
       card.appendChild(btn);
-      // 3D 预览（v7.4）：悬停/点击卡片展示武器模型
+      // 3D 预览（v7.4）+ 属性面板（v18.3）：悬停/点击卡片展示武器模型与属性变化
       if (item.def || item.id === 'frag' || item.id === 'molotov') {
         const prevDef = item.def || THROWABLES[item.id];
-        const showIt = () => GUNPREVIEW.show(prevDef, item.name);
+        const showIt = () => {
+          GUNPREVIEW.show(prevDef, item.name);
+          this.renderWStats(item.inst || null);
+        };
         card.addEventListener('mouseenter', showIt);
         card.addEventListener('click', showIt);
       }
@@ -137,6 +147,26 @@ const SHOPUI = {
     }
     // 默认展示第一个含模型的商品
     const first = items.find(i => i.def || i.id === 'frag' || i.id === 'molotov');
-    if (first) GUNPREVIEW.show(first.def || THROWABLES[first.id], first.name);
+    if (first) {
+      GUNPREVIEW.show(first.def || THROWABLES[first.id], first.name);
+      this.renderWStats(first.inst || null);
+    }
+  },
+
+  /* 武器属性面板（v18.3）：武器模型旁显示 基础 → 升级后当前值 */
+  renderWStats(inst) {
+    const el = document.getElementById('gp-stats');
+    if (!el) return;
+    if (!inst || typeof weaponStatRows !== 'function') { el.classList.add('hidden'); el.innerHTML = ''; return; }
+    const rows = weaponStatRows(inst);
+    const changed = rows.some(r => r.better !== 0);
+    el.classList.remove('hidden');
+    el.innerHTML = `<div class="wst-head">属性面板${changed ? ' · <i>基础 → 当前</i>' : ' · <i>全部基础值</i>'}</div>` +
+      `<div class="wst-grid">` + rows.map(r => {
+        const arrow = r.better > 0 ? '↑' : r.better < 0 ? '↓' : '＝';
+        const cls = r.better > 0 ? 'up' : r.better < 0 ? 'down' : 'same';
+        const cur = r.better === 0 ? `<b>${r.base}</b>` : `<b>${r.cur}</b> <i class="${cls}">${arrow}</i>`;
+        return `<div class="wst-row"><span class="wst-k">${r.k}</span><span class="wst-v"><i class="wst-base">${r.base}</i>→ ${cur}</span></div>`;
+      }).join('') + `</div>`;
   },
 };

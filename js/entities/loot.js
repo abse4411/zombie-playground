@@ -22,10 +22,10 @@ const LOOT_TABLE = [
   { id: 'adrenaline', weight: 1.2, rarity: 2 },   // 肾上腺素（稀有）
   { id: 'big',    weight: 2.5, rarity: 3 },  // 大奖：现金×5（史诗）
   { id: 'weapon', weight: 3,  rarity: 2 },   // 稀有武器掉落（稀有）
-  { id: 'none',   weight: 22, rarity: -1 },  // 显式空掉落（普通难度约29%不掉落）
+  { id: 'none',   weight: 40, rarity: -1 },  // 显式空掉落（v19.9 大幅下调：普通难度约65%不掉落）
 ];
-/* 难度掉落系数（v19.7）：难度越高掉落越多 */
-const LOOT_DIFF_MULT = { normal: 0.7, hard: 0.85, nightmare: 1.0 };
+/* 难度掉落系数（v19.9 大幅下调）：难度越高掉落越多 */
+const LOOT_DIFF_MULT = { normal: 0.28, hard: 0.43, nightmare: 0.73 };
 /* 武器掉落稀有度池（v9.5）：白60/绿25/蓝10/紫5 → 对应商城价格档 */
 const WEAPON_DROP_TIERS = [
   { rarity: 0, priceRange: [0, 1600], chance: 0.60, lvl: 0 },

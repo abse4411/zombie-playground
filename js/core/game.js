@@ -738,11 +738,11 @@ class Game {
     }
     // 安全屋回血：圈内每秒+3（战斗中躲圈=战术撤退）
     if (inZone && p.alive && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + 3 * dt);
-    if (p.alive && inZone) this.interactText = (INPUT.touch ? '点击补给站按钮' : '[E] 打开补给站');
+    if (p.alive && inZone) this.interactText = (INPUT.touch ? '点击补给站按钮' : '[B] 打开补给站');
     const shopAnywhere = (this.mode instanceof HuntMode && this.mode.state === 'intermission')
       || (this.mode instanceof TutorialMode && this.mode.shopStep);
-    if (p.alive && !this._pickupEaten && INPUT.justPressed('KeyE') && inZone) SHOPUI.open(this);
-    else if (p.alive && INPUT.justPressed('KeyB') && (inZone || shopAnywhere)) SHOPUI.open(this);
+    // v19.5：补给站统一用 B 键打开（E 专司拾取与补给箱），避免与拾取冲突
+    if (p.alive && INPUT.justPressed('KeyB') && (inZone || shopAnywhere)) SHOPUI.open(this);
 
     // 鼠标锁定提示
     HUD.el.lockHint.classList.toggle('hidden', INPUT.locked || INPUT.touch);

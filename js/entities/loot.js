@@ -13,7 +13,8 @@ const LOOT_TABLE = [
   { id: 'frag',   weight: 8,  rarity: 1 },   // 手雷×2
   { id: 'molo',   weight: 6,  rarity: 1 },   // 燃烧瓶×2
   { id: 'armorplate', weight: 3, rarity: 1 },   // 护甲板（v18.2）
-  { id: 'ammobag',    weight: 2, rarity: 1 },   // 弹药袋（v18.2）
+  { id: 'ammop',  weight: 2, rarity: 1 },   // 主武器弹药袋：拾取即补满主武器（v19.6）
+  { id: 'ammos',  weight: 2, rarity: 1 },   // 副武器弹药袋：拾取即补满副武器（v19.6）
   { id: 'adrenaline', weight: 2, rarity: 2 },   // 肾上腺素（v18.2）
   { id: 'big',    weight: 4,  rarity: 3 },   // 大奖：现金×5
   { id: 'weapon', weight: 6,  rarity: 2 },   // 稀有武器掉落（v9.5）
@@ -121,17 +122,8 @@ const LOOT_MODELS = {
     g.add(plate, strap);
     return g;
   },
-  ammobag: () => {
-    const g = new THREE.Group();
-    const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.2, 0.18), new THREE.MeshStandardMaterial({ color: 0x4a4232, roughness: 0.7 }));
-    for (let i = 0; i < 3; i++) {
-      const bullet = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.13, 8), new THREE.MeshStandardMaterial({ color: 0xc9a24a, metalness: 0.75, roughness: 0.3 }));
-      bullet.position.set(-0.07 + i * 0.07, 0.16, 0);
-      g.add(bullet);
-    }
-    g.add(pouch);
-    return g;
-  },
+  ammop: () => buildAmmoBagModel(0x5a6648, '🟢'),
+  ammos: () => buildAmmoBagModel(0x3f5a7a, '🔵'),
   adrenaline: () => {
     const g = new THREE.Group();
     const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.28, 10), new THREE.MeshStandardMaterial({ color: 0x8ad8ff, roughness: 0.2, transparent: true, opacity: 0.9, emissive: 0x1a4a66, emissiveIntensity: 0.6 }));
@@ -156,9 +148,24 @@ const LOOT_MODELS = {
 const LOOT_LABELS = {
   cash: '💵 现金', ammo: '🔸 弹药盒', medkit: '🧪 医疗包',
   frag: '💣 手雷', molo: '🔥 燃烧瓶', attractor: '🧲 声波诱饵',
-  armorplate: '🛡 护甲板', ammobag: '🎒 弹药袋', adrenaline: '⚡ 肾上腺素',
+  armorplate: '🛡 护甲板', ammop: '🟢 主武器弹药', ammos: '🔵 副武器弹药', adrenaline: '⚡ 肾上腺素',
   big: '⭐ 大奖奖金',
 };
+
+/* 弹药袋模型（v19.6）：主武器=橄榄绿 / 副武器=蓝灰 */
+function buildAmmoBagModel(color) {
+  const g = new THREE.Group();
+  const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.2, 0.18), new THREE.MeshStandardMaterial({ color, roughness: 0.7 }));
+  const band = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.06, 0.19), new THREE.MeshStandardMaterial({ color: 0xc84030 }));
+  band.position.y = 0.02;
+  for (let i = 0; i < 3; i++) {
+    const bullet = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.13, 8), new THREE.MeshStandardMaterial({ color: 0xc9a24a, metalness: 0.75, roughness: 0.3 }));
+    bullet.position.set(-0.07 + i * 0.07, 0.16, 0);
+    g.add(bullet);
+  }
+  g.add(pouch, band);
+  return g;
+}
 
 class LootDrop {
   /* opts: { inst(武器实例), rarity, amount(拾取数量,默认2), delay(拾取延迟秒), toss(抛落动画) } */
@@ -355,8 +362,9 @@ class LootDrop {
       case 'armorplate':
         this._collectItem(game, 'armorplate', 1);
         break;
-      case 'ammobag':
-        this._collectItem(game, 'ammobag', 1);
+      case 'ammop':
+      case 'ammos':
+        this._collectAmmoBag(game, this.kind === 'ammop' ? 'primary' : 'secondary');
         break;
       case 'adrenaline':
         this._collectItem(game, 'adrenaline', 1);
@@ -412,7 +420,22 @@ class LootDrop {
     return 'collected';
   }
 
-  // 道具类收集（v18.2）：计数未满→直接入计数；满→溢出背包（可丢弃/使用）
+  // 弹药袋拾取即用（v19.6）：立即补满对应槽位全部武器的备弹与弹匣（含升级弹匣）
+  _collectAmmoBag(game, slot) {
+    const p = game.player;
+    const names = { primary: '主武器', secondary: '副武器' };
+    let any = false;
+    for (const inst of p.rack[slot]) {
+      if (!inst || inst.def.melee) continue;
+      const full = Math.floor(inst.def.reserve * p.reserveMult * (inst.reserveMaxMult || 1) * 1.2);
+      if (inst.reserve < full) { inst.reserve = full; any = true; }
+      if (inst.mag < inst.magSize) { inst.mag = inst.magSize; any = true; }
+    }
+    if (any) HUD.pickup(`🎒 ${names[slot]}弹药袋已分装——${names[slot]}全部补满`, this.rarity);
+    else { p.addMoney(40); HUD.pickup('💰 弹药已满 → 现金 +$40', 0); }
+  }
+
+
   _collectItem(game, kind, n) {
     const p = game.player;
     const def = kind === 'medkit' ? { icon: '🧪', name: '医疗包' } : GAMECONFIG.items[kind];

@@ -146,7 +146,7 @@ function weaponPreviewRows(inst, upId) {
 }
 
 /* 道具槽种类顺序（v18.1）：数字键5循环切换 */
-const ITEM_KINDS = ['medkit', 'armorplate', 'ammobag', 'adrenaline'];
+const ITEM_KINDS = ['medkit', 'armorplate', 'adrenaline'];   // v19.6：弹药袋改为拾取即用，移出道具栏
 
 /* 赤手空拳（v18.2）：全部武器丢光后的徒手状态——左键轻击/右键重击，消耗体力 */
 const FIST_DEF = {

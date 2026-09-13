@@ -46,7 +46,7 @@ class Player {
     this.lastWeapon = null;   // Q键切换上一把武器 {slot, defId}
     this.throwables = { frag: { count: 2 }, molotov: { count: 1 }, attractor: { count: 0 } };
     // 道具栏（v18.1）：5键槽位字段道具（医疗包计数沿用 medkits，其余在此）
-    this.items = { armorplate: 0, ammobag: 0, adrenaline: 0 };
+    this.items = { armorplate: 0, adrenaline: 0 };   // v19.6：弹药袋改为拾取即用
     this.itemSel = 'medkit';     // 道具槽当前选中
     this.adrenalineT = 0;        // 肾上腺素 buff 剩余时间
     // 支援道具库存（v16.3）：背包点击使用；开局送1发战机轰炸供体验
@@ -367,21 +367,6 @@ class Player {
       this.itemConsume(kind);
       this.armor = this.maxArmor;
       AUDIO.purchase(); HUD.pickup('🛡 护甲板已装贴——装甲修复完毕', 1);
-      return true;
-    }
-    if (kind === 'ammobag') {
-      let any = false;
-      for (const slot of ['primary', 'secondary', 'melee']) {
-        for (const inst of this.rack[slot]) {
-          if (!inst || inst.def.melee) continue;
-          const full = Math.floor(inst.def.reserve * this.reserveMult * (inst.reserveMaxMult || 1) * 1.2);
-          if (inst.reserve < full) { inst.reserve = full; any = true; }
-          if (inst.mag < inst.magSize) { inst.mag = inst.magSize; any = true; }
-        }
-      }
-      if (!any) { HUD.toast('🎒 弹药已全部补满'); AUDIO.emptyClick(); return false; }
-      this.itemConsume(kind);
-      AUDIO.purchase(); HUD.pickup('🎒 弹药袋已分装——全部武器备弹补满', 1);
       return true;
     }
     if (kind === 'adrenaline') {

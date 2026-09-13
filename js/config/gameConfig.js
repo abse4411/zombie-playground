@@ -130,14 +130,14 @@ const GAMECONFIG = {
     medkitHeal: 55,     // 单个回复量
   },
 
-  /* ---------- 道具栏（v18.1）：5键字段道具，左键使用 ---------- */
+  /* ---------- 道具栏（v18.1/v19.6）：5键字段道具，左键使用 ----------
+   * v19.6：弹药袋改为"拾取即用"的地面掉落（主/副武器分 slots，见 loot.js），
+   * 不再是可持有的道具栏物品 */
   items: {
     medkit:     { name: '医疗包',   icon: '💉', max: 5, price: 0,   use: 'cast',
                   desc: '1.2秒包扎恢复大量生命，受击打断（H键快速使用）' },
     armorplate: { name: '护甲板',   icon: '🛡', max: 3, price: 700, use: 'armor',
                   desc: '立即将护甲修复至上限（需已装备装甲）' },
-    ammobag:    { name: '弹药袋',   icon: '🎒', max: 2, price: 600, use: 'ammo',
-                  desc: '立即补满全部武器（含背包内）的备弹' },
     adrenaline: { name: '肾上腺素', icon: '⚡', max: 3, price: 850, use: 'adrenaline', dur: 8,
                   desc: '8秒内移速+45%、换弹速度+35%、体力回复翻倍' },
   },

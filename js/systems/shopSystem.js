@@ -123,9 +123,20 @@ const SHOP = {
         stats: [['生命', `${Math.ceil(p.hp)}/${p.maxHp}`]],
       });
       items.push({
-        kind: 'ammoAll', id: 'ammoAll', name: '📦 全弹药补给', desc: '补满主武器与副武器的全部备弹。',
+        kind: 'ammoAll', id: 'ammoAll', name: '📦 全弹药补给', desc: '补满主武器与副武器槽内全部武器的备弹与弹匣（含升级弹匣）。',
         price: Math.round(E.ammoPrice * 0.8), state: 'buy',
-        stats: [['覆盖', '主武器 + 副武器']],
+        stats: [['覆盖', '主武器槽 + 副武器槽']],
+      });
+      // 主/副武器分类补给（v19.6）
+      items.push({
+        kind: 'ammoP', id: 'ammoP', name: '🟢 主武器弹药补给', desc: '只补满主武器槽内全部武器的备弹与弹匣。',
+        price: 250, state: 'buy',
+        stats: [['覆盖', '主武器槽'], ['效果', '备弹+弹匣全满']],
+      });
+      items.push({
+        kind: 'ammoS', id: 'ammoS', name: '🔵 副武器弹药补给', desc: '只补满副武器槽内全部武器的备弹与弹匣。',
+        price: 150, state: 'buy',
+        stats: [['覆盖', '副武器槽'], ['效果', '备弹+弹匣全满']],
       });
       items.push({
         kind: 'armorFix', id: 'armorFix', name: '🛡 护甲修复', desc: '修复护甲至上限。需先购买“装甲板甲”强化。',
@@ -293,11 +304,26 @@ const SHOP = {
       }
       case 'heal': p.hp = p.maxHp; break;
       case 'ammoAll':
+        // v19.6 修复：弹匣容量按升级后的 magSize（原 def.mag 会把 +5级扩容弹匣缩回基础值）
         for (const s of ['primary', 'secondary']) {
-          const w = p.weapons[s];
-          if (w) { w.reserve = Math.floor(w.def.reserve * p.reserveMult); w.mag = w.def.mag; }
+          for (const inst of p.rack[s]) {
+            if (!inst || inst.def.melee) continue;
+            inst.reserve = Math.floor(inst.def.reserve * p.reserveMult * (inst.reserveMaxMult || 1));
+            inst.mag = inst.magSize;
+          }
         }
         break;
+      case 'ammoP':
+      case 'ammoS': {
+        // 主/副武器分类补给（v19.6）
+        const slot = item.kind === 'ammoP' ? 'primary' : 'secondary';
+        for (const inst of p.rack[slot]) {
+          if (!inst || inst.def.melee) continue;
+          inst.reserve = Math.floor(inst.def.reserve * p.reserveMult * (inst.reserveMaxMult || 1) * 1.2);
+          inst.mag = inst.magSize;
+        }
+        break;
+      }
       case 'armorFix': p.armor = p.maxArmor; break;
       case 'bagUp': {
         const BAG_TIERS2 = [{ cap: 9, price: 2200 }, { cap: 12, price: 4800 }];

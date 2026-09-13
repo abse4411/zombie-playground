@@ -91,15 +91,17 @@ function weaponStatRows(inst) {
   return rows;
 }
 
-/* ---------- 升级预览（v18.4）：指定升级线再升一级后，只返回受影响的属性行 ----------
- * 返回 [{k, cur(当前), next(预览), better}] —— better: 1=提升 / -1=下降 */
+/* ---------- 升级预览（v18.4）：指定升级线再升一级后的全部属性行 ----------
+ * 返回 [{k, cur(当前), next(预览), better, changed}] —— 只有 changed 行才有数值变化 */
 function weaponPreviewRows(inst, upId) {
   const tmp = Object.create(inst);   // 原型链继承 def/方法，仅覆写 upgrades
   tmp.upgrades = Object.assign({}, inst.upgrades, { [upId]: ((inst.upgrades && inst.upgrades[upId]) || 0) + 1 });
   const cur = weaponStatRows(inst);
   const nxt = weaponStatRows(tmp);
-  return cur.map((r, i) => ({ k: r.k, cur: r.cur, next: nxt[i].cur, better: nxt[i].better }))
-    .filter(r => r.cur !== r.next);
+  return cur.map((r, i) => {
+    const changed = r.cur !== nxt[i].cur;
+    return { k: r.k, cur: r.cur, next: nxt[i].cur, better: changed ? nxt[i].better : 0, changed };
+  });
 }
 
 /* 道具槽种类顺序（v18.1）：数字键5循环切换 */

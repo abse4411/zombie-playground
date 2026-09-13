@@ -178,7 +178,8 @@ const SHOPUI = {
       }).join('') + `</div>`;
   },
 
-  /* 升级预览（v18.4）：悬浮/点击升级项 → 只显示该级会变化的属性 */
+  /* 升级预览（v18.4 → v18.5）：悬浮/点击升级项 → 全部属性照常展示，
+   * 发生变化的行显示 当前→下一级 与升降箭头，未变化行只显示数值 */
   renderWPreview(inst, upId, lineName) {
     const el = document.getElementById('gp-stats');
     if (!el || !inst) return;
@@ -186,12 +187,13 @@ const SHOPUI = {
     const rows = weaponPreviewRows(inst, upId);
     el.classList.remove('hidden');
     el.innerHTML = `<div class="wst-head">升级预览 · <i>${lineName}</i>（下一级）</div>` +
-      (rows.length
-        ? `<div class="wst-grid">` + rows.map(r => {
-          const arrow = r.better > 0 ? '↑' : r.better < 0 ? '↓' : '＝';
-          const cls = r.better > 0 ? 'up' : r.better < 0 ? 'down' : 'same';
-          return `<div class="wst-row"><span class="wst-k">${r.k}</span><span class="wst-v"><i class="wst-base">${r.cur}</i>→ <b>${r.next}</b> <i class="${cls}">${arrow}</i></span></div>`;
-        }).join('') + `</div>`
-        : `<div class="wst-head">该升级不影响面板数值</div>`);
+      `<div class="wst-grid">` + rows.map(r => {
+        if (!r.changed) {
+          return `<div class="wst-row"><span class="wst-k">${r.k}</span><span class="wst-v"><b>${r.cur}</b></span></div>`;
+        }
+        const arrow = r.better > 0 ? '↑' : '↓';
+        const cls = r.better > 0 ? 'up' : 'down';
+        return `<div class="wst-row"><span class="wst-k">${r.k}</span><span class="wst-v"><i class="wst-base">${r.cur}</i>→ <b>${r.next}</b> <i class="${cls}">${arrow}</i></span></div>`;
+      }).join('') + `</div>`;
   },
 };

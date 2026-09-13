@@ -1124,7 +1124,9 @@ class WeaponSystem {
       if (!kind) { AUDIO.emptyClick(); return; }
       p.throwables[kind].count--;
       const pos = tossPos(game);
-      spawnGroundDrop(game, kind, pos.x, pos.z, { amount: 1, delay: 1.2, toss: true });
+      // v18.6：掉落物种类统一用掉落表键（molotov→molo），保证模型/标签/拾取链路一致
+      const dropKind = kind === 'molotov' ? 'molo' : kind;
+      spawnGroundDrop(game, dropKind, pos.x, pos.z, { amount: 1, delay: 1.2, toss: true });
       HUD.pickup(`🗑 已丢弃 ${THROWABLES[kind].name}`, 0);
       AUDIO.uiClick();
       // 丢空该种类：自动顺延到下一种或收枪

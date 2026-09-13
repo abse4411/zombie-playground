@@ -248,8 +248,15 @@ class LootDrop {
       const cap = this.kind === 'medkit' ? GAMECONFIG.inventory.medkitMax : GAMECONFIG.items[this.kind].max;
       return p.itemCount(this.kind) < cap;
     }
+    // v18.6 修复：掉落种类 'molo' 需映射到投掷物键 'molotov'，查表也用映射后的键
+    // （旧代码 THROWABLES['molo'] 为 undefined → '.max' 抛错 → 整帧更新中断）
     const tb = { frag: 'frag', molo: 'molotov', attractor: 'attractor' }[this.kind];
-    if (tb) return p.throwables[tb].count < THROWABLES[this.kind].max;
+    if (tb) {
+      const tDef = THROWABLES[tb];
+      const tCur = p.throwables[tb];
+      if (!tDef || !tCur) return true;
+      return tCur.count < tDef.max;
+    }
     return true;
   }
 

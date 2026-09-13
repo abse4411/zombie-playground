@@ -43,11 +43,17 @@ class Projectile {
     this.fuse -= dt;
     this.vy -= this.g * dt;
 
-    // 分轴移动 + 撞墙反弹
+    // 分轴移动 + 撞墙反弹（手雷弹开继续引信倒计时；燃烧瓶 wallHit 即炸）
     let px = p.x; p.x += this.vx * dt;
-    if (pointBlocked(p.x, p.y, p.z)) { p.x = px; this.vx *= -0.4; this.wallHit = true; }
+    if (pointBlocked(p.x, p.y, p.z)) {
+      p.x = px; this.vx *= -0.4; this.wallHit = true;
+      if (this.kind === 'frag' && !this.opts.R) { AUDIO.tone(2100, 0.05, 'square', 0.1); PARTICLES.impact(p.x, p.y, p.z); }   // 反弹火花+金属声（v20.3）
+    }
     let pz = p.z; p.z += this.vz * dt;
-    if (pointBlocked(p.x, p.y, p.z)) { p.z = pz; this.vz *= -0.4; this.wallHit = true; }
+    if (pointBlocked(p.x, p.y, p.z)) {
+      p.z = pz; this.vz *= -0.4; this.wallHit = true;
+      if (this.kind === 'frag' && !this.opts.R) { AUDIO.tone(2100, 0.05, 'square', 0.1); PARTICLES.impact(p.x, p.y, p.z); }
+    }
     p.y += this.vy * dt;
 
     if (p.y <= this.r) {
@@ -87,6 +93,19 @@ class Projectile {
       this._finish(game);
       explodeGrenade(game, p.x, p.y, p.z, (this.opts.R && this.opts.R.damage) ? this.opts.R : THROWABLES.frag);
       return;
+    }
+    // 燃烧瓶：碰到丧尸立即碎裂起火（v20.3——碰到东西就炸：墙/地/丧尸，不再穿身飞过）
+    if (this.kind === 'molotov') {
+      for (const zb of game.zombies) {
+        if (zb.dead || zb.state === 'rise') continue;
+        const dx2 = zb.pos.x - p.x, dz2 = zb.pos.z - p.z;
+        if (dx2 * dx2 + dz2 * dz2 < 0.42 && p.y < zb.pos.y + 1.9 * zb.group.scale.x) {
+          this._finish(game);
+          spawnFireZone(game, p.x, p.z, THROWABLES.molotov);
+          AUDIO.fireIgnite();
+          return;
+        }
+      }
     }
     if (this.kind === 'molotov' && (this.landed || this.wallHit || this.fuse <= 0)) {
       this._finish(game);

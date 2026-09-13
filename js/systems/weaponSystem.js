@@ -1348,10 +1348,17 @@ class WeaponSystem {
     let vx = dir.x * spd, vy = dir.y * spd + 2.6 * (0.5 + power * 0.5), vz = dir.z * spd;
     let x = origin.x + dir.x * 0.5, y = origin.y - 0.08, z = origin.z + dir.z * 0.5;
     const step = 1 / 60, arr = this.trajLine.geometry.attributes.position.array;
+    const shatter = this.chargeThrow === 'molotov';   // 燃烧瓶碰墙即碎：预测线截断在墙面（v20.3）
     let n = 0, lx = x, ly = y, lz = z;
     for (let i = 0; i < 96 * 2 && n < 96; i++) {
       vy -= cfg.gravity * step;
-      x += vx * step; y += vy * step; z += vz * step;
+      let nx = x + vx * step;
+      if (pointBlocked(nx, y, z)) { if (shatter) break; vx *= -0.4; nx = x; }   // 与 Projectile 一致的撞墙反弹
+      x = nx;
+      let nz = z + vz * step;
+      if (pointBlocked(x, y, nz)) { if (shatter) break; vz *= -0.4; nz = z; }
+      z = nz;
+      y += vy * step;
       if (y < 0.06) break;
       if (i % 2 === 0) { arr[n * 3] = x; arr[n * 3 + 1] = y; arr[n * 3 + 2] = z; n++; }
       lx = x; ly = y; lz = z;

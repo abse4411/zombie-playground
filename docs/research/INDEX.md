@@ -36,3 +36,4 @@
 | v14.1-zombie-nav.md | 丧尸多楼层寻路（楼梯路标/转向集成）+攻击立体判定+狩猎存档 | v14.1~v14.3 |
 | v15.1-miniboss-human-enemies.md | 小Boss机制+人类敌人AI（登场三件套/阶段/弱点/掩体点射循环） | v15.1~v15.4 |
 | v16.1-mutation-support-items.md | 变异情景/尸潮+支援道具（B4B腐蚀卡/COD连杀/Helldivers前摇友伤/TF2哨戒） | v16.1~v16.4 |
+| v18.1-weapon-slots-inventory-pickup.md | FPS五槽位+丢弃拾取（CS槽位循环/PUBG自动拾取/L4D手动E/BR替换掉落/混合拾取开关） | v18.1~v18.3 |

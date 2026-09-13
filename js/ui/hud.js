@@ -28,6 +28,7 @@ const HUD = {
       bloodLayer: $('blood-layer'), fps: $('fps-counter'),
       bossBar: $('boss-bar'), bossName: $('boss-name'), bossFill: $('boss-fill'),
       bpHint: $('bp-hint'),
+      pickupList: $('pickup-list'),
     };
     this.radarCtx = this.el.radar.getContext('2d');
     // 背包入口：左下角提示可点击（触屏同样生效）
@@ -146,6 +147,26 @@ const HUD = {
     setTimeout(() => { if (d.parentNode) d.parentNode.removeChild(d); }, 2800);
   },
 
+  // 地面拾取列表（v18.2）：底部中央，≤4条，容量不足红字
+  renderPickupList(rows) {
+    const el = this.el.pickupList;
+    if (!el) return;
+    if (!rows.length) {
+      if (!el.classList.contains('hidden')) { el.classList.add('hidden'); el.innerHTML = ''; }
+      return;
+    }
+    el.classList.remove('hidden');
+    el.innerHTML = rows.map(r => {
+      const col = '#' + LOOT_RARITY_COLORS[r.rarity || 0].toString(16).padStart(6, '0');
+      let right = '';
+      if (!r.ok) right = `<i class="pk-block">⚠ ${r.reason || '无法拾取'}</i>`;
+      else if (r.nearest && !r.auto) right = '<i class="pk-key">E 拾取</i>';
+      return `<div class="pk-row${r.ok ? '' : ' pk-no'}">
+        <span class="pk-dot" style="background:${col};box-shadow:0 0 6px ${col}"></span>
+        <b>${r.name}</b>${right}</div>`;
+    }).join('');
+  },
+
   banner(main, sub) {
     const b = this.el.banner;
     b.classList.remove('hidden');
@@ -206,7 +227,7 @@ const HUD = {
       mk.parentElement.classList.toggle('empty', p.medkits <= 0);
     }
 
-    // 武器（v11.9：投掷槽显示投掷物名与数量）
+    // 武器（v11.9：投掷槽显示投掷物名与数量；v18.1：道具槽显示道具名与数量）
     const w = game.weapons.w;
     if (p.current === 'throw') {
       const k = game.weapons._selKind();
@@ -217,6 +238,17 @@ const HUD = {
         this.el.ammoMag.textContent = t.count;
         this.el.ammoReserve.textContent = '/ ' + THROWABLES[k].max;
         this.el.ammoMag.className = t.count === 0 ? 'empty' : '';
+      }
+    } else if (p.current === 'item') {
+      const ik = game.weapons._selItem ? game.weapons._selItem() : null;
+      if (ik) {
+        const it = GAMECONFIG.items[ik];
+        const cnt = p.itemCount(ik);
+        this.el.weaponName.textContent = it.icon + ' ' + it.name;
+        this.el.weaponName.className = '';
+        this.el.ammoMag.textContent = cnt;
+        this.el.ammoReserve.textContent = '/ ' + it.max;
+        this.el.ammoMag.className = cnt === 0 ? 'empty' : '';
       }
     } else if (w) {
       if (w.mastery) {   // 满级精通（v11.11）：金色★名
@@ -246,14 +278,24 @@ const HUD = {
         s.classList.toggle('active', p.current === 'throw');
         continue;
       }
+      if (slot === 'item') {
+        // 道具槽（v18.1）：显示当前选中道具与数量
+        const ik = game.weapons._selItem ? game.weapons._selItem() : null;
+        const cnt = ik ? p.itemCount(ik) : 0;
+        const icon = ik ? GAMECONFIG.items[ik].icon : '💊';
+        s.innerHTML = `<b>5</b> ${icon} ${ik ? GAMECONFIG.items[ik].name : '—'}${ik ? ` ×${cnt}` : ''}`;
+        s.classList.toggle('active', p.current === 'item');
+        continue;
+      }
       const inst = p.weapons[slot];
       const rackN = p.rack[slot] ? p.rack[slot].length : 0;
       s.innerHTML = `<b>${slot === 'primary' ? 1 : slot === 'secondary' ? 2 : 3}</b> ${inst ? inst.def.name : '—'}${rackN > 1 ? ` ×${rackN}` : ''}`;
       s.classList.toggle('active', p.current === slot);
     }
-    this.el.throwFrag.innerHTML = `💣 ×${p.throwables.frag.count} <i>${INPUT.touch ? '💣键' : '[G]'}</i>`;
-    this.el.throwMolo.innerHTML = `🔥 ×${p.throwables.molotov.count} <i>${INPUT.touch ? '🧪键' : '[T]'}</i>`;
-    if (this.el.throwAttr) this.el.throwAttr.innerHTML = `🧲 ×${p.throwables.attractor.count} <i>${INPUT.touch ? '🧲键' : '[V]'}</i>`;
+    // 投掷物/道具概览（v18.1：直投键已移除，改提示槽位键）
+    this.el.throwFrag.innerHTML = `💣 ×${p.throwables.frag.count}`;
+    this.el.throwMolo.innerHTML = `🔥 ×${p.throwables.molotov.count}`;
+    if (this.el.throwAttr) this.el.throwAttr.innerHTML = `🧲 ×${p.throwables.attractor.count}`;
 
     // 模式信息
     if (game.mode) {

@@ -96,7 +96,7 @@ class TutorialMode {
         check: (g) => this.meleeKill,
       },
       {
-        text: T ? '按 💣 投掷手雷' : '按 G 投掷手雷，炸倒假人',
+        text: T ? '按 💣 掏出手雷，按住开火键投掷' : '按 4 掏出手雷，按住左键蓄力、松开投掷',
         hint: '手雷碰到丧尸会立即引爆，注意自己也别站太近',
         check: (g) => this.fragKill,
       },

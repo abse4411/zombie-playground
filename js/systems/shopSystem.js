@@ -148,6 +148,39 @@ const SHOP = {
           price: 0, state: 'maxed', stats: [['容量', '12']],
         });
       }
+      // 道具（v18.1）：护甲板/弹药袋/肾上腺素
+      for (const id in GAMECONFIG.items) {
+        const it = GAMECONFIG.items[id];
+        if (id === 'medkit') continue;   // 医疗包走 heal/拾取体系
+        const cur = p.itemCount(id);
+        items.push({
+          kind: 'item', id,
+          name: `${it.icon} ${it.name}`,
+          desc: it.desc,
+          price: it.price,
+          state: cur >= it.max ? 'maxed' : 'buy',
+          stats: [['持有', `${cur}/${it.max}`], ['使用', '道具槽[5]·左键']],
+        });
+      }
+      // 武器栏位扩容（v18.1）：主/副/近战各槽 +1，上限3
+      const SU = GAMECONFIG.slotUpgrade;
+      const SLOT_META = { primary: '主武器', secondary: '副武器', melee: '近战武器' };
+      const chDef = getCharacter(SAVE.data.character || 'raven');
+      for (const slot of ['primary', 'secondary', 'melee']) {
+        const base = (chDef.slots && chDef.slots[slot]) || ({ primary: 2, secondary: 1, melee: 1 })[slot];
+        const cur = p.slotMax ? p.slotMax[slot] : base;
+        const lv = Math.max(0, cur - base);   // 已扩容档数
+        const prices = SU.price[slot];
+        const maxed = cur >= SU.cap;
+        items.push({
+          kind: 'slotUp', id: 'slotUp_' + slot, slot,
+          name: `🎖 ${SLOT_META[slot]}栏位 +1`,
+          desc: `${SLOT_META[slot]}装备栏位 ${cur} → ${Math.min(SU.cap, cur + 1)} 把，火力配置更灵活。`,
+          price: maxed ? 0 : (prices[lv] !== undefined ? prices[lv] : prices[prices.length - 1]),
+          state: maxed ? 'maxed' : 'buy',
+          stats: [['栏位', `${cur} → ${Math.min(SU.cap, cur + 1)}`], ['上限', SU.cap + ' 把']],
+        });
+      }
     }
     return items;
   },
@@ -173,7 +206,7 @@ const SHOP = {
           // 新武器（v9.4 流转）：直接装备该槽；槽满(2把)则手中旧枪退入背包
           const inst = new WeaponInstance(item.def);
           inst.reserve = Math.floor(item.def.reserve * p.reserveMult);
-          if (p.rack[slot].length < p.EQUIP_MAX) {
+          if (p.rack[slot].length < (p.slotMax ? p.slotMax[slot] : 2)) {
             p.rack[slot].push(inst);
             p.weapons[slot] = inst;
           } else {
@@ -229,6 +262,21 @@ const SHOP = {
         const S = GAMECONFIG.supports[item.id];
         p.supports[item.id] = Math.min(S.max, (p.supports[item.id] || 0) + S.pack);
         HUD.toast(`${S.icon} ${S.name} 已入背包——打开背包 [Tab] 点击使用`);
+        break;
+      }
+      case 'item': {
+        // 道具入库（v18.1）：道具槽[5]·左键使用
+        const it = GAMECONFIG.items[item.id];
+        p.items[item.id] = Math.min(it.max, (p.items[item.id] || 0) + 1);
+        HUD.toast(`${it.icon} ${it.name} 已入道具栏 [5]`);
+        break;
+      }
+      case 'slotUp': {
+        // 武器栏位扩容（v18.1）
+        if (!p.slotMax) p.slotMax = { primary: 2, secondary: 1, melee: 1 };
+        p.slotMax[item.slot] = Math.min(GAMECONFIG.slotUpgrade.cap, p.slotMax[item.slot] + 1);
+        const names = { primary: '主武器', secondary: '副武器', melee: '近战武器' };
+        HUD.toast(`🎖 ${names[item.slot]}栏位扩容至 ${p.slotMax[item.slot]} 把`);
         break;
       }
       case 'perk': {

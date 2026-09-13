@@ -11,7 +11,7 @@ const BACKPACK = {
       meds: $('bp-meds'), frags: $('bp-frags'), molos: $('bp-molos'),
       cash: $('bp-cash'), stats: $('bp-stats'),
       equip: $('bp-equip'), storage: $('bp-storage'), cap: $('bp-cap'),
-      support: $('bp-support'),
+      support: $('bp-support'), items: $('bp-items'),
     };
     this.els.close.addEventListener('click', () => this.close());
   },
@@ -42,11 +42,11 @@ const BACKPACK = {
     this.els.frags.textContent = `${p.throwables.frag.count} / ${THROWABLES.frag.max}`;
     this.els.molos.textContent = `${p.throwables.molotov.count} / ${THROWABLES.molotov.max}`;
     this.els.cash.textContent = fmtMoney(p.money);
-    // 装备栏（v9.3）：每槽最多2把，点击卸下入背包
+    // 装备栏（v9.3）：槽数=角色配置+商城扩容（v18.1），点击卸下入背包
     this.els.equip.innerHTML = '';
     const SLOT_NAMES = { primary: '主武器', secondary: '副武器', melee: '近战' };
     for (const slot of ['primary', 'secondary', 'melee']) {
-      for (let i = 0; i < p.EQUIP_MAX; i++) {
+      for (let i = 0; i < (p.slotMax ? (p.slotMax[slot] || 2) : 2); i++) {
         const inst = p.rack[slot][i];
         const row = document.createElement('div');
         if (!inst) {
@@ -101,12 +101,54 @@ const BACKPACK = {
           else HUD.toast('⚠ 换装失败：背包已满');
           if (res) { AUDIO.uiClick(); if (g.weapons) g.weapons._buildViewmodel(); this.render(); }
         });
+        const btnDrop = document.createElement('button');
+        btnDrop.textContent = '丢弃';
+        btnDrop.addEventListener('click', () => {
+          if (typeof GAME !== 'undefined' && GAME.dropStorageEntry) {
+            GAME.dropStorageEntry(idx);
+            AUDIO.uiClick();
+            this.render();
+          }
+        });
         row.appendChild(btn);
+        row.appendChild(btnDrop);
       } else {
         row.innerHTML = `<span class="bp-slot">物资</span><b>${entry.name}</b><span class="bp-ammo">×${entry.count}</span>`;
+        const btnDrop = document.createElement('button');
+        btnDrop.textContent = '丢弃';
+        btnDrop.addEventListener('click', () => {
+          if (typeof GAME !== 'undefined' && GAME.dropStorageEntry) {
+            GAME.dropStorageEntry(idx);
+            AUDIO.uiClick();
+            this.render();
+          }
+        });
+        row.appendChild(btnDrop);
       }
       this.els.storage.appendChild(row);
     });
+    // 道具栏（v18.1）：护甲板/弹药袋/肾上腺素，点击使用
+    this.els.items.innerHTML = '';
+    if (typeof GAMECONFIG !== 'undefined' && GAMECONFIG.items) {
+      for (const id in GAMECONFIG.items) {
+        if (id === 'medkit') continue;   // 医疗包在消耗品行展示
+        const it = GAMECONFIG.items[id];
+        const n = p.itemCount(id);
+        const row = document.createElement('div');
+        row.className = 'bp-w in-storage';
+        row.innerHTML = `<span class="bp-slot">${it.icon}</span><b>${it.name}</b>
+          <span class="bp-ammo">×${n}</span>`;
+        row.title = it.desc;
+        const btn = document.createElement('button');
+        btn.textContent = '使用';
+        btn.disabled = n <= 0;
+        btn.addEventListener('click', () => {
+          if (p.useItem(id)) { AUDIO.uiClick(); this.render(); }
+        });
+        row.appendChild(btn);
+        this.els.items.appendChild(row);
+      }
+    }
     // 支援道具（v16.3）：点击使用（与投掷物按键即抛区分）
     this.els.support.innerHTML = '';
     if (typeof GAMECONFIG !== 'undefined' && GAMECONFIG.supports) {

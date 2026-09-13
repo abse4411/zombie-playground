@@ -36,13 +36,19 @@ class Player {
       secondary: [this.weapons.secondary],
       melee: [this.weapons.melee],
     };
-    this.EQUIP_MAX = 2;   // 每装备槽上限
+    this.EQUIP_MAX = 2;   // 每装备槽上限（兼容旧存档读取；运行时以 slotMax 为准）
+    // 武器栏位容量（v18.1）：由所选角色 slots 配置覆盖（game._begin），商城可扩容至3
+    this.slotMax = { primary: 2, secondary: 1, melee: 1 };
     // 背包仓库（v9.2）：容量制，存武器/物资，商城可扩容
     this.storage = [];       // [{kind:'weapon', inst} | {kind:'item', itemId, count}]
     this.storageMax = 6;
     this.current = 'secondary';
     this.lastWeapon = null;   // Q键切换上一把武器 {slot, defId}
     this.throwables = { frag: { count: 2 }, molotov: { count: 1 }, attractor: { count: 0 } };
+    // 道具栏（v18.1）：5键槽位字段道具（医疗包计数沿用 medkits，其余在此）
+    this.items = { armorplate: 0, ammobag: 0, adrenaline: 0 };
+    this.itemSel = 'medkit';     // 道具槽当前选中
+    this.adrenalineT = 0;        // 肾上腺素 buff 剩余时间
     // 支援道具库存（v16.3）：背包点击使用；开局送1发战机轰炸供体验
     this.supports = { airstrike: 1, supply: 0, drone: 0, sentry: 0 };
     this.medkits = 2;   // 背包医疗包
@@ -151,6 +157,8 @@ class Player {
     let spd = (sprint ? P.sprintSpeed : P.walkSpeed) * this.speedMult;
     if (this.slowT > 0) { spd *= 0.55; this.slowT -= dt; }
     spd *= this.moveMult * (this.rogueSpd || 1) * (this.metaSpd || 1);
+    // 肾上腺素（v18.1）：移速加成
+    if (this.adrenalineT > 0) spd *= 1.45;
     // 背水一战（v8.4）：濒死移速
     if (this.laststandVal && this.hp <= this.maxHp * 0.25) spd *= 1.15;
 
@@ -220,10 +228,12 @@ class Player {
         this.stamina = Math.max(0, this.stamina - S.sprintDrain * dt);
         if (this.stamina <= 0 && !this.exhausted) { this.exhausted = true; HUD.toast('💨 体力耗尽！'); AUDIO.emptyClick(); }
       } else if (this.stamina < this.maxStamina) {
-        const regen = (this.moving ? S.walkRegen : S.idleRegen) * (this.staminaRegenMult || 1);
+        const regen = (this.moving ? S.walkRegen : S.idleRegen) * (this.staminaRegenMult || 1) * (this.adrenalineT > 0 ? 2 : 1);
         this.stamina = Math.min(this.maxStamina, this.stamina + regen * dt);
       }
       if (this.exhausted && this.stamina >= this.maxStamina * S.exhaustedRecover) this.exhausted = false;
+      // 肾上腺素（v18.1）：体力回复翻倍 + buff 计时
+      if (this.adrenalineT > 0) this.adrenalineT = Math.max(0, this.adrenalineT - dt);
     }
     const stepBound = this.bobPhase;
     this.bobPhase += dt * (this.moving ? (this.sprinting ? 11.5 : 8) : 2);
@@ -281,7 +291,7 @@ class Player {
   equipFromStorage(slot, inst) {
     const idx = this.storage.findIndex(e => e.kind === 'weapon' && e.inst === inst);
     if (idx < 0) return false;
-    if (this.rack[slot].length < this.EQUIP_MAX) {
+    if (this.rack[slot].length < (this.slotMax ? this.slotMax[slot] : 2)) {
       this.storage.splice(idx, 1);
       this.rack[slot].push(inst);
       this.weapons[slot] = inst;
@@ -332,6 +342,55 @@ class Player {
     if (typeof GAME !== 'undefined' && GAME.weapons) GAME.weapons.healAnimT = 1.2;
     AUDIO.reloadStart();
     HUD.toast('💉 包扎中…（受击会打断）');
+  }
+
+  // 道具栏计数（v18.1）：医疗包沿用 medkits，其余在 items
+  itemCount(kind) { return kind === 'medkit' ? this.medkits : (this.items[kind] || 0); }
+  itemConsume(kind) {
+    if (kind === 'medkit') this.medkits--;
+    else if (this.items[kind] > 0) this.items[kind]--;
+  }
+
+  // 使用道具（v18.1 道具栏 LMB / 背包使用按钮）：返回是否成功消耗
+  useItem(kind) {
+    const def = GAMECONFIG.items[kind];
+    if (!def) return false;
+    if (kind === 'medkit') {
+      const before = this.medkits;
+      this.useMedkit();   // 施法成功后才在 _healTick 里扣减
+      return this.medkits < before || this.healT > 0;
+    }
+    if ((this.items[kind] || 0) <= 0) { AUDIO.emptyClick(); return false; }
+    if (kind === 'armorplate') {
+      if (this.maxArmor <= 0) { HUD.toast('🛡 未装备装甲——先在商城购买“装甲板甲”'); AUDIO.emptyClick(); return false; }
+      if (this.armor >= this.maxArmor) { HUD.toast('🛡 护甲完好，无需修复'); AUDIO.emptyClick(); return false; }
+      this.itemConsume(kind);
+      this.armor = this.maxArmor;
+      AUDIO.purchase(); HUD.pickup('🛡 护甲板已装贴——装甲修复完毕', 1);
+      return true;
+    }
+    if (kind === 'ammobag') {
+      let any = false;
+      for (const slot of ['primary', 'secondary', 'melee']) {
+        for (const inst of this.rack[slot]) {
+          if (!inst || inst.def.melee) continue;
+          const full = Math.floor(inst.def.reserve * this.reserveMult * (inst.reserveMaxMult || 1) * 1.2);
+          if (inst.reserve < full) { inst.reserve = full; any = true; }
+          if (inst.mag < inst.magSize) { inst.mag = inst.magSize; any = true; }
+        }
+      }
+      if (!any) { HUD.toast('🎒 弹药已全部补满'); AUDIO.emptyClick(); return false; }
+      this.itemConsume(kind);
+      AUDIO.purchase(); HUD.pickup('🎒 弹药袋已分装——全部武器备弹补满', 1);
+      return true;
+    }
+    if (kind === 'adrenaline') {
+      this.itemConsume(kind);
+      this.adrenalineT = def.dur || 8;
+      AUDIO.streak(); HUD.toast('⚡ 肾上腺素起效！移速/换弹/体力大幅强化 8 秒');
+      return true;
+    }
+    return false;
   }
 
   // 施法结算（update内调用）

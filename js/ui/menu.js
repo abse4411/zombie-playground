@@ -45,6 +45,19 @@ const MENU = {
       HUD.toast(`画质：${GAMECONFIG.quality[q] ? GAMECONFIG.quality[q].name : '自动'}`);
     }));
 
+    // 自动拾取地面武器（v18.2）：默认开启
+    const apBtns = document.querySelectorAll('.ap-btn');
+    const savedAp = SAVE.data.settings.autoPickup === false ? 'off' : 'on';
+    apBtns.forEach(b => b.classList.toggle('active', b.dataset.ap === savedAp));
+    apBtns.forEach(b => b.addEventListener('click', () => {
+      const on = b.dataset.ap === 'on';
+      SAVE.data.settings.autoPickup = on;
+      SAVE.commit();
+      apBtns.forEach(x => x.classList.toggle('active', x === b));
+      AUDIO.uiClick();
+      HUD.toast(on ? '自动拾取地面武器：开启' : '自动拾取关闭——靠近按 E 拾取');
+    }));
+
     document.querySelectorAll('.btn-back').forEach(b =>
       b.addEventListener('click', () => { AUDIO.uiClick(); this.show('screen-menu'); }));
 
@@ -273,6 +286,7 @@ const MENU = {
       const card = document.createElement('div');
       card.className = 'card char-card' + (c.id === cur ? ' char-active' : '') + (locked ? ' char-locked' : '');
       const achv = c.unlockBy ? ACHIEVEMENTS.find(a => a.id === c.unlockBy) : null;
+      const sl = c.slots || { primary: 2, secondary: 1, melee: 1 };
       card.innerHTML = `
         <h3>${locked ? '🔒 ' : ''}${c.gender === '女' ? '♀' : '♂'} ${c.name} · ${c.prof}</h3>
         <div class="char-stats">
@@ -283,6 +297,7 @@ const MENU = {
           ${c.medkits !== 2 ? `<span>🧪 医疗包 <b>${c.medkits}</b></span>` : ''}
           <span>💢 伤害 <b>×${c.dmg.toFixed(2)}</b></span>
           ${c.staminaMax !== undefined ? `<span>💨 体力 <b>${c.staminaMax}</b></span><span>⚡ 回复 <b>×${(c.staminaRegen || 1).toFixed(2)}</b></span>` : ''}
+          <span>🎯 栏位 <b>主${sl.primary}/副${sl.secondary}/近${sl.melee}</b></span>
         </div>
         ${locked
           ? `<p style="color:#ff8f9f">🔒 成就解锁：${achv ? achv.name + ' — ' + achv.desc : '???'}</p>`
@@ -519,7 +534,7 @@ const MENU = {
         c.className = 'codex-card';
         c.innerHTML = `
           <h4><span class="codex-dot" style="background:#ff7733;color:#ff7733"></span>${t.name}</h4>
-          <div class="cx-role">投掷武器 · 按 ${t.id === 'frag' ? 'G' : 'T'} 投掷</div>
+          <div class="cx-role">投掷武器 · 按 [4] 掏出，左键蓄力投掷</div>
           <p>${t.desc}</p>
           <div class="cx-stats">
             <span>价格 <b>$${t.price} / ${t.pack}枚</b></span><span>携带上限 <b>${t.max}</b></span>
@@ -533,7 +548,7 @@ const MENU = {
           if (t.duration) tstats.push(['持续', t.duration + ' s']);
           this._pvSet({
             name: t.name,
-            role: '投掷武器 · 按 ' + (t.id === 'frag' ? 'G' : 'T') + ' 投掷',
+            role: '投掷武器 · 按 [4] 掏出，左键蓄力投掷',
             stats: tstats,
             desc: t.desc,
           });

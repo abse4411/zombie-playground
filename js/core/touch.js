@@ -115,11 +115,13 @@ const TOUCH = {
     press($('tb-jump'), () => tap('Space'));
     press($('tb-dash'), () => tap('KeyC'));
     press($('tb-kick'), () => tap('KeyF'));
-    press($('tb-frag'), () => tap('KeyG'));
-    press($('tb-molo'), () => tap('KeyT'));
+    press($('tb-frag'), () => tap('Digit4'));   // v18.2：触屏💣=切到投掷槽（配合开火键投掷）
+    press($('tb-molo'), () => tap('Digit4'));
     press($('tb-w1'), () => tap('Digit1'));
     press($('tb-w2'), () => tap('Digit2'));
     press($('tb-w3'), () => tap('Digit3'));
+    press($('tb-w4'), () => tap('Digit4'));
+    press($('tb-w5'), () => tap('Digit5'));
     press($('tb-shop'), () => { tap('KeyE'); tap('KeyB'); });
     press($('tb-bp'), () => { if (typeof BACKPACK !== 'undefined' && GAME && GAME.state === 'playing') BACKPACK.toggle(GAME); });
     press($('tb-pause'), () => { if (typeof GAME !== 'undefined' && GAME) { if (GAME.state === 'playing') GAME.pause(); } });

@@ -45,6 +45,9 @@ function getUpgradeLines(def) {
 }
 function upgradeDef(id) { return W_UPGRADES[id] || W_SPECIALS[id]; }
 
+/* 道具槽种类顺序（v18.1）：数字键5循环切换 */
+const ITEM_KINDS = ['medkit', 'armorplate', 'ammobag', 'adrenaline'];
+
 class WeaponInstance {
   constructor(def) {
     this.def = def;
@@ -205,6 +208,8 @@ class WeaponSystem {
     this._disposeViewmodel();
     // 投掷槽（v11.9）：手持投掷物模型
     if (this.p.current === 'throw') { this._buildThrowViewmodel(this._selKind()); return; }
+    // 道具槽（v18.1）：手持道具模型
+    if (this.p.current === 'item') { this._buildItemViewmodel(this._selItem()); return; }
     if (!this.w) this._ensureFallbackWeapon();
     const def = this.w.def;
     const g = new THREE.Group();
@@ -252,32 +257,22 @@ class WeaponSystem {
     if (INPUT.justPressed('Digit2')) this._cycleSlot('secondary');
     if (INPUT.justPressed('Digit3')) this._cycleSlot('melee');
     if (INPUT.justPressed('Digit4')) this._cycleThrow();
+    if (INPUT.justPressed('Digit5')) this._cycleItem();
     if (INPUT.justPressed('KeyQ')) this._lastInv();
-    // 投掷蓄力（v11.7）：按下键进入蓄力预备，左键释放按力度抛出
-    if (INPUT.justPressed('KeyG') && !this.chargeThrow) this._beginCharge('frag');
-    if (INPUT.justPressed('KeyV') && !this.chargeThrow) this._beginCharge('attractor');
-    if (INPUT.justPressed('KeyT') && !this.chargeThrow) this._beginCharge('molotov');
+    if (INPUT.justPressed('KeyR')) this._startReload();
+    if (INPUT.justPressed('KeyF')) this._kick(game);
+    if (INPUT.justPressed('KeyH')) this.p.useMedkit();
+    // G键丢弃（v18.2）：武器抛出 / 投掷物·道具各丢1个
+    if (INPUT.justPressed('KeyG')) this._dropCurrent(game);
+    // 投掷蓄力状态机（v11.7→v18.1）：仅投掷槽左键触发；按住蓄力松开投出
     if (this.chargeThrow) {
-      if (!this._chargeLmbSeen) {
-        // 阶段1：等待玩家按下左键（防按G瞬间误投）
-        if (INPUT.lmb || INPUT.lmbEdge) this._chargeLmbSeen = true;
-        else if (INPUT.justPressed('KeyG') || INPUT.justPressed('KeyT') || INPUT.justPressed('KeyV')) { /* 保持蓄力 */ }
-        else {
-          // 松开投掷键取消
-          this.chargeThrow = null; this._chargeLmbSeen = false;
-        }
-      } else if (INPUT.lmb) {
-        // 阶段2：按住左键蓄力
+      if (INPUT.lmb) {
         this.chargePower = Math.min(1, (this.chargePower || 0) + dt * 1.4);
       } else {
-        // 阶段3：松开左键→投出
         this._chargeLmbSeen = false;
         this._releaseCharge(game);
       }
     }
-    if (INPUT.justPressed('KeyR')) this._startReload();
-    if (INPUT.justPressed('KeyF')) this._kick(game);
-    if (INPUT.justPressed('KeyH')) this.p.useMedkit();
 
     // 投掷槽（v11.9）：掏出投掷物后——按下左键进入蓄力预备，松开左键按视角投出；RMB收枪取消
     if (p.current === 'throw') {
@@ -289,6 +284,23 @@ class WeaponSystem {
       }
       this._prevRmb = INPUT.rmb;
     }
+    // 道具槽（v18.1）：左键使用选中道具；RMB 收枪
+    if (p.current === 'item') {
+      const ik = this._selItem();
+      if (ik && this.switchT <= 0 && INPUT.consumeLmb()) {
+        this._useAnimT = 0.5;
+        if (p.useItem(ik)) {
+          // 用完最后一个：自动收枪
+          if (this.p.itemCount(ik) <= 0) {
+            const kinds = this._itemKinds();
+            if (!kinds.length) this._holsterFromItem();
+          }
+        }
+      }
+      if (INPUT.rmb && !this._prevRmb) this._holsterFromItem();
+      this._prevRmb = INPUT.rmb;
+    }
+    if (p.current !== 'throw' && p.current !== 'item') this._prevRmb = INPUT.rmb;
     // 弹道预览弧（v11.9）：投掷槽蓄力时实时重算抛物线+落点环
     if (this.chargeThrow && this._chargeFromSlot) this._updateTraj();
     else this._hideTraj();
@@ -303,10 +315,18 @@ class WeaponSystem {
     if (this.muzzleLight) this.muzzleLight.intensity = Math.max(0, this.muzzleLight.intensity - dt * 22);
 
     const w = this.w;
-    if (!w && this.p.current !== 'throw') return;
+    if (!w && this.p.current !== 'throw' && this.p.current !== 'item') return;
     if (this.p.current === 'throw') {
       // 投掷槽主循环：无开火/ADS，仅保持视图模型动画与移速
       this.p.moveMult = 1.02;
+      this._updateViewmodel(dt);
+      HUD.setScope(false);
+      return;
+    }
+    if (this.p.current === 'item') {
+      // 道具槽主循环（v18.1）：无开火/ADS
+      this.p.moveMult = 1.02;
+      if (this._useAnimT > 0) this._useAnimT -= dt;
       this._updateViewmodel(dt);
       HUD.setScope(false);
       return;
@@ -749,7 +769,9 @@ class WeaponSystem {
     const w = this.w;
     if (!w || w.def.melee) return;
     if (this.reloadT > 0 || w.mag >= w.magSize || w.reserve <= 0 || this.switchT > 0) return;
-    this.reloadT = w.def.reloadTime * this.p.reloadMult * (w.reloadTimeMult || 1);
+    // 肾上腺素（v18.1）：换弹速度 +35%
+    const adr = this.p.adrenalineT > 0 ? 0.65 : 1;
+    this.reloadT = w.def.reloadTime * this.p.reloadMult * (w.reloadTimeMult || 1) * adr;
     AUDIO.reloadStart();
   }
 
@@ -814,11 +836,13 @@ class WeaponSystem {
   _cycle(dir) {
     const order = ['primary', 'secondary', 'melee'];
     if (this._anyThrowOwned()) order.push('throw');
+    if (this._anyItemOwned()) order.push('item');
     let i = Math.max(0, order.indexOf(this.p.current));
     for (let k = 0; k < order.length; k++) {
       i = (i + dir + order.length) % order.length;
       const s = order[i];
       if (s === 'throw') { if (this.p.current !== 'throw') { this._cycleThrow(); return; } }
+      else if (s === 'item') { if (this.p.current !== 'item') { this._cycleItem(); return; } }
       else if (this.p.weapons[s]) { this._equip(s); return; }
     }
   }
@@ -894,6 +918,153 @@ class WeaponSystem {
     else if (this.p.weapons.secondary) this._equip('secondary');
     else if (this.p.weapons.primary) this._equip('primary');
     else if (this.p.weapons.melee) this._equip('melee');
+  }
+
+  /* ---------- 道具槽（v18.1）：医疗包/护甲板/弹药袋/肾上腺素 ---------- */
+  _itemKinds() {
+    return ITEM_KINDS.filter(k => this.p.itemCount(k) > 0);
+  }
+
+  _anyItemOwned() { return this._itemKinds().length > 0; }
+
+  // 当前选中道具（选中数量耗尽时自动顺延）
+  _selItem() {
+    const kinds = this._itemKinds();
+    if (!kinds.length) { return null; }
+    if (!kinds.includes(this.p.itemSel)) this.p.itemSel = kinds[0];
+    return this.p.itemSel;
+  }
+
+  // Digit5 / 循环：掏出或切换下一种持有中的道具
+  _cycleItem() {
+    const kinds = this._itemKinds();
+    if (!kinds.length) { AUDIO.emptyClick(); HUD.toast('没有可用道具——可在商城补给'); return; }
+    let idx = kinds.indexOf(this.p.itemSel);
+    if (this.p.current === 'item') idx = (idx + 1) % kinds.length;   // 已掏出：切换种类
+    else idx = Math.max(0, idx);
+    this._equipItemKind(kinds[idx]);
+  }
+
+  _equipItemKind(kind) {
+    this.p.itemSel = kind;
+    this._rememberLast();
+    this.p.current = 'item';
+    this.switchT = 0.3; this.reloadT = 0; this.adsT = 0;
+    this.swingT = -1; this._fireKick = 0;
+    this.chargeThrow = null;
+    this._buildItemViewmodel(kind);
+    AUDIO.weaponSwitch();
+    const it = GAMECONFIG.items[kind];
+    HUD.pickup(`${it.icon} ${it.name} ×${this.p.itemCount(kind)} —— 左键使用`, 1);
+  }
+
+  _holsterFromItem() {
+    const lw = this.p.lastWeapon;
+    let inst = null;
+    if (lw) inst = this.p.rack[lw.slot]?.find(r => r.def.id === lw.defId);
+    if (inst) this._equip(lw.slot, inst);
+    else if (this.p.weapons.secondary) this._equip('secondary');
+    else if (this.p.weapons.primary) this._equip('primary');
+    else if (this.p.weapons.melee) this._equip('melee');
+  }
+
+  /* ---------- G键丢弃（v18.2） ---------- */
+  _dropCurrent(game) {
+    const p = this.p;
+    // 投掷槽：丢出当前选中投掷物 ×1
+    if (p.current === 'throw') {
+      const kind = this._selKind();
+      if (!kind) { AUDIO.emptyClick(); return; }
+      p.throwables[kind].count--;
+      const pos = tossPos(game);
+      spawnGroundDrop(game, kind, pos.x, pos.z, { amount: 1, delay: 1.2, toss: true });
+      HUD.pickup(`🗑 已丢弃 ${THROWABLES[kind].name}`, 0);
+      AUDIO.uiClick();
+      // 丢空该种类：自动顺延到下一种或收枪
+      if (p.throwables[kind].count <= 0) {
+        if (!this._anyThrowOwned()) this._holsterFromThrow();
+        else { const nk = this._selKind(); if (nk) this._buildThrowViewmodel(nk); }
+      }
+      return;
+    }
+    // 道具槽：丢出当前选中道具 ×1
+    if (p.current === 'item') {
+      const ik = this._selItem();
+      if (!ik) { AUDIO.emptyClick(); return; }
+      p.itemConsume(ik);
+      const pos = tossPos(game);
+      spawnGroundDrop(game, ik, pos.x, pos.z, { amount: 1, delay: 1.2, toss: true });
+      HUD.pickup(`🗑 已丢弃 ${GAMECONFIG.items[ik].name}`, 0);
+      AUDIO.uiClick();
+      if (!this._anyItemOwned()) this._holsterFromItem();
+      else { const nk = this._selItem(); if (nk && nk !== ik) this._buildItemViewmodel(nk); }
+      return;
+    }
+    // 武器：丢出手中武器（抛出一段距离）
+    const w = this.w;
+    if (!w) { AUDIO.emptyClick(); return; }
+    const total = ['primary', 'secondary', 'melee'].reduce((n, s) => n + (p.rack[s] ? p.rack[s].length : 0), 0);
+    if (total <= 1) { HUD.toast('⚠ 不能丢弃最后一把武器'); AUDIO.emptyClick(); return; }
+    const slot = p.current;
+    const idx = p.rack[slot] ? p.rack[slot].indexOf(w) : -1;
+    if (idx >= 0) p.rack[slot].splice(idx, 1);
+    p.weapons[slot] = (p.rack[slot] && p.rack[slot][0]) || null;
+    const pos = tossPos(game);
+    spawnGroundDrop(game, 'weapon', pos.x, pos.z, { inst: w, rarity: rarityForPrice(w.def.price), delay: 1.2, toss: true });
+    HUD.pickup(`🗑 已丢弃 ${w.def.name}`, 0);
+    AUDIO.uiClick();
+    // 切到下一把可用武器（全空由兜底补枪）
+    const nextSlot = ['primary', 'secondary', 'melee'].find(s => p.weapons[s]);
+    if (nextSlot) this._equip(nextSlot);
+    else this._ensureFallbackWeapon();
+  }
+
+  // 手持道具模型（极简风格与投掷槽一致）
+  _buildItemViewmodel(kind) {
+    this._disposeViewmodel();
+    const it = GAMECONFIG.items[kind] || GAMECONFIG.items.medkit;
+    const g = new THREE.Group();
+    const body = new THREE.Group();
+    if (kind === 'medkit') {
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.11, 0.12), ART.mat(0xd8dde2, { roughness: 0.5 }));
+      const cross1 = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.022, 0.004), new THREE.MeshBasicMaterial({ color: 0xe63946 }));
+      cross1.position.set(0, 0.02, 0.062);
+      const cross2 = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.07, 0.004), new THREE.MeshBasicMaterial({ color: 0xe63946 }));
+      cross2.position.set(0, 0.02, 0.062);
+      const latch = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 0.02), ART.mat(0x3a4046, {}));
+      latch.position.set(0, -0.05, 0);
+      body.add(box, cross1, cross2, latch);
+    } else if (kind === 'armorplate') {
+      const plate = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.22, 0.03), ART.mat(0x2e3638, { roughness: 0.35, metalness: 0.55 }));
+      const strap = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.03, 0.034), ART.mat(0x4a3226, {}));
+      body.add(plate, strap);
+    } else if (kind === 'ammobag') {
+      const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.12, 0.1), ART.mat(0x4a4232, { roughness: 0.7 }));
+      const bullet1 = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.07, 6), ART.mat(0xc9a24a, { metalness: 0.7, roughness: 0.3 }));
+      bullet1.position.set(-0.04, 0.08, 0);
+      const bullet2 = bullet1.clone(); bullet2.position.x = 0;
+      const bullet3 = bullet1.clone(); bullet3.position.x = 0.04;
+      body.add(pouch, bullet1, bullet2, bullet3);
+    } else {
+      // 肾上腺素注射器
+      const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.14, 8),
+        new THREE.MeshBasicMaterial({ color: 0x8ad8ff, transparent: true, opacity: 0.85 }));
+      const needle = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.06, 6), ART.mat(0xc8d0da, { metalness: 0.8, roughness: 0.2 }));
+      needle.position.y = -0.1;
+      const plunger = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.015, 0.015), ART.mat(0xd8dde2, {}));
+      plunger.position.y = 0.09;
+      body.add(tube, needle, plunger);
+    }
+    // 手持姿态：交由 _updateViewmodel 统一摆放（投掷槽基准位），本体仅微调
+    body.position.set(0.03, 0.01, 0.04);
+    body.rotation.z = -0.12;
+    g.add(body);
+    // 第一人称手臂
+    const sleeveColor = 0x3a4236;
+    attachArmsToViewmodel(g, { melee: true, len: 0.3 }, sleeveColor);
+    this.viewmodel = g;
+    ENGINE.camera.add(g);
+    ENGINE.scene.add(ENGINE.camera);
   }
 
   // 手持投掷物模型（极简：手雷球体/燃烧瓶/诱饵棒）
@@ -1024,7 +1195,7 @@ class WeaponSystem {
     const vm = this.viewmodel;
     if (!vm) return;
     const w = this.w;
-    const isThrow = !w && this.p.current === 'throw';
+    const isThrow = !w && (this.p.current === 'throw' || this.p.current === 'item');
     if (!w && !isThrow) return;
     const def = isThrow ? { melee: false, scope: false, len: 0.3 } : w.def;
     const p = this.p;

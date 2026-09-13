@@ -130,6 +130,24 @@ const GAMECONFIG = {
     medkitHeal: 55,     // 单个回复量
   },
 
+  /* ---------- 道具栏（v18.1）：5键字段道具，左键使用 ---------- */
+  items: {
+    medkit:     { name: '医疗包',   icon: '💉', max: 5, price: 0,   use: 'cast',
+                  desc: '1.2秒包扎恢复大量生命，受击打断（H键快速使用）' },
+    armorplate: { name: '护甲板',   icon: '🛡', max: 3, price: 700, use: 'armor',
+                  desc: '立即将护甲修复至上限（需已装备装甲）' },
+    ammobag:    { name: '弹药袋',   icon: '🎒', max: 2, price: 600, use: 'ammo',
+                  desc: '立即补满全部武器（含背包内）的备弹' },
+    adrenaline: { name: '肾上腺素', icon: '⚡', max: 3, price: 850, use: 'adrenaline', dur: 8,
+                  desc: '8秒内移速+45%、换弹速度+35%、体力回复翻倍' },
+  },
+
+  /* ---------- 武器栏位扩容（v18.1）：角色基准槽数 + 商城升级档 ---------- */
+  slotUpgrade: {
+    cap: 3,
+    price: { primary: [1800, 3200], secondary: [900, 1600], melee: [600, 1100] },
+  },
+
   /* ---------- Boss 战机制（v6.5） ---------- */
   bossMech: {
     phase2At: 0.5,          // 血量50%进入二阶段
@@ -280,8 +298,7 @@ const GAMECONFIG = {
 };
 
 // 难度等级（狩猎模式）
-const DIFFICULTIES = {
-  normal:    { name: '普通', hp: 1.0,  dmg: 1.0,  speed: 1.0,  reward: 1.0, tag: '新兵适应性', color: '#8ac07a',
+const DIFFICULTIES = {  normal:    { name: '普通', hp: 1.0,  dmg: 1.0,  speed: 1.0,  reward: 1.0, tag: '新兵适应性', color: '#8ac07a',
     desc: '标准威胁等级。感染体行动迟缓、伤害可控，赏金收益基准。适合熟悉武器手感、地图机制与支援道具的猎手。' },
   hard:      { name: '困难', hp: 1.35, dmg: 1.25, speed: 1.08, reward: 1.3, tag: '老兵常规作战', color: '#e8a13a',
     desc: '感染体更耐打、更具攻击性，移动明显加快。资源开始紧张，精准的枪法、合理走位与道具时机是活下去的关键。' },

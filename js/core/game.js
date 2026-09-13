@@ -147,6 +147,7 @@ class Game {
         hp: p.hp, armor: p.armor, maxArmor: p.maxArmor, money: p.money,
         kills: p.kills, headshots: p.headshots, moneyEarned: p.moneyEarned,
         perks: Object.assign({}, p.perks), medkits: p.medkits, medkitHeal: p.medkitHeal,
+        items: Object.assign({}, p.items), slotMax: Object.assign({}, p.slotMax),
         throwables: { frag: p.throwables.frag.count, molotov: p.throwables.molotov.count, attractor: p.throwables.attractor.count },
         stamina: p.stamina,
         current: p.current,
@@ -202,7 +203,8 @@ class Game {
     p.rack = rack;
     p.weapons = { primary: rack.primary[0] || null, secondary: rack.secondary[0] || null, melee: rack.melee[0] || null };
     const cur = sv.player.current;
-    p.current = (p.weapons[cur]) ? cur : (['secondary', 'primary', 'melee'].find(sl => p.weapons[sl]) || 'secondary');
+    if (cur === 'throw' || cur === 'item') p.current = cur;   // 虚拟槽直接恢复（v18.1）
+    else p.current = (p.weapons[cur]) ? cur : (['secondary', 'primary', 'melee'].find(sl => p.weapons[sl]) || 'secondary');
     // 仓库
     p.storage = (sv.player.storage || []).map(it => it && it.kind === 'weapon'
       ? { kind: 'weapon', inst: build(it.w) }
@@ -218,6 +220,10 @@ class Game {
     p.perks = Object.assign(zeroPerks(), sv.player.perks || {});
     p.medkits = sv.player.medkits;
     if (sv.player.medkitHeal) p.medkitHeal = sv.player.medkitHeal;
+    // 道具与栏位（v18.1）
+    p.items = Object.assign({ armorplate: 0, ammobag: 0, adrenaline: 0 }, sv.player.items || {});
+    p.slotMax = Object.assign({ primary: 2, secondary: 1, melee: 1 }, sv.player.slotMax || {});
+    p.adrenalineT = 0;
     p.throwables.frag.count = sv.player.throwables.frag;
     p.throwables.molotov.count = sv.player.throwables.molotov;
     p.throwables.attractor.count = sv.player.throwables.attractor;
@@ -278,6 +284,17 @@ class Game {
     }
     p.current = (c.current && p.weapons[c.current]) ? c.current : 'secondary';
     if (!p.weapons[p.current]) p.current = ['secondary', 'melee', 'primary'].find(s => p.weapons[s]);
+    // 继承武器超容裁剪（v18.1）：上一章扩容的栏位不带出，超出部分退背包/折现
+    for (const slot of ['primary', 'secondary', 'melee']) {
+      while (p.rack[slot].length > (p.slotMax ? p.slotMax[slot] : 2)) {
+        const drop = p.rack[slot].pop();
+        if (p.weapons[slot] === drop) p.weapons[slot] = p.rack[slot][p.rack[slot].length - 1] || null;
+        if (!p.storageAdd({ kind: 'weapon', inst: drop })) {
+          p.money += Math.round((drop.def.price || 300) * 0.35);
+        }
+      }
+      if (!p.weapons[slot] && p.rack[slot].length) p.weapons[slot] = p.rack[slot][0];
+    }
     this.weapons._buildViewmodel();
     HUD.toast('📦 战役继承：装备 / 弹药 / 生命 已全部补满');
   }
@@ -355,6 +372,12 @@ class Game {
     if (ch.armorStart > 0) { this.player.maxArmor = Math.max(this.player.maxArmor, ch.armorStart); this.player.armor = ch.armorStart; }
     this.player.medkits = ch.medkits;
     this.player.medkitHeal = ch.medkitHeal || GAMECONFIG.inventory.medkitHeal;
+    // 武器栏位容量（v18.1）：按角色 slots 配置（商城扩容为局内升级，重开会重置为角色基准）
+    this.player.slotMax = Object.assign({ primary: 2, secondary: 1, melee: 1 }, ch.slots || {});
+    if (!this.player.items) this.player.items = { armorplate: 0, ammobag: 0, adrenaline: 0 };
+    else this.player.items = Object.assign({ armorplate: 0, ammobag: 0, adrenaline: 0 }, this.player.items);
+    this.player.itemSel = 'medkit';
+    this.player.adrenalineT = 0;
     // 角色差异化体力（v13.2）：recomputePerks 已按 charStats 计算，出生回满
     this.player.stamina = this.player.maxStamina;
     // 解锁角色被动（v8.3）
@@ -377,6 +400,20 @@ class Game {
       this.player.explodeMult = 1;
       this.player.throwMaxBonus = 0;
       this.player.scopePenaltyHalf = false;
+    }
+    // 各槽超容裁剪（v18.1）：被动开局武器/继承武器可能超出角色槽数，退背包或折现
+    for (const slot of ['primary', 'secondary', 'melee']) {
+      const rack = this.player.rack[slot];
+      while (rack.length > this.player.slotMax[slot]) {
+        const drop = rack.pop();
+        if (this.player.weapons[slot] === drop) this.player.weapons[slot] = rack[rack.length - 1] || null;
+        if (!this.player.storageAdd({ kind: 'weapon', inst: drop })) {
+          const val = Math.round((drop.def.price || 300) * 0.35);
+          this.player.money += val;
+          HUD.toast(`💼 ${drop.def.name} 已折现 $${val}（栏位不足）`);
+        }
+      }
+      if (!this.player.weapons[slot] && rack.length) this.player.weapons[slot] = rack[0];
     }
     // 战役继承（在剧情对话前应用）
     if (this._pendingCarry) { this._applyCarry(this._pendingCarry); this._pendingCarry = null; }
@@ -612,6 +649,9 @@ class Game {
     for (const l of this.loots) l.update(dt, this);
     this.loots = this.loots.filter(l => !l.dead);
 
+    // 地面拾取列表 + E键拾取（v18.2）：优先级 拾取 > 补给箱 > 商城
+    this._updatePickupList(dt);
+
     // 支援道具实体（v16.3）：轰炸引导/空投箱/无人机/哨戒塔
     for (const d of this.deployments) d.update(dt, this);
     this.deployments = this.deployments.filter(d => !d.dead);
@@ -625,7 +665,7 @@ class Game {
         c.beam.visible = d < 36;   // 远处隐藏光柱（性能）
         if (d < 3) {
           this.interactText = INPUT.touch ? '走近补给箱自动开启' : '[E] 打开补给箱';
-          if (INPUT.justPressed('KeyE') || d < 1.2) c.tryOpen(this);
+          if (!this._pickupEaten && (INPUT.justPressed('KeyE') || d < 1.2)) c.tryOpen(this);
           break;
         }
       }
@@ -700,7 +740,7 @@ class Game {
     if (p.alive && inZone) this.interactText = (INPUT.touch ? '点击补给站按钮' : '[E] 打开补给站');
     const shopAnywhere = (this.mode instanceof HuntMode && this.mode.state === 'intermission')
       || (this.mode instanceof TutorialMode && this.mode.shopStep);
-    if (p.alive && INPUT.justPressed('KeyE') && inZone) SHOPUI.open(this);
+    if (p.alive && !this._pickupEaten && INPUT.justPressed('KeyE') && inZone) SHOPUI.open(this);
     else if (p.alive && INPUT.justPressed('KeyB') && (inZone || shopAnywhere)) SHOPUI.open(this);
 
     // 鼠标锁定提示
@@ -709,6 +749,55 @@ class Game {
     DMGNUM.update(dt);
     PARTICLES.update(dt);
     HUD.update(this);
+  }
+
+  /* ================= 拾取列表（v18.2） ================= */
+  _updatePickupList(dt) {
+    const p = this.player;
+    const rows = [];
+    for (const l of this.loots) {
+      if (l.dead || l.life <= 0 || l.pickupDelay > 0) continue;
+      const d = dist2d(l.group.position.x, l.group.position.z, p.pos.x, p.pos.z);
+      if (d > 2.6) continue;
+      rows.push({ l, d });
+    }
+    rows.sort((a, b) => a.d - b.d);
+    const top = rows.slice(0, 4);
+    this._pickupEaten = false;
+    // E 拾取最近的可拾物（武器/道具/耗材均可用 E 手动拾）
+    if (p.alive && top.length && INPUT.justPressed('KeyE')) {
+      for (const r of top) {
+        if (r.l.collect(this, true) === 'collected') { this._pickupEaten = true; break; }
+      }
+    }
+    // 列表 UI（拾取后重算本帧列表，避免显示已消失项）
+    const shown = this._pickupEaten ? [] : top;
+    HUD.renderPickupList(shown.map(r => {
+      const cc = r.l.canCollect(this);
+      const auto = r.l.weaponInst ? SAVE.data.settings.autoPickup !== false : true;
+      return { name: r.l.name(), rarity: r.l.rarity, ok: cc.ok, reason: cc.reason, auto, nearest: r === top[0] };
+    }));
+  }
+
+  // 背包条目丢弃到地面（v18.2，背包UI丢弃按钮调用）
+  dropStorageEntry(idx) {
+    const p = this.player;
+    const entry = p.storage[idx];
+    if (!entry) return;
+    const pos = tossPos(this);
+    if (entry.kind === 'weapon' && entry.inst) {
+      spawnGroundDrop(this, 'weapon', pos.x, pos.z, {
+        inst: entry.inst, rarity: rarityForPrice(entry.inst.def.price), delay: 1.2, toss: true,
+      });
+      HUD.toast(`🗑 已丢弃 ${entry.inst.def.name}（3秒后可拾回）`);
+    } else if (entry.kind === 'item') {
+      const n = entry.count || 1;
+      for (let i = 0; i < n; i++) {
+        spawnGroundDrop(this, entry.itemId, pos.x + rand(-0.4, 0.4), pos.z + rand(-0.4, 0.4), { amount: 1, delay: 1.2, toss: true });
+      }
+      HUD.toast(`🗑 已丢弃 ${entry.name || entry.itemId} ×${n}`);
+    }
+    p.storage.splice(idx, 1);
   }
 
   /* ================= 击杀 / 死亡 / 胜利 ================= */
@@ -729,9 +818,7 @@ class Game {
       } else {
         const wd = rollWeaponDrop ? rollWeaponDrop() : null;
         if (wd) {
-          const drop = new LootDrop('weapon', z.pos.x + 1, z.pos.z, 0);
-          drop.weaponInst = wd.inst; drop.rarity = Math.min(3, wd.rarity + 1);
-          this.loots.push(drop);
+          this.loots.push(new LootDrop('weapon', z.pos.x + 1, z.pos.z, 0, { inst: wd.inst, rarity: Math.min(3, wd.rarity + 1) }));
           HUD.toast('🎁 Boss掉落了稀有武器！');
         }
       }

@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>丧尸游乐场 · Zombie Playground</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧟</text></svg>">
-<link rel="stylesheet" href="css/style.css?v=17.1">
+<link rel="stylesheet" href="css/style.css?v=18.1">
 </head>
 <body>
 <div id="boot-screen">
@@ -90,9 +90,10 @@
   <!-- 右下：武器/弹药/投掷物 -->
   <div id="hud-br">
     <div id="throwables-row">
-      <span id="throw-frag">💣 ×0 <i>[G]</i></span>
-      <span id="throw-molo">🔥 ×0 <i>[T]</i></span>
-      <span id="throw-attr">🧲 ×0 <i>[V]</i></span>
+      <span id="throw-frag">💣 ×0</span>
+      <span id="throw-molo">🔥 ×0</span>
+      <span id="throw-attr">🧲 ×0</span>
+      <span class="slot-key-hint">[4]投掷 [5]道具 [G]丢弃</span>
     </div>
     <div id="weapon-name">P92 手枪</div>
     <div id="ammo-row"><span id="ammo-mag">12</span><span id="ammo-reserve">/ 72</span></div>
@@ -101,8 +102,12 @@
       <span class="slot" data-slot="secondary"><b>2</b> 副 P92</span>
       <span class="slot" data-slot="melee"><b>3</b> 刀 军刀</span>
       <span class="slot" data-slot="throw"><b>4</b> 💣 —</span>
+      <span class="slot" data-slot="item"><b>5</b> 💊 —</span>
     </div>
   </div>
+
+  <!-- 地面拾取列表（v18.2） -->
+  <div id="pickup-list" class="hidden"></div>
 
   <!-- 交互提示 / 换弹提示 / 横幅 -->
   <div id="interact-prompt" class="hidden"></div>
@@ -128,6 +133,8 @@
   <div class="tb tb-w" id="tb-w1">1</div>
   <div class="tb tb-w" id="tb-w2">2</div>
   <div class="tb tb-w" id="tb-w3">3</div>
+  <div class="tb tb-w" id="tb-w4">4</div>
+  <div class="tb tb-w" id="tb-w5">5</div>
   <div class="tb" id="tb-shop">🛒</div>
   <div class="tb" id="tb-bp">🎒</div>
 </div>
@@ -180,10 +187,14 @@
       </div>
       <div class="bp-sec">
         <div class="bp-sec-title">🧪 消耗品</div>
-        <div class="bp-row"><span>医疗包 <i>[H使用]</i></span><b id="bp-meds">0</b></div>
-        <div class="bp-row"><span>💣 破片手雷</span><b id="bp-frags">0</b></div>
-        <div class="bp-row"><span>🔥 燃烧瓶</span><b id="bp-molos">0</b></div>
+        <div class="bp-row"><span>医疗包 <i>[H]/[5槽]使用</i></span><b id="bp-meds">0</b></div>
+        <div class="bp-row"><span>💣 破片手雷 <i>[4槽投掷]</i></span><b id="bp-frags">0</b></div>
+        <div class="bp-row"><span>🔥 燃烧瓶 <i>[4槽投掷]</i></span><b id="bp-molos">0</b></div>
         <div class="bp-row"><span>💰 现金</span><b id="bp-cash">$0</b></div>
+      </div>
+      <div class="bp-sec">
+        <div class="bp-sec-title">💊 道具栏 <i>（[5槽]·左键使用）</i></div>
+        <div id="bp-items"></div>
       </div>
       <div class="bp-sec">
         <div class="bp-sec-title">🛠 支援道具 <i>（点击使用）</i></div>
@@ -236,7 +247,7 @@
       <button id="btn-settings">⚙ 设置</button>
     </div>
     <div id="menu-stats"></div>
-    <div class="menu-footer">黎明会机密档案 · 赤潮事件记录 v17.1</div>
+    <div class="menu-footer">黎明会机密档案 · 赤潮事件记录 v18.1</div>
   </div>
 </div>
 
@@ -360,12 +371,15 @@
       <div class="help-item"><b>C / Ctrl</b><span>闪避冲刺（短暂无敌）</span></div>
       <div class="help-item"><b>F</b><span>战术脚踢（大硬直+击退）</span></div>
       <div class="help-item"><b>R</b><span>装填弹药</span></div>
-      <div class="help-item"><b>1 / 2 / 3</b><span>切换槽位（多武器再按循环）</span></div>
+      <div class="help-item"><b>1 / 2 / 3</b><span>切换武器槽位（多武器再按循环）</span></div>
+      <div class="help-item"><b>4</b><span>投掷武器槽：左键蓄力投掷（再按4换雷种）</span></div>
+      <div class="help-item"><b>5</b><span>道具槽：左键使用道具（再按5换道具）</span></div>
       <div class="help-item"><b>Q</b><span>快速切回上一把武器</span></div>
       <div class="help-item"><b>滚轮</b><span>快速切换武器</span></div>
-      <div class="help-item"><b>G</b><span>投掷破片手雷</span></div>
-      <div class="help-item"><b>T</b><span>投掷燃烧瓶</span></div>
-      <div class="help-item"><b>B / E</b><span>打开补给站（波间或站在补给区内）</span></div>
+      <div class="help-item"><b>G</b><span>丢弃手中武器/道具（抛出一段距离，可拾回）</span></div>
+      <div class="help-item"><b>E</b><span>拾取地面物品 / 打开补给箱 / 补给站</span></div>
+      <div class="help-item"><b>B</b><span>打开补给站（波间或站在补给区内）</span></div>
+      <div class="help-item"><b>Tab</b><span>背包（可丢弃/卸下/使用物品）</span></div>
       <div class="help-item"><b>Esc</b><span>暂停</span></div>
       <div class="help-item"><b>空格/点击</b><span>推进剧情对话</span></div>
       <div class="help-item"><b>📱 触屏</b><span>左侧摇杆移动 · 右侧滑动视角 · 实体按键</span></div>
@@ -377,6 +391,7 @@
       <p>💡 连续快速击杀会触发连杀奖金；狩猎模式中留意"尸潮突袭"与"空投补给"事件。</p>
       <p>💡 变异情景：狩猎第3波起每波可能抽到全局修正（铁皮进化/狂潮尸海/血色赏金等）——顶部信息栏会显示当前情景，负面强化必配赏金补偿，提前换枪布雷应对。</p>
       <p>💡 尸潮爆发警报：3秒倒计时后感染体将从四面八方环形合围——背靠窄口或提前在开阔地布雷是生存关键。</p>
+      <p>💡 装备管理：武器栏位数量由角色决定、商城可扩容（主/副/近战各最多3把）。[4]投掷武器左键蓄力投掷、[5]道具栏左键使用（护甲板/弹药袋/肾上腺素）、[G]丢弃手中武器或道具——丢弃的武器抛在地上，靠近自动拾回（设置可关，改为E拾取）。背包满了就无法再拾取道具，先用G或背包丢弃腾地方。</p>
       <p>💡 支援道具（商城🛠支援页购买）：打开背包 [Tab] 在"支援道具"区点击使用——✈战机轰炸沿面前弹带投弹（小心友伤）、📦空投补给、🛸攻击无人机伴飞索敌、🔫哨戒机枪扇形自动防守。小Boss击杀也可能掉落。</p>
     </div>
     <button class="btn-back" data-back="menu">◂ 返回主菜单</button>
@@ -402,6 +417,13 @@
         <button class="diff-btn q-btn" data-q="high">高（描边+高分屏）</button>
         <button class="diff-btn q-btn" data-q="medium">中</button>
         <button class="diff-btn q-btn" data-q="low">低（流畅优先）</button>
+      </div>
+    </div>
+    <div class="setting-row">
+      <label>自动拾取地面武器（关闭后需按 E 拾取）</label>
+      <div id="autopickup-btns">
+        <button class="diff-btn ap-btn" data-ap="on">开启</button>
+        <button class="diff-btn ap-btn" data-ap="off">关闭（仅E拾取）</button>
       </div>
     </div>
     <div class="setting-row">
@@ -503,57 +525,57 @@
 <div id="toast" class="hidden"></div>
 
 <!-- ==================== 脚本（按依赖顺序加载） ==================== -->
-<script src="js/lib/three.min.js?v=17.1"></script>
+<script src="js/lib/three.min.js?v=18.1"></script>
 <!-- 配置层 -->
-<script src="js/config/gameConfig.js?v=17.1"></script>
-<script src="js/core/resources.js?v=17.1"></script>
-<script src="js/systems/mapStructs.js?v=17.1"></script>
+<script src="js/config/gameConfig.js?v=18.1"></script>
+<script src="js/core/resources.js?v=18.1"></script>
+<script src="js/systems/mapStructs.js?v=18.1"></script>
 <!-- 核心层 -->
-<script src="js/core/utils.js?v=17.1"></script>
-<script src="js/core/artkit.js?v=17.1"></script>
-<script src="js/core/audio.js?v=17.1"></script>
-<script src="js/core/input.js?v=17.1"></script>
-<script src="js/core/touch.js?v=17.1"></script>
-<script src="js/core/particles.js?v=17.1"></script>
-<script src="js/core/collision.js?v=17.1"></script>
-<script src="js/core/engine.js?v=17.1"></script>
+<script src="js/core/utils.js?v=18.1"></script>
+<script src="js/core/artkit.js?v=18.1"></script>
+<script src="js/core/audio.js?v=18.1"></script>
+<script src="js/core/input.js?v=18.1"></script>
+<script src="js/core/touch.js?v=18.1"></script>
+<script src="js/core/particles.js?v=18.1"></script>
+<script src="js/core/collision.js?v=18.1"></script>
+<script src="js/core/engine.js?v=18.1"></script>
 <!-- 实体层 -->
-<script src="js/entities/fpbody.js?v=17.1"></script>
-<script src="js/entities/player.js?v=17.1"></script>
-<script src="js/entities/zombie.js?v=17.1"></script>
-<script src="js/entities/projectile.js?v=17.1"></script>
-<script src="js/entities/combatFx.js?v=17.1"></script>
-<script src="js/entities/support.js?v=17.1"></script>
-<script src="js/entities/loot.js?v=17.1"></script>
-<script src="js/entities/destructible.js?v=17.1"></script>
-<script src="js/entities/supplyCrate.js?v=17.1"></script>
-    <script src="js/entities/nest.js?v=17.1"></script>
-    <script src="js/entities/roguelite.js?v=17.1"></script>
+<script src="js/entities/fpbody.js?v=18.1"></script>
+<script src="js/entities/player.js?v=18.1"></script>
+<script src="js/entities/zombie.js?v=18.1"></script>
+<script src="js/entities/projectile.js?v=18.1"></script>
+<script src="js/entities/combatFx.js?v=18.1"></script>
+<script src="js/entities/support.js?v=18.1"></script>
+<script src="js/entities/loot.js?v=18.1"></script>
+<script src="js/entities/destructible.js?v=18.1"></script>
+<script src="js/entities/supplyCrate.js?v=18.1"></script>
+    <script src="js/entities/nest.js?v=18.1"></script>
+    <script src="js/entities/roguelite.js?v=18.1"></script>
 <!-- 系统层 -->
-<script src="js/systems/gunModels.js?v=17.1"></script>
-    <script src="js/systems/weaponSystem.js?v=17.1"></script>
-<script src="js/systems/spawnSystem.js?v=17.1"></script>
-<script src="js/systems/shopSystem.js?v=17.1"></script>
-<script src="js/systems/saveSystem.js?v=17.1"></script>
-<script src="js/systems/achvSystem.js?v=17.1"></script>
+<script src="js/systems/gunModels.js?v=18.1"></script>
+    <script src="js/systems/weaponSystem.js?v=18.1"></script>
+<script src="js/systems/spawnSystem.js?v=18.1"></script>
+<script src="js/systems/shopSystem.js?v=18.1"></script>
+<script src="js/systems/saveSystem.js?v=18.1"></script>
+<script src="js/systems/achvSystem.js?v=18.1"></script>
 <!-- UI层 -->
-<script src="js/ui/hud.js?v=17.1"></script>
-<script src="js/ui/damageNumbers.js?v=17.1"></script>
-<script src="js/ui/gunPreview.js?v=17.1"></script>
-    <script src="js/ui/codexPreview.js?v=17.1"></script>
-    <script src="js/ui/shopUI.js?v=17.1"></script>
-<script src="js/ui/storyUI.js?v=17.1"></script>
-<script src="js/ui/backpack.js?v=17.1"></script>
-<script src="js/ui/charPreview.js?v=17.1"></script>
-    <script src="js/ui/menuScene.js?v=17.1"></script>
-<script src="js/ui/menu.js?v=17.1"></script>
+<script src="js/ui/hud.js?v=18.1"></script>
+<script src="js/ui/damageNumbers.js?v=18.1"></script>
+<script src="js/ui/gunPreview.js?v=18.1"></script>
+    <script src="js/ui/codexPreview.js?v=18.1"></script>
+    <script src="js/ui/shopUI.js?v=18.1"></script>
+<script src="js/ui/storyUI.js?v=18.1"></script>
+<script src="js/ui/backpack.js?v=18.1"></script>
+<script src="js/ui/charPreview.js?v=18.1"></script>
+    <script src="js/ui/menuScene.js?v=18.1"></script>
+<script src="js/ui/menu.js?v=18.1"></script>
 <!-- 模式层 -->
-<script src="js/modes/huntMode.js?v=17.1"></script>
-<script src="js/modes/encounterMode.js?v=17.1"></script>
-<script src="js/modes/tutorialMode.js?v=17.1"></script>
+<script src="js/modes/huntMode.js?v=18.1"></script>
+<script src="js/modes/encounterMode.js?v=18.1"></script>
+<script src="js/modes/tutorialMode.js?v=18.1"></script>
 <!-- 主循环 -->
-<script src="js/net/net.js?v=17.1"></script>
-<script src="js/core/game.js?v=17.1"></script>
-<script src="js/main.js?v=17.1"></script>
+<script src="js/net/net.js?v=18.1"></script>
+<script src="js/core/game.js?v=18.1"></script>
+<script src="js/main.js?v=18.1"></script>
 </body>
 </html>

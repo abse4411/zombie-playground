@@ -48,11 +48,12 @@ const MENU = {
     document.querySelectorAll('.btn-back').forEach(b =>
       b.addEventListener('click', () => { AUDIO.uiClick(); this.show('screen-menu'); }));
 
-    // 难度
+    // 难度（狩猎）：切换时刷新难度介绍栏
     document.querySelectorAll('#difficulty-row .diff-btn').forEach(b =>
       b.addEventListener('click', () => {
         this.diff = b.dataset.diff;
         document.querySelectorAll('#difficulty-row .diff-btn').forEach(x => x.classList.toggle('active', x === b));
+        this.refreshDiffInfo();
         AUDIO.uiClick();
       }));
     document.querySelector('#difficulty-row .diff-btn[data-diff="normal"]').classList.add('active');
@@ -346,11 +347,31 @@ const MENU = {
     list.appendChild(bg);
   },
 
+  /* ---------- 狩猎难度介绍（v17.1） ---------- */
+  refreshDiffInfo() {
+    const box = document.getElementById('diff-info');
+    if (!box) return;
+    const d = DIFFICULTIES[this.diff];
+    if (!d) { box.classList.add('hidden'); return; }
+    box.classList.remove('hidden');
+    const name = document.getElementById('diff-info-name');
+    name.textContent = d.name;
+    name.style.color = d.color || '#fff';
+    document.getElementById('diff-info-tag').textContent = `— ${d.tag || ''}`;
+    document.getElementById('diff-info-stats').innerHTML =
+      `<span>敌人生命 <b>×${d.hp.toFixed(2)}</b></span>` +
+      `<span>敌人伤害 <b>×${d.dmg.toFixed(2)}</b></span>` +
+      `<span>移动速度 <b>×${d.speed.toFixed(2)}</b></span>` +
+      `<span>赏金收益 <b>×${d.reward.toFixed(2)}</b></span>`;
+    document.getElementById('diff-info-desc').textContent = d.desc || '';
+  },
+
   /* ---------- 地图卡片 ---------- */
   async buildMapCards() {
     const list = document.getElementById('map-list');
     list.innerHTML = '';
     document.getElementById('difficulty-row').classList.remove('hidden');
+    this.refreshDiffInfo();
     document.getElementById('maps-title').textContent = '狩猎模式 · 选择猎场';
     for (const id in MAPS) {
       const m = MAPS[id];
@@ -401,7 +422,20 @@ const MENU = {
     }
   },
 
-  /* ---------- 图鉴 ---------- */
+  /* ---------- 图鉴（v17.1：左侧模型+详细数据栏，右侧卡片列表） ---------- */
+  _pvSet(o) {
+    document.getElementById('codex-pv-name').textContent = o.name || '—';
+    document.getElementById('codex-pv-role').textContent = o.role || '';
+    document.getElementById('codex-pv-stats').innerHTML =
+      (o.stats || []).map(([k, v]) => `<div class="pv-stat"><span>${k}</span><b>${v}</b></div>`).join('');
+    document.getElementById('codex-pv-desc').textContent = o.desc || '';
+  },
+  _pvReset() {
+    this._pvSet({ name: '点击右侧卡片查看 3D 模型', desc: '模型自动旋转展示' });
+    CODEXPREVIEW._clear();
+    CODEXPREVIEW.renderSync();
+  },
+
   buildCodex() {
     const box = document.getElementById('codex-content');
     box.innerHTML = '';
@@ -409,6 +443,7 @@ const MENU = {
     grid.className = 'codex-grid';
 
     CODEXPREVIEW.init(document.getElementById('codex-canvas'));
+    this._pvReset();
     if (this.codexTab === 'zombies') {
       for (const id in ZOMBIE_TYPES) {
         const z = ZOMBIE_TYPES[id];
@@ -426,7 +461,16 @@ const MENU = {
           </div>`;
         c.addEventListener('click', () => {
           AUDIO.uiClick();
-          document.getElementById('codex-pv-name').textContent = z.name;
+          this._pvSet({
+            name: z.name,
+            role: z.role + (z.parkOnly ? ' · 仅游乐园出没' : '') + (z.human ? ' · 人类敌人' : '') + (z.mutate ? ' · 可变异' : ''),
+            stats: [
+              ['生命', z.hp], ['速度', z.speed + ' m/s'],
+              ['伤害', z.damage || '自爆'], ['赏金', '$' + z.reward],
+              ['出场', '第' + z.minWave + '波+'], ['威胁', z.cost >= 3 ? '极高' : z.cost >= 2 ? '高' : '中'],
+            ],
+            desc: z.desc,
+          });
           CODEXPREVIEW.showZombie(id);
           CODEXPREVIEW.renderSync();
         });
@@ -451,7 +495,18 @@ const MENU = {
             <div class="cx-stats">${stats}</div>`;
           c.addEventListener('click', () => {
             AUDIO.uiClick();
-            document.getElementById('codex-pv-name').textContent = w.name;
+            const price = w.price ? '$' + w.price : '初始';
+            this._pvSet({
+              name: w.name,
+              role: label + (w.unlockBy ? ' · 成就专属' : ''),
+              stats: w.melee
+                ? [['伤害', w.damage], ['攻速', w.rpm / 10], ['范围', w.range + ' m'], ['价格', price]]
+                : [['伤害', w.damage + (w.pellets > 1 ? '×' + w.pellets : '')], ['爆头', '×' + (w.headMult || 2)],
+                  ['射速', w.rpm + ' /分'], ['弹匣', w.mag],
+                  ['射程', w.range + ' m'], ['换弹', (w.reloadTime || 0) + ' s'],
+                  ['备弹上限', w.reserveMax || w.reserve || '—'], ['价格', price]],
+              desc: w.desc,
+            });
             CODEXPREVIEW.showWeapon(w);
             CODEXPREVIEW.renderSync();
           });
@@ -469,6 +524,22 @@ const MENU = {
           <div class="cx-stats">
             <span>价格 <b>$${t.price} / ${t.pack}枚</b></span><span>携带上限 <b>${t.max}</b></span>
           </div>`;
+        c.addEventListener('click', () => {
+          AUDIO.uiClick();
+          const tstats = [['价格', '$' + t.price + ' / ' + t.pack + '枚'], ['携带上限', t.max]];
+          if (t.damage) tstats.push(['爆炸伤害', t.damage]);
+          if (t.radius) tstats.push(['作用半径', t.radius + ' m']);
+          if (t.dps) tstats.push(['灼烧 DPS', t.dps]);
+          if (t.duration) tstats.push(['持续', t.duration + ' s']);
+          this._pvSet({
+            name: t.name,
+            role: '投掷武器 · 按 ' + (t.id === 'frag' ? 'G' : 'T') + ' 投掷',
+            stats: tstats,
+            desc: t.desc,
+          });
+          CODEXPREVIEW._clear();
+          CODEXPREVIEW.renderSync();
+        });
         grid.appendChild(c);
       }
     } else if (this.codexTab === 'achv') {
@@ -520,6 +591,17 @@ const MENU = {
             <h4>${ok ? ic : '🔒'} ${a.name}</h4>
             <div class="cx-role" style="color:${col}">${{ bronze: '铜', silver: '银', gold: '金', platinum: '白金' }[a.tier]}${ok ? ' · 已解锁' : ''}</div>
             <p style="margin:0">${a.desc}</p>${progHtml}`;
+          c.addEventListener('click', () => {
+            AUDIO.uiClick();
+            this._pvSet({
+              name: (ok ? ic : '🔒') + ' ' + a.name,
+              role: { bronze: '铜质成就', silver: '银质成就', gold: '金质成就', platinum: '白金成就' }[a.tier] + (ok ? ' · 已解锁' : ' · 未解锁'),
+              stats: [['分类', { combat: '战斗', survival: '生存', explore: '探索', story: '剧情', collect: '收集' }[a.cat] || a.cat]],
+              desc: a.desc,
+            });
+            CODEXPREVIEW._clear();
+            CODEXPREVIEW.renderSync();
+          });
           grid2.appendChild(c);
         }
         box.appendChild(grid2);
@@ -538,6 +620,17 @@ const MENU = {
           <div class="cx-stats">
             ${k.tiers.map((t, i) => `<span>Lv.${i + 1} <b>${k.valName(t.val)} · $${t.price}</b></span>`).join('')}
           </div>`;
+        c.addEventListener('click', () => {
+          AUDIO.uiClick();
+          this._pvSet({
+            name: k.icon + ' ' + k.name,
+            role: '强化针剂 · ' + k.tiers.length + '级',
+            stats: k.tiers.map((t, i) => ['Lv.' + (i + 1), k.valName(t.val) + ' · $' + t.price]),
+            desc: k.desc,
+          });
+          CODEXPREVIEW._clear();
+          CODEXPREVIEW.renderSync();
+        });
         grid.appendChild(c);
       }
     }

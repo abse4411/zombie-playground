@@ -281,9 +281,12 @@ const GAMECONFIG = {
 
 // 难度等级（狩猎模式）
 const DIFFICULTIES = {
-  normal:    { name: '普通', hp: 1.0,  dmg: 1.0,  speed: 1.0,  reward: 1.0 },
-  hard:      { name: '困难', hp: 1.35, dmg: 1.25, speed: 1.08, reward: 1.3 },
-  nightmare: { name: '噩梦', hp: 1.8,  dmg: 1.55, speed: 1.16, reward: 1.65 },
+  normal:    { name: '普通', hp: 1.0,  dmg: 1.0,  speed: 1.0,  reward: 1.0, tag: '新兵适应性', color: '#8ac07a',
+    desc: '标准威胁等级。感染体行动迟缓、伤害可控，赏金收益基准。适合熟悉武器手感、地图机制与支援道具的猎手。' },
+  hard:      { name: '困难', hp: 1.35, dmg: 1.25, speed: 1.08, reward: 1.3, tag: '老兵常规作战', color: '#e8a13a',
+    desc: '感染体更耐打、更具攻击性，移动明显加快。资源开始紧张，精准的枪法、合理走位与道具时机是活下去的关键。' },
+  nightmare: { name: '噩梦', hp: 1.8,  dmg: 1.55, speed: 1.16, reward: 1.65, tag: '赤潮失控区', color: '#e63946',
+    desc: '赤潮全面失控。感染体成群结队且异常凶残，弹药与医疗品极度稀缺——一次失误即是终结。唯有老练的猎手才能见到第 20 波。' },
 };
 
 /* ---------- 外观系统（v5.4） ---------- */

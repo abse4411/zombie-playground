@@ -30,6 +30,8 @@ const CODEXPREVIEW = {
     this.scene.add(disc);
     this._loop = this._loop.bind(this);
     this._loop();
+    // 画布改为随左栏宽度自适应（v17.1）：界面显示后按真实 clientWidth 校正一次
+    requestAnimationFrame(() => { this._resize(); this.renderSync(); });
   },
 
   showZombie(typeId) {

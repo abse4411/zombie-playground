@@ -84,6 +84,7 @@ const MISSIONS = [
       { at: 240, comp: { screamer: 2, walker: 14, runner: 8, bloater: 4 } },
       { at: 300, comp: { walker: 12, runner: 12, stalker: 5 } },
     ],
+    minibosses: [{ at: 200, id: 'banshee' }],   // 小Boss：嚎哭女妖（v15.4）
     intro: [
       { s: '林晚', t: '血库在负一层，但电梯早瘫痪了。走东侧安全梯，我在蓝牙里给你指路。' },
       { s: '哈特', t: '渡鸦，卫星热成像显示医院里的感染体生命体征……不对劲。强度是街区的三倍。' },
@@ -109,10 +110,10 @@ const MISSIONS = [
     objective: '守住撤离广场 7:00，等待直升机',
     waves: [
       { at: 8, comp: { walker: 16, runner: 8 } },
-      { at: 90, comp: { walker: 12, runner: 8, armored: 3 } },
+      { at: 90, comp: { walker: 12, runner: 8, armored: 3, raider: 3 } },
       { at: 180, comp: { walker: 14, spitter: 6, bloater: 5 } },
-      { at: 270, comp: { armored: 4, screamer: 2, stalker: 6 } },
-      { at: 350, comp: { armored: 5, walker: 14, runner: 12 } },
+      { at: 270, comp: { armored: 4, screamer: 2, stalker: 6, gunner: 1, raider: 2 } },
+      { at: 350, comp: { armored: 5, walker: 14, runner: 12, marksman: 1, raider: 2 } },
     ],
     intro: [
       { s: '广播', t: '——全城幸存者请注意：净化轰炸将于120分钟后执行。请前往最近的“净化收容点”……重复——' },
@@ -143,7 +144,7 @@ const MISSIONS = [
       { at: 90, comp: { walker: 14, stalker: 6, armored: 4 } },
       { at: 180, comp: { walker: 14, spitter: 5, bloater: 4 } },
       { at: 270, comp: { screamer: 3, walker: 16, runner: 12 } },
-      { at: 360, comp: { walker: 12, armored: 5, runner: 10 } },
+      { at: 360, comp: { walker: 12, armored: 5, runner: 10, raider: 3, gunner: 1 } },
       { at: 430, comp: { walker: 14, runner: 14 } },
     ],
     eliteBrutes: [{ at: 150, count: 1 }, { at: 330, count: 1 }, { at: 420, count: 2 }],
@@ -176,11 +177,12 @@ const MISSIONS = [
     waves: [
       { at: 10, comp: { walker: 16, runner: 10 } },
       { at: 90, comp: { walker: 14, stalker: 6, spitter: 6 } },
-      { at: 180, comp: { armored: 5, screamer: 3, walker: 14 } },
+      { at: 180, comp: { armored: 5, screamer: 3, walker: 14, raider: 3 } },
       { at: 270, comp: { walker: 14, bloater: 6, hound: 6 } },
-      { at: 350, comp: { phantom: 3, armored: 4, runner: 14 } },
+      { at: 350, comp: { phantom: 3, armored: 4, runner: 14, marksman: 1, gunner: 1 } },
     ],
     eliteBrutes: [{ at: 240, count: 1 }, { at: 390, count: 2 }],
+    minibosses: [{ at: 260, id: 'warlord' }],   // 小Boss：战场军阀（v15.4）
     intro: [
       { s: '林晚', t: '渡鸦，解药数据里藏着别人的后门——我花了三天才绕开它。留言的人代号“灯塔”，自称方舟议会的前研究员。' },
       { s: '灯塔', t: '……如果有人听到这段话：泄漏是计划好的。七座种子园，滨港只是第一座。他们在观察“收割效率”。' },
@@ -268,12 +270,13 @@ const MISSIONS = [
     objective: '扮演艾伦上传加密数据 6:00，甩掉方舟清剿队',
     waves: [
       { at: 10, comp: { armored: 3, walker: 12 } },
-      { at: 85, comp: { armored: 4, runner: 10, stalker: 4 } },
-      { at: 170, comp: { armored: 5, screamer: 2, spitter: 5 } },
+      { at: 85, comp: { armored: 4, runner: 10, stalker: 4, raider: 2 } },
+      { at: 170, comp: { armored: 5, screamer: 2, spitter: 5, gunner: 1 } },
       { at: 260, comp: { armored: 6, hound: 5, runner: 10 } },
-      { at: 320, comp: { phantom: 2, armored: 4, walker: 12 } },
+      { at: 320, comp: { phantom: 2, armored: 4, walker: 12, marksman: 2, raider: 2 } },
     ],
     eliteBrutes: [{ at: 300, count: 1 }],
+    minibosses: [{ at: 180, id: 'warlord' }],   // 小Boss：清剿队军官（v15.4）
     finaleBoss: { id: 'executioner', at: 290 },   // 幕末Boss：方舟刽子手（v6.9）
     intro: [
       { s: '艾伦', t: '“收割效率：城区样本 91.4%……实验符合预期。”——他们管这三万人的死叫“样本”。' },
@@ -307,6 +310,7 @@ const MISSIONS = [
       { at: 440, comp: { licker: 5, runner: 14, stalker: 6 } },
     ],
     eliteBrutes: [{ at: 200, count: 1 }, { at: 400, count: 2 }],
+    minibosses: [{ at: 300, id: 'banshee' }],   // 小Boss：下水道的声波回音（v15.4）
     intro: [
       { s: '林晚', t: '原初株的活性衰减曲线指向这里——城市地下排水枢纽。所有赤潮变体，都是从这管子里的水流出去的。' },
       { s: '老周', t: '这地方又湿又臭还长眼睛……我说的不是灯。渡鸦，管好你的六点钟方向。' },
@@ -330,11 +334,12 @@ const MISSIONS = [
       { at: 10, comp: { walker: 14, armored: 4 } },
       { at: 100, comp: { armored: 5, runner: 10, ivy: 3 } },
       { at: 200, comp: { regenerator: 2, walker: 12, spitter: 5 } },
-      { at: 300, comp: { phantom: 4, licker: 3, runner: 12 } },
-      { at: 400, comp: { regenerator: 3, ivy: 4, armored: 5 } },
+      { at: 300, comp: { phantom: 4, licker: 3, runner: 12, raider: 2 } },
+      { at: 400, comp: { regenerator: 3, ivy: 4, armored: 5, gunner: 1, marksman: 1 } },
       { at: 490, comp: { phantom: 4, licker: 4, runner: 14, bloater: 5 } },
     ],
     eliteBrutes: [{ at: 250, count: 1 }, { at: 460, count: 2 }],
+    minibosses: [{ at: 320, id: 'ironwall' }],   // 小Boss：运输队重甲护卫（v15.4）
     intro: [
       { s: '老周', t: '雪原哨站——我年轻时在这熬过两年极夜。风水轮流转，现在轮到我们在暖气房里守夜了。' },
       { s: '林晚', t: '方舟车队两小时后经过这里。母体泵的核心部件就在其中一辆车里——它必须留在这片雪原上。' },
@@ -420,9 +425,9 @@ const MISSIONS = [
     ],
     waves: [
       { at: 8, comp: { walker: 14, runner: 8 } },
-      { at: 75, comp: { armored: 5, toxic: 4, runner: 10 } },
+      { at: 75, comp: { armored: 5, toxic: 4, runner: 10, raider: 3 } },
       { at: 160, comp: { licker: 4, phantom: 3, walker: 12 } },
-      { at: 260, comp: { regenerator: 3, armored: 6, hound: 6 } },
+      { at: 260, comp: { regenerator: 3, armored: 6, hound: 6, gunner: 1 } },
       { at: 360, comp: { witch: 1, licker: 4, runner: 12 } },
       { at: 460, comp: { tank: 1, bloater: 6, walker: 12 } },
     ],
@@ -457,9 +462,9 @@ const MISSIONS = [
     ],
     waves: [
       { at: 8, comp: { walker: 14, runner: 10 } },
-      { at: 80, comp: { armored: 5, licker: 3, bloater: 4 } },
+      { at: 80, comp: { armored: 5, licker: 3, bloater: 4, raider: 2 } },
       { at: 170, comp: { boomer: 3, hunter: 3, runner: 12 } },
-      { at: 270, comp: { regenerator: 2, phantom: 4, toxic: 4 } },
+      { at: 270, comp: { regenerator: 2, phantom: 4, toxic: 4, gunner: 1, marksman: 1 } },
       { at: 380, comp: { witch: 1, tank: 1, walker: 12 } },
       { at: 470, comp: { tank: 1, licker: 5, runner: 14 } },
     ],

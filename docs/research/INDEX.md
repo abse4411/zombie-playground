@@ -34,3 +34,4 @@
 | v12.1-resource-architecture.md | 资源文件化/懒加载/内存泄露防治（RES管理器/JSON外置/GPU释放） | v12.1 |
 | v13.1-stamina.md | 体力系统设计（双速回复/疲劳锁定/角色差异/商城升级线） | v13.1~v13.3 |
 | v14.1-zombie-nav.md | 丧尸多楼层寻路（楼梯路标/转向集成）+攻击立体判定+狩猎存档 | v14.1~v14.3 |
+| v15.1-miniboss-human-enemies.md | 小Boss机制+人类敌人AI（登场三件套/阶段/弱点/掩体点射循环） | v15.1~v15.4 |

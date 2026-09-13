@@ -2,7 +2,7 @@
  * 入口 —— 初始化所有子系统（v12.1：资源文件化 + 异步启动）
  * ============================================================ */
 let GAME = null;
-window.__ASSET_VER = '14.4';   // JSON 资源缓存版本（与页面 ?v= 同步）
+window.__ASSET_VER = '15.4';   // JSON 资源缓存版本（与页面 ?v= 同步）
 
 window.addEventListener('DOMContentLoaded', async () => {
   const $ = id => document.getElementById(id);
@@ -25,6 +25,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const canvas = document.getElementById('game-canvas');
   GAME = new Game(canvas);
+  window.GAME = GAME;   // 挂到window：延时回调（XT-300弹幕/地刺/兽群/宝箱奖励/小Boss登场）经 window.GAME 守卫（v15.4修复潜伏bug）
 
   progress(0.9, '初始化引擎');
   HUD.init();

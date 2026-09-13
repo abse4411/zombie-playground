@@ -39,6 +39,7 @@ class SpawnSystem {
       const z = ZOMBIE_TYPES[id];
       if (z.minWave > wave) continue;
       if (z.parkOnly && mapId !== 'park') continue;
+      if (z.noHunt) continue;   // 人类敌人不进常规尸潮池（v15.1）
       this.pool.push({ id, weight: z.weight });
     }
     this.active = true;
@@ -174,7 +175,7 @@ class SpawnSystem {
     // 变异感染体判定（v6.9→v7.0）：概率随章节进度与波次递增（14%基础→45%上限），变异可叠加至4个
     const wv = this.game.mode.wave !== undefined ? this.game.mode.wave : (this.game.mode.wavePtr || 0);
     const chapter = this.game.mode.idx || 0;
-    if (!opts.boss && !opts.dummy && ZOMBIE_TYPES[typeId].cost < 10 && wv >= 4) {
+    if (!opts.boss && !opts.mini && !opts.dummy && !ZOMBIE_TYPES[typeId].human && ZOMBIE_TYPES[typeId].cost < 10 && wv >= 4) {
       const mutChance = Math.min(0.45, GAMECONFIG.elites.chance + wv * 0.012 + chapter * 0.03);
       if (Math.random() < mutChance) {
         const pool = GAMECONFIG.elites.list.slice();
@@ -202,4 +203,23 @@ class SpawnSystem {
   }
 
   spawnExtra(typeId) { this.spawnOne(typeId); }
+
+  /* ---------- 小Boss召唤（v15.3）：登场三件套（横幅+号角+慢镜） ----------
+   * 空闲时占用Boss血条；击杀奖励/掉落由 Zombie.die 与 onZombieKilled 处理 */
+  spawnMiniboss(miniId, x, z) {
+    const M = GAMECONFIG.minibosses && GAMECONFIG.minibosses[miniId];
+    if (!M) return null;
+    const zb = this.spawnOne(M.type, x, z, { mini: miniId });
+    if (!zb) return null;
+    HUD.banner('⚠ 小Boss：' + M.name, M.tag || '强敌登场——优先集火或绕行');
+    AUDIO.hordeHorn();
+    ENGINE.shake(0.4);
+    this.game.slowmo(0.55);
+    if (!this.game.boss) {   // 主Boss血条空闲时才占用（幕末Boss优先）
+      zb._isMini = true;
+      this.game.boss = zb;
+      HUD.showBossBar(zb.displayName);
+    }
+    return zb;
+  }
 }

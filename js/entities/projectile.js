@@ -59,15 +59,18 @@ class Projectile {
     if (this.kind === 'molotov') PARTICLES.flames(p.x, p.y, p.z, 1);
     if (this.kind === 'acid' && Math.random() < 0.4) PARTICLES.acidSplash(p.x, p.y, p.z);
     // 破片手雷 / M79榴弹：碰到丧尸立即引爆（直接命中不再穿身飞过）
+    // 敌方手雷（v15.3）：opts.R 提供独立伤害/半径（军阀小Boss），且不做碰炸（避免炸到周围尸群/自己）
     if (this.kind === 'frag' || this.kind === 'gl') {
-      for (const zb of game.zombies) {
-        if (zb.dead || zb.state === 'rise') continue;
-        const dx2 = zb.pos.x - p.x, dz2 = zb.pos.z - p.z;
-        if (dx2 * dx2 + dz2 * dz2 < 0.42 && p.y < zb.pos.y + 1.9 * zb.group.scale.x) {
-          this._finish(game);
-          if (this.kind === 'gl') explodeGrenade(game, p.x, p.y, p.z, { damage: 120, radius: 6 * (this.opts.radiusMult || 1), selfMult: 0.4 * (1 + (this.opts.selfBonus || 0)) });
-          else explodeGrenade(game, p.x, p.y, p.z, THROWABLES.frag);
-          return;
+      if (!this.opts.R) {
+        for (const zb of game.zombies) {
+          if (zb.dead || zb.state === 'rise') continue;
+          const dx2 = zb.pos.x - p.x, dz2 = zb.pos.z - p.z;
+          if (dx2 * dx2 + dz2 * dz2 < 0.42 && p.y < zb.pos.y + 1.9 * zb.group.scale.x) {
+            this._finish(game);
+            if (this.kind === 'gl') explodeGrenade(game, p.x, p.y, p.z, { damage: 120, radius: 6 * (this.opts.radiusMult || 1), selfMult: 0.4 * (1 + (this.opts.selfBonus || 0)) });
+            else explodeGrenade(game, p.x, p.y, p.z, THROWABLES.frag);
+            return;
+          }
         }
       }
     }
@@ -82,7 +85,7 @@ class Projectile {
 
     if (this.kind === 'frag' && this.fuse <= 0) {
       this._finish(game);
-      explodeGrenade(game, p.x, p.y, p.z, THROWABLES.frag);
+      explodeGrenade(game, p.x, p.y, p.z, (this.opts.R && this.opts.R.damage) ? this.opts.R : THROWABLES.frag);
       return;
     }
     if (this.kind === 'molotov' && (this.landed || this.wallHit || this.fuse <= 0)) {

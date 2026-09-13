@@ -43,6 +43,10 @@ class HuntMode {
       g.player.addMoney(amt);
       HUD.toast(`📦 黎明会空投补给 +$${amt}`);
       AUDIO.purchase();
+    } else if (roll < 0.9 && this.wave >= 5 && !g.zombies.some(z => z.mini && !z.dead)) {
+      // 小Boss事件（v15.4）：场上没有存活小Boss时随机空降一个
+      const roster = GAMECONFIG.minibossRoster || [];
+      if (roster.length) g.spawner.spawnMiniboss(choice(roster));
     } else {
       // 精英提前登场
       const type = choice(GAMECONFIG.director.eliteTypes);
@@ -75,6 +79,17 @@ class HuntMode {
         this._waveDmgMark = g.runStats ? g.runStats.damageTaken : 0;
         SAVE.recordHunt(this.mapId, this.wave, g.player.kills);
         if (typeof ACHV !== 'undefined') ACHV.event('wave', g, this.wave);
+        // 小Boss（v15.4）：第4波起每3波轮换登场（延迟2.5s让玩家先接敌）
+        if (this.wave >= 4 && (this.wave - 4) % 3 === 0 && GAMECONFIG.minibossRoster) {
+          const roster = GAMECONFIG.minibossRoster;
+          const mbId = roster[Math.floor(this.wave / 3) % roster.length];
+          const self = this;
+          setTimeout(() => {
+            const g2 = window.GAME;
+            if (!g2 || g2.state !== 'playing' || g2.mode !== self || !g2.spawner) return;
+            g2.spawner.spawnMiniboss(mbId);
+          }, 2500);
+        }
       }
     } else {
       this._directorTick(dt);

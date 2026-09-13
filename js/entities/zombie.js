@@ -358,6 +358,91 @@ function buildQuadrupedModel(cfg, outlines) {
   return { group: g, skin, cloth: skin, head, arms: [], legs, headBits: [head, jaw], tilt: 0, quadruped: true };
 }
 
+/* ---------- 人类敌人模型（v15.1）：持枪士兵 —— 头盔/防弹背心/步枪/枪口锚点 ----------
+ * 骨架布局与丧尸一致（四肢 pivot 同位），复用行走摆动动画；
+ * 双臂持枪为固定据枪姿态，muzzle 为曳光起点。
+ */
+function buildHumanModel(cfg, outlines) {
+  const g = new THREE.Group();
+  g.rotation.order = 'YXZ';
+  const skin = ART.toon(cfg.skin);
+  const cloth = ART.toon(cfg.cloth);
+  const pants = ART.toon(cfg.pants);
+  const gear = ART.mat(0x23282c);
+
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.7, 0.3), cloth);
+  torso.position.y = 1.15; g.add(torso);
+  // 防弹背心 + 弹匣包
+  const vest = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.5, 0.36), cfg.armorPlate ? ART.mat(0x2e3638) : gear);
+  vest.position.y = 1.2; g.add(vest);
+  for (const side of [-1, 1]) {
+    const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.15, 0.08), gear);
+    pouch.position.set(side * 0.16, 1.05, 0.21); g.add(pouch);
+  }
+  // 背包
+  const pack = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.42, 0.16), ART.mat(cfg.id === 'warlord' ? 0x4a3428 : 0x2c3230));
+  pack.position.set(0, 1.22, -0.24); g.add(pack);
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.32, 0.32), skin);
+  head.position.y = 1.66; g.add(head);
+  const headBits = [head];
+  // 头盔（机枪手/军阀带护目镜）
+  const helm = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.13, 0.38), cfg.armorPlate ? ART.mat(0x2a3230) : ART.mat(0x3a4438));
+  helm.position.set(0, head.position.y + 0.16, 0); g.add(helm);
+  headBits.push(helm);
+  if (cfg.armorPlate) {
+    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.08, 0.04), new THREE.MeshBasicMaterial({ color: 0x66aaff }));
+    visor.position.set(0, head.position.y + 0.03, 0.17); g.add(visor);
+  }
+
+  // 步枪（指向模型前方 +z）
+  const gun = new THREE.Group();
+  const gBody = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.1, 0.56), ART.mat(0x2a2d31));
+  const gBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.3, 8), ART.mat(0x1c1f22));
+  gBarrel.rotation.x = Math.PI / 2; gBarrel.position.z = 0.42;
+  const gMag = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.08), ART.mat(0x3a3f45));
+  gMag.position.set(0, -0.11, 0.08);
+  const gStock = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.12, 0.18), ART.mat(0x33383d));
+  gStock.position.z = -0.32;
+  gun.add(gBody, gBarrel, gMag, gStock);
+  if (cfg.gun && cfg.gun.laser) {   // 狙击手激光瞄具
+    const scope = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 8), ART.mat(0x111418));
+    scope.rotation.x = Math.PI / 2; scope.position.y = 0.09;
+    gun.add(scope);
+  }
+  gun.position.set(0.19, 1.24, 0.24);
+  g.add(gun);
+  const muzzle = new THREE.Object3D();
+  muzzle.position.set(0, 0, 0.6);
+  gun.add(muzzle);
+
+  const arms = [], legs = [];
+  for (const side of [-1, 1]) {
+    const armPivot = new THREE.Group();
+    armPivot.position.set(side * 0.37, 1.44, 0);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.6, 0.14), cloth);
+    arm.position.y = -0.3;
+    armPivot.add(arm); g.add(armPivot); arms.push(armPivot);
+  }
+  // 据枪姿态：双臂前伸
+  arms[0].rotation.x = -1.15; arms[0].rotation.z = -0.5;
+  arms[1].rotation.x = -1.35; arms[1].rotation.z = 0.15;
+  for (const side of [-1, 1]) {
+    const legPivot = new THREE.Group();
+    legPivot.position.set(side * 0.16, 0.78, 0);
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.78, 0.18), pants);
+    leg.position.y = -0.39;
+    legPivot.add(leg); g.add(legPivot); legs.push(legPivot);
+  }
+
+  if (outlines) {
+    for (const m of [torso, head]) ART.outline(m, 1.14);
+    for (const pv of legs) for (const c of pv.children) ART.outline(c, 1.16);
+  }
+  g.scale.setScalar(cfg.scale);
+  return { group: g, skin, cloth, head, arms, legs, headBits, tilt: 0, human: true, muzzle, gun };
+}
+
 class Zombie {
   constructor(typeId, x, z, mults, opts = {}) {
     const cfg = ZOMBIE_TYPES[typeId];
@@ -367,6 +452,8 @@ class Zombie {
     this.net = !!opts.net;                  // 联机网络傀儡（客户端）
     this.boss = !!opts.boss;                // Boss：血条 + 超大
     this.bossCfg = (this.boss && opts.bossId && GAMECONFIG.bosses) ? GAMECONFIG.bosses[opts.bossId] : null;
+    this.miniId = opts.mini || null;        // 小Boss（v15.3）
+    this.mini = (this.miniId && GAMECONFIG.minibosses) ? GAMECONFIG.minibosses[this.miniId] : null;
     // 变异列表（v7.0）：支持叠加，最多4种（兼容旧单数 opts.affix）
     this.affixes = (opts.affixList && opts.affixList.length) ? opts.affixList.slice(0, 4) : (opts.affix ? [opts.affix] : []);
     this.affix = this.affixes[0] || null;
@@ -400,6 +487,16 @@ class Zombie {
       this.speed = B.speed * mults.speed;
       this.damage = B.dmg * mults.dmg;
       this.reward = Math.round(B.reward * (GAMECONFIG.economy.rewardGlobalMult || 1));
+    }
+    // 小Boss（v15.3）：独立数值 + 专属弱点/护甲
+    if (this.mini) {
+      const M = this.mini;
+      this.maxHp = Math.round(M.hp * mults.hp);
+      this.hp = this.maxHp;
+      this.speed = M.speed * mults.speed;
+      this.damage = M.dmg * mults.dmg;
+      this.reward = Math.round(M.reward * mults.reward * (GAMECONFIG.economy.rewardGlobalMult || 1));
+      if (M.frontArmor) this.type.frontArmor = M.frontArmor;
     }
     // 变异特性合并进实例类型（v6.9→v7.0 多变异）：易爆/长爪/铁甲
     const _ex = this.affixes.find(a => a.explode), _rc = this.affixes.find(a => a.reach), _fa = this.affixes.find(a => a.frontArmor);
@@ -441,12 +538,21 @@ class Zombie {
       this.group.traverse(o => { if (o.userData.isOutline) o.visible = wantOutline; else o.visible = true; });
     } else {
       const model = this.bossCfg && this.bossCfg.mech ? buildMechModel(cfg, false)
+        : cfg.human ? buildHumanModel(cfg, ENGINE.quality.outlines && !this.dummy)
         : cfg.quadruped ? buildQuadrupedModel(cfg, ENGINE.quality.outlines && !this.dummy) : buildZombieModel(cfg, ENGINE.quality.outlines && !this.dummy);
       this.model = model;
       this.group = model.group;
       this.group.userData.model = model;   // 供对象池复用
     }
-    this.group.position.set(x, -2.05 * cfg.scale, z);
+    // 人类敌人（v15.1）：空降登场不破土 + 枪械AI状态
+    if (cfg.human && cfg.gun) {
+      const G = cfg.gun;
+      this.state = 'chase'; this.riseT = 0;
+      this.gunMag = G.mag; this.gunCd = rand(1.2, 2.2);
+      this.aimT = -1; this.burstLeft = 0; this.burstT = 0; this.gunReloadT = 0;
+      this.strafeDir = Math.random() < 0.5 ? 1 : -1; this.strafeT = rand(1.2, 2.4);
+    }
+    this.group.position.set(x, cfg.human ? 0 : -2.05 * cfg.scale, z);
     this.pos = this.group.position;
     ENGINE.scene.add(this.group);
 
@@ -479,6 +585,7 @@ class Zombie {
     // 变异头顶词条（v7.0）：显示变异组合名称
     if (typeof MUTTAGS !== 'undefined') MUTTAGS.attach(this);
     if (this.boss) this.group.scale.multiplyScalar(this.bossCfg ? this.bossCfg.scale / cfg.scale : GAMECONFIG.boss.scale / cfg.scale);
+    else if (this.mini) this.group.scale.multiplyScalar(this.mini.scale / cfg.scale);   // 小Boss巨型化（v15.3）
 
     // 幽影：半透明材质（接近时显形）
     this.cloakMats = null;
@@ -621,6 +728,75 @@ class Zombie {
         st.lastX = this.pos.x; st.lastZ = this.pos.z;
       }
       mvx = tx; mvz = tz;
+    }
+
+    // ---- 人类敌人枪械AI（v15.1）：接近→交战带走位点射→换弹暴露窗口 ----
+    // 弹道有真实命中判定；瞄准前摇是 telegraph（狙击手带激光指示）
+    if (cfg.human && cfg.gun && !this.dummy) {
+      const G = cfg.gun;
+      const hasLOS = this.steer.hasLOS;
+      // 硬直/玩家死亡：立即中断射击节奏
+      if (this.stagger > 0 || !p.alive) { this.aimT = -1; this.burstLeft = 0; this._laserOff(); }
+      this.strafeT -= dt;
+      if (this.strafeT <= 0) { this.strafeT = rand(1.2, 2.4); this.strafeDir *= -1; }
+      // 玩家正拿枪瞄自己 → 横向急走规避 + 更久瞄准前摇
+      const aimAng = Math.atan2(this.pos.x - p.pos.x, this.pos.z - p.pos.z);
+      const pAimAtMe = p.ads && dist < 26
+        && Math.abs(((aimAng - (p.yaw + Math.PI)) % TAU + TAU) % TAU - Math.PI) < 0.3;
+
+      if (this.gunReloadT > 0) {
+        // 换弹（击杀窗口）：远离玩家，放慢节奏
+        this.gunReloadT -= dt;
+        this.aimT = -1; this.burstLeft = 0; this._laserOff();
+        if (this.gunReloadT <= 0) { this.gunMag = G.mag; AUDIO.reloadEnd(); }
+        else if (dist < G.keepMin + 3) { mvx = -nx; mvz = -nz; spd *= 0.85; }
+        else { mvx = -nz * this.strafeDir; mvz = nx * this.strafeDir; spd *= 0.55; }
+      } else if (this.burstLeft > 0) {
+        // 点射中：慢速横移
+        mvx = -nz * this.strafeDir * 0.3; mvz = nx * this.strafeDir * 0.3; spd *= 0.4;
+        this.burstT -= dt;
+        if (this.burstT <= 0) {
+          this.burstLeft--; this.burstT = G.burstGap;
+          this._humanShoot(game, G, dist);
+        }
+      } else if (this.aimT >= 0) {
+        // 瞄准前摇：站定（暴露意图），狙击手亮激光
+        this.aimT -= dt;
+        mvx = 0; mvz = 0; spd = 0;
+        if (G.laser) this._laserTick(); else this._laserOff();
+        if (!hasLOS) { this.aimT = -1; this._laserOff(); }
+        else if (this.aimT <= 0) {
+          this.aimT = -1; this._laserOff();
+          this.burstLeft = G.burst; this.burstT = 0;
+          // 点射结束后的冷却（小Boss狂暴期缩短，v15.3）
+          this.gunCd = G.cooldown * rand(0.9, 1.15)
+            * (this.mini && this._miniPh2 && this.mini.phase2 ? (this.mini.phase2.cdMult || 1) : 1);
+        }
+      } else {
+        this.gunCd -= dt;
+        // 弹匣打空 → 进入换弹（击杀窗口，v15.1）
+        if (this.gunMag <= 0) {
+          this.gunReloadT = G.reload * rand(0.9, 1.15);
+          AUDIO.reloadStart();
+        } else if (dist > G.keepMax || !hasLOS) {
+          // 接近段：沿用追击移动；远距小跑
+          if (dist > 26) spd *= 1.5;
+        } else if (dist < G.keepMin) {
+          // 过近：后撤拉开，同时可进入瞄准
+          mvx = -nx * 0.8 - nz * this.strafeDir * 0.4;
+          mvz = -nz * 0.8 + nx * this.strafeDir * 0.4;
+          spd *= 0.8;
+          if (this.gunCd <= 0 && hasLOS) { this.aimT = G.aimTime; AUDIO.reloadStart(); }
+        } else {
+          // 交战带：横移走位，冷却好了就开镜
+          mvx = -nz * this.strafeDir; mvz = nx * this.strafeDir;
+          spd *= pAimAtMe ? 0.9 : 0.55;
+          if (this.gunCd <= 0 && hasLOS && dist < G.range) {
+            this.aimT = G.aimTime * (pAimAtMe ? 1.4 : 1);
+            AUDIO.reloadStart();
+          }
+        }
+      }
     }
 
     // ---- 网络傀儡（联机客户端）：仅插值到房主快照，不跑AI ----
@@ -820,6 +996,107 @@ class Zombie {
         this.lungeActive = 0.45; this.lungeT = rand(2.6, 3.8);
       }
       if (this.lungeActive > 0) { this.lungeActive -= dt; spd = cfg.lungeSpeed * (this.buffT > 0 ? 1.3 : 1); }
+    }
+
+    // ---- 小Boss机制（v15.3）：50%阶段转换 + 专属技 + 狂暴光环 ----
+    if (this.mini) {
+      const M = this.mini;
+      const ph2 = this.hp < this.maxHp * 0.5;
+      const hasLOS2 = this.steer.hasLOS;
+      if (ph2 && !this._miniPh2) {
+        this._miniPh2 = true;
+        this.speed *= M.phase2.speedMult || 1.3;
+        if (M.phase2.dropArmor) this.type.frontArmor = 0.1;   // 铁壁弃盾（弱点反转）
+        else this.type.immuneStagger = true;                   // 狂暴免硬直（防无限控制）
+        HUD.banner('⚠ ' + M.name + ' 狂暴', M.phase2.banner || '它进入了狂暴状态！');
+        AUDIO.hordeHorn();
+        ENGINE.shake(0.35);
+      }
+      // 狂暴期红色雾气标识
+      if (this._miniPh2 && !lodSkip && Math.random() < dt * 7) {
+        PARTICLES.spawn('smoke', this.pos.x + rand(-0.3, 0.3), rand(0.3, 1.7) * this.group.scale.x, this.pos.z + rand(-0.3, 0.3), 1,
+          { speed: 0.3, vy: 1.0, life: 0.55, color: [1, 0.35, 0.18], color2: [0.5, 0.08, 0.04] });
+      }
+      const cdM = ph2 && M.phase2 ? (M.phase2.cdMult || 0.65) : 1;
+      // 军阀：破片手雷（抛物线弹道可预判落点）
+      if (M.fragEvery) {
+        this.miniFragT = (this.miniFragT === undefined ? M.fragEvery : this.miniFragT) - dt;
+        if (this.miniFragT <= 0 && dist > 5 && dist < 18 && p.alive) {
+          this.miniFragT = M.fragEvery * cdM;
+          const t2 = clamp(dist / 9, 0.5, 1.6);
+          game.projectiles.push(new Projectile('frag', this.pos.x + nx * 0.5, this.pos.y + 1.5, this.pos.z + nz * 0.5,
+            nx * dist / t2, (p.pos.y + 0.6 - (this.pos.y + 1.5) + 0.5 * 13 * t2 * t2) / t2, nz * dist / t2,
+            { fuse: 3, R: { damage: M.fragDmg || 30, radius: M.fragRadius || 4.2, selfMult: 1 } }));
+          AUDIO.throwPin();
+          HUD.toast('💣 军阀掷出破片手雷——离开落点！');
+        }
+      }
+      // 铁壁：锁定直线冲锋（撞中击飞）
+      if (M.chargeEvery) {
+        this.miniChgCd = (this.miniChgCd === undefined ? rand(3, 5) : this.miniChgCd) - dt;
+        if (this.miniChg > 0) {
+          this.miniChg -= dt;
+          spd = 9; mvx = this.miniChgDx; mvz = this.miniChgDz;
+          if (dist < cfg.attackRange + 0.8 && vNear && this.attackCd <= 0) {
+            if (p.alive) { p.takeDamage(this.damage * 1.4, game, this.pos); p.vel.x += this.miniChgDx * 8; p.vel.z += this.miniChgDz * 8; p.vel.y += 3.5; }
+            this.miniChg = 0; this.attackCd = cfg.attackRate;
+          }
+        } else if (this.miniChgCd <= 0 && dist < 15 && dist > 4 && hasLOS2) {
+          this.miniChgDx = nx; this.miniChgDz = nz;
+          this.miniChg = 1.0;
+          this.miniChgCd = M.chargeEvery * cdM;
+          AUDIO.growl(dist, 0.6);
+          HUD.toast('⚠ 铁壁冲锋——侧向闪避！');
+        }
+      }
+      // 铁壁：跺地AOE
+      if (M.slamEvery) {
+        this.miniSlamT = (this.miniSlamT === undefined ? M.slamEvery : this.miniSlamT) - dt;
+        if (this.miniSlamT <= 0 && dist < M.slamRadius + 2) {
+          this.miniSlamT = M.slamEvery * cdM;
+          ENGINE.shake(0.4);
+          PARTICLES.dust(this.pos.x, 0.3, this.pos.z, 14);
+          AUDIO.impact();
+          if (p.alive && dist < M.slamRadius && vNear) p.takeDamage(M.slamDmg, game, this.pos);
+          HUD.toast('💥 跺地冲击——离开它的脚下！');
+        }
+      }
+      // 女妖：声波冲击（0.9s蓄力站定 → 环形击飞）
+      if (M.sonicEvery) {
+        this.miniSonicT = (this.miniSonicT === undefined ? rand(3, 5) : this.miniSonicT) - dt;
+        if (this.miniSonicTele > 0) {
+          this.miniSonicTele -= dt;
+          mvx = 0; mvz = 0; spd = 0;   // 蓄力站定（telegraph 前摇）
+          if (this.miniSonicTele <= 0) {
+            ENGINE.shake(0.45);
+            AUDIO.scream(dist);
+            PARTICLES.dust(this.pos.x, 0.4, this.pos.z, 20);
+            if (p.alive && dist < M.sonicRadius && Math.abs(p.pos.y - this.pos.y) < 3) {
+              const sd = dist || 1;
+              p.vel.x += (p.pos.x - this.pos.x) / sd * 10;
+              p.vel.z += (p.pos.z - this.pos.z) / sd * 10;
+              p.vel.y += 3;
+              p.takeDamage(M.sonicDmg, game, this.pos);
+              HUD.toast('🌀 被声波击飞！');
+            }
+          }
+        } else if (this.miniSonicT <= 0 && dist < M.sonicRadius + 4) {
+          this.miniSonicT = M.sonicEvery * cdM;
+          this.miniSonicTele = 0.9;
+          AUDIO.hordeHorn();
+          HUD.toast('⚠ 女妖蓄力尖啸——拉开距离！');
+        }
+      }
+      // 召唤增援
+      if (M.summonEvery) {
+        this.miniSumT = (this.miniSumT === undefined ? M.summonEvery : this.miniSumT) - dt;
+        if (this.miniSumT <= 0) {
+          this.miniSumT = M.summonEvery * (ph2 ? 0.75 : 1);
+          const n = M.summonN + (ph2 ? 1 : 0);
+          for (let i = 0; i < n; i++) game.spawner.spawnOne(M.summonType);
+          HUD.killfeed('⚠ ' + M.name + ' 呼叫了增援！', 'big');
+        }
+      }
     }
 
     // ---- Boss 机制（v6.9：幕末专属Boss攻击组 + 狩猎通用Boss） ----
@@ -1207,6 +1484,18 @@ class Zombie {
       else m.head.position.z = 0.52;
       return;
     }
+    // 人类（v15.1）：腿部摆动 + 据枪姿态固定双臂；换弹时枪口下垂，瞄准时微抬
+    if (m.human) {
+      m.legs[0].rotation.x = sw * 0.5;
+      m.legs[1].rotation.x = -sw * 0.5;
+      if (m.gun) {
+        m.gun.rotation.x = this.gunReloadT > 0 ? 0.55
+          : this.aimT >= 0 ? -0.05
+          : Math.sin(this.walkPhase * 0.5) * 0.04 + 0.05;
+      }
+      m.head.rotation.x = Math.sin(ENGINE.time * 1.6 + this.walkPhase) * 0.05;
+      return;
+    }
     m.legs[0].rotation.x = sw * 0.55;
     m.legs[1].rotation.x = -sw * 0.55;
     const base = cfg.crawl ? -0.5 : -1.15;
@@ -1222,8 +1511,57 @@ class Zombie {
     m.head.rotation.z = (cfg.id === 'walker' ? 0.18 : 0) + Math.sin(ENGINE.time * 1.7 + this.walkPhase) * 0.09;
   }
 
+  /* ---------- 人类射击（v15.1）：曳光弹道 + 命中判定（玩家移动/冲刺降低命中率） ---------- */
+  _humanShoot(game, G, dist) {
+    const p = game.player;
+    if (this.gunMag <= 0) return;   // 弹匣防护（换弹分支兜底）
+    this.gunMag--;
+    const mz = new THREE.Vector3();
+    this.model.muzzle.getWorldPosition(mz);
+    const end = { x: p.pos.x, y: p.pos.y + 1.05, z: p.pos.z };
+    const moveF = p.moving ? (p.sprinting ? 0.4 : 0.62) : 1;
+    const acc = G.acc * clamp(1.2 - (dist / G.range) * 0.75, 0.3, 1) * moveF * (p.dashT > 0 ? 0.12 : 1);
+    const hit = p.alive && Math.random() < acc;
+    if (!hit) {
+      const a = rand(0, TAU), r = rand(0.5, 1.8);
+      end.x += Math.cos(a) * r; end.y += rand(-0.5, 0.9); end.z += Math.sin(a) * r;
+    }
+    if (typeof TRACERS !== 'undefined') TRACERS.fire(mz, end);
+    PARTICLES.spawn('spark', mz.x, mz.y, mz.z, 1,
+      { speed: 1.2, vy: 0.6, life: 0.12, color: [1, 0.85, 0.4], color2: [0.9, 0.5, 0.1] });
+    if (!hit && Math.random() < 0.5) PARTICLES.impact(end.x, end.y, end.z);
+    AUDIO.shot(G.sound || 120, 0.06, 0.4, dist);
+    if (hit) {
+      const dmgRatio = this.damage / (this.type.damage || 1);   // 难度倍率随实例
+      p.takeDamage(G.dmg * dmgRatio, game, this.pos);
+      ENGINE.shake(0.045);
+    }
+  }
+
+  /* 狙击手激光指示（瞄准时可见） */
+  _laserTick() {
+    const p = GAME && GAME.player;
+    if (!p) return;
+    if (!this._laser) {
+      const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+      this._laser = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xff3030, transparent: true, opacity: 0.38 }));
+      this._laser.frustumCulled = false;
+      ENGINE.scene.add(this._laser);
+    }
+    const mz = new THREE.Vector3();
+    this.model.muzzle.getWorldPosition(mz);
+    const pos = this._laser.geometry.attributes.position;
+    pos.setXYZ(0, mz.x, mz.y, mz.z);
+    pos.setXYZ(1, p.pos.x, p.pos.y + 1.05 + Math.sin(ENGINE.time * 26) * 0.04, p.pos.z);
+    pos.needsUpdate = true;
+    this._laser.visible = true;
+  }
+
+  _laserOff() { if (this._laser) this._laser.visible = false; }
+
   get displayName() {
     if (this.boss) return this.bossCfg ? this.bossCfg.name : '暴君 Ω';
+    if (this.mini) return this.mini.name;
     return (this.affixes.length ? this.affixes.map(a => a.name).join('+') + '·' : '') + this.type.name;
   }
 
@@ -1252,6 +1590,7 @@ class Zombie {
   // 血量阶段断肢：60% 断一臂 / 35% 断另一臂 / 18% 断一腿（四足 40% 断前腿）
   _updateDismember() {
     const m = this.model;
+    if (m.human || m.mech) return;   // 人类/机甲不做阶段断肢
     if (m.quadruped) {
       if (!this._gq1 && this.hp < this.maxHp * 0.4) { this._gq1 = true; this._gibPiece(m.legs[0].children[0]); }
       return;
@@ -1264,6 +1603,7 @@ class Zombie {
   // 击杀解体：爆头→头颅集群崩飞；过量击杀→全身碎块；普通击杀→概率崩残肢
   _gibDeath(headshot, overkill) {
     const m = this.model;
+    if (m.human) return;   // 人类士兵有装备护具，不做肢解（v15.1）
     const s = this.group.scale.x;
     if (headshot || overkill) {
       for (const b of (m.headBits || [])) this._gibPiece(b, 1.6);
@@ -1310,6 +1650,10 @@ class Zombie {
       const fx = Math.sin(this.group.rotation.y), fz = Math.cos(this.group.rotation.y);
       if ((fx * tx + fz * tz) / tl > 0.35) amount *= (1 - cfg.frontArmor);
     }
+    // 人类敌人：受击打断瞄准节奏（v15.1）——主动压制可让射手开不了枪
+    if (cfg.human && cfg.gun && this.aimT > 0) this.aimT = Math.min(this.aimT + 0.5, cfg.gun.aimTime * 1.9);
+    // 小Boss弱点部位（v15.3）：爆头额外倍率（Borderlands式 crit spot）
+    if (this.mini && this.mini.weakHead && isHead) amount *= this.mini.weakHead;
     if (isHead && !cfg.immuneStagger) this.stagger = Math.max(this.stagger, GAMECONFIG.combat.staggerTime);
     this.hp -= amount;
     this.flashT = 0.07;
@@ -1348,6 +1692,7 @@ class Zombie {
 
   die(game, headshot) {
     this.dead = true; this.deadT = 0;
+    this._laserOff(); this.aimT = -1; this.burstLeft = 0;   // 人类：死亡关闭激光/射击（v15.1）
     const overkill = this.hp <= -this.maxHp * 0.25;
     if (this.dummy) {
       // 假人：短促倒地，快速移除，不计赏金
@@ -1368,6 +1713,11 @@ class Zombie {
     if (game.player.synVampire && !this.dummy && game.player.alive) game.player.hp = Math.min(game.player.maxHp, game.player.hp + 1);
     if (typeof XPGEMS !== 'undefined' && !this.dummy) XPGEMS.drop(this.pos.x, 0.6, this.pos.z, this.boss ? 30 : this.type.cost >= 3 ? 8 : this.type.cost >= 2 ? 4 : 2);
     if (!this.dummy && typeof CHESTS !== 'undefined' && (this.boss || this.affix)) CHESTS.drop(this.pos.x, this.pos.z, this.boss ? 2 : 1);
+    // 小Boss保底掉落（v15.3）：Boss级补给箱 + 击杀播报
+    if (this.mini && typeof CHESTS !== 'undefined') {
+      CHESTS.drop(this.pos.x, this.pos.z, 2);
+      HUD.killfeed('🏆 小Boss已击杀：' + this.mini.name + ' —— 掉落补给箱', 'big');
+    }
     if (typeof spawnLoot !== 'undefined' && !this.dummy) spawnLoot(game, this);
     if (this.type.deathPool) spawnAcidPool(game, this.pos.x, this.pos.z, { poolDps: 12, poolRadius: 2.6, poolTime: 5 });
     if (this.type.explode) explodeBloater(game, this);
@@ -1377,6 +1727,12 @@ class Zombie {
   dispose() {
     ENGINE.scene.remove(this.group);
     ENGINE.scene.remove(this.shadow);
+    // 人类狙击手激光线（v15.1）：随实例销毁
+    if (this._laser) {
+      ENGINE.scene.remove(this._laser);
+      this._laser.geometry.dispose(); this._laser.material.dispose();
+      this._laser = null;
+    }
     // 回收到对象池（上限10个/类，超出才真正销毁GPU资源）
     const poolKey = this.typeId + (this.dummy ? ':d' : '');
     const pool = ZOMBIE_POOL[poolKey] || (ZOMBIE_POOL[poolKey] = []);

@@ -776,7 +776,7 @@ class Game {
     // 成就检测
     if (typeof ACHV !== 'undefined') {
       ACHV.event('kill', this, p.current === 'melee' ? 'melee' : null);
-      if (z === this.boss) ACHV.event('boss', this);
+      if (z === this.boss && !z._isMini) ACHV.event('boss', this);   // 小Boss不计入幕末Boss成就（v15.3）
     }
 
     // 顿帧（爆头击杀更狠）
@@ -908,6 +908,8 @@ class Game {
   _cleanupWorld() {
     for (const z of this.zombies) z.dispose();
     this.zombies = [];
+    this.boss = null;   // 清除Boss引用（防残留引用跨局污染血条，v15.4）
+    HUD.hideBossBar();
     if (typeof clearZombiePool === 'function') clearZombiePool();   // 释放模型池 GPU 资源（v12.1）
     for (const pr of this.projectiles) pr._finish(this);
     this.projectiles = [];

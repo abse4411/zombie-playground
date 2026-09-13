@@ -11,6 +11,7 @@ class EncounterMode {
     this.elapsed = 0;
     this.wavePtr = 0;
     this.brutePtr = 0;
+    this.miniPtr = 0;   // 小Boss脚本指针（v15.4）
     this.finaleSpawned = false;   // 幕末Boss（v6.9）
     this.finaleHordeSpawned = false;   // L4D finale尸潮（v9.9）
     // CSOL大灾变式阶段制（v10.0）：defend→destroy→boss
@@ -67,7 +68,18 @@ class EncounterMode {
         reward: m.rewardMult * df.reward,
       });
       g.spawner.addComposition(m.waves[this.wavePtr].comp);
-      HUD.banner(`第 ${this.wavePtr + 1} 波来袭`, m.name);
+      // 武装人类波次播报（v15.2）：敌人里有活人枪手时给出战术提示
+      const comp = m.waves[this.wavePtr].comp;
+      const hasHuman = Object.keys(comp).some(id => ZOMBIE_TYPES[id] && ZOMBIE_TYPES[id].human);
+      if (hasHuman) {
+        HUD.banner(`第 ${this.wavePtr + 1} 波来袭 · ⚠ 武装人类`, '活人枪手混在尸群里——找掩体，别站桩对枪');
+        if (!this._humanTipShown) {
+          this._humanTipShown = true;
+          HUD.killfeed('⚠ 人类枪手：开枪前有明显瞄准停顿；对它造成伤害可打断瞄准；换弹时是击杀窗口', 'big');
+        }
+      } else {
+        HUD.banner(`第 ${this.wavePtr + 1} 波来袭`, m.name);
+      }
       AUDIO.waveHorn();
       this.wavePtr++;
     }
@@ -81,6 +93,14 @@ class EncounterMode {
         AUDIO.scream(0);
         ENGINE.shake(0.35);
         this.brutePtr++;
+      }
+    }
+
+    // 小Boss登场（v15.4）：剧情到点召唤（登场三件套在 spawnMiniboss 内）
+    if (m.minibosses) {
+      while (this.miniPtr < m.minibosses.length && m.minibosses[this.miniPtr].at <= this.elapsed) {
+        g.spawner.spawnMiniboss(m.minibosses[this.miniPtr].id);
+        this.miniPtr++;
       }
     }
 
@@ -138,6 +158,7 @@ class EncounterMode {
     }
     const allSpawned = this.wavePtr >= m.waves.length
       && (!m.eliteBrutes || this.brutePtr >= m.eliteBrutes.length)
+      && (!m.minibosses || this.miniPtr >= m.minibosses.length)
       && (!m.finaleBoss || (this.finaleSpawned && !g.boss));
     if (allSpawned && g.spawner.exhausted() && g.aliveZombies() === 0 && this.elapsed > 12) {
       this.win(true);

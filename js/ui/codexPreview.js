@@ -39,7 +39,8 @@ const CODEXPREVIEW = {
     const cfg = ZOMBIE_TYPES[typeId];
     if (!cfg) return;
     // 丧尸模型（不描边避免小画布糊）
-    const model = cfg.quadruped ? buildQuadrupedModel(cfg, false) : buildZombieModel(cfg, false);
+    const model = cfg.human ? buildHumanModel(cfg, false)
+      : cfg.quadruped ? buildQuadrupedModel(cfg, false) : buildZombieModel(cfg, false);
     model.group.rotation.x = 0;
     if (cfg.crawl) model.group.rotation.x = 0;   // 爬行体展示用站姿缩放
     this.model = model.group;

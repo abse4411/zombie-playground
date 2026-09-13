@@ -175,6 +175,40 @@ const ZOMBIE_TYPES = {
     attackRange: 2.2, attackRate: 1.5, combo: 0.35,
     desc: '赤潮病毒的巅峰造物——两米半高的肌肉堡垒，一巴掌能把人拍飞。永远优先集火，永远别被它近身。',
   },
+
+  /* ---------- 人类敌人（v15.1）：持枪幸存者/清剿队，有真实枪械AI ---------- */
+  warlord: {
+    id: 'warlord', name: '战场军阀·卡恩', role: '人类小Boss · 小Boss战',
+    hp: 1600, speed: 2.6, damage: 18, reward: 1200, cost: 8, minWave: 6, weight: 0, noHunt: true,
+    scale: 1.32, skin: 0xc09a74, cloth: 0x4a3428, pants: 0x33271e, human: true, armorPlate: true, frontArmor: 0.4,
+    attackRange: 2.0, attackRate: 1.2, knockback: 4, immuneStagger: false,
+    gun: { dmg: 7, burst: 6, burstGap: 0.1, cooldown: 2.4, range: 24, keepMin: 8, keepMax: 16, mag: 30, reload: 2.6, aimTime: 0.6, acc: 0.5, sound: 130 },
+    desc: '方舟清剿队的战场军官。身经百战的雇佣兵头子——压制扫射、破片手雷、呼叫步枪兵增援样样精通。半血后进入"自由开火"状态，射速大幅提升。爆头依然是他最大的弱点。（以小Boss形式登场，见 v15.3）',
+  },
+  raider: {
+    id: 'raider', name: '掠夺者·步枪兵', role: '人类敌人 · 掩体射击',
+    hp: 150, speed: 3.3, damage: 8, reward: 90, cost: 3.0, minWave: 99, weight: 0, noHunt: true, human: true,
+    scale: 1.0, skin: 0xb08a68, cloth: 0x3a4036, pants: 0x2c3028,
+    attackRange: 1.7, attackRate: 1.2,
+    gun: { dmg: 9, burst: 3, burstGap: 0.14, cooldown: 2.3, range: 22, keepMin: 7, keepMax: 14, mag: 9, reload: 2.4, aimTime: 0.55, acc: 0.5, sound: 150 },
+    desc: '赤潮后沦为武装劫掠者的幸存者——成群行动，保持距离点射。瞄准时有明显停顿，横向走位即可甩开弹道；听不到枪声时，他们多半在换弹。',
+  },
+  marksman: {
+    id: 'marksman', name: '清剿队·狙击手', role: '人类敌人 · 远程狙杀',
+    hp: 110, speed: 2.9, damage: 6, reward: 100, cost: 3.2, minWave: 99, weight: 0, noHunt: true, human: true,
+    scale: 1.0, skin: 0xb08a68, cloth: 0x2a3038, pants: 0x22262c,
+    attackRange: 1.7, attackRate: 1.3,
+    gun: { dmg: 24, burst: 1, burstGap: 0, cooldown: 3.1, range: 34, keepMin: 14, keepMax: 24, mag: 4, reload: 2.9, aimTime: 1.05, acc: 0.62, sound: 90, laser: true },
+    desc: '方舟清剿队的专业射手。一枪半管血，开镜红光会先亮——看到激光立刻横向冲刺或找掩体。对它造成任意伤害即可打断瞄准。',
+  },
+  gunner: {
+    id: 'gunner', name: '清剿队·机枪手', role: '人类敌人 · 压制火力',
+    hp: 320, speed: 2.2, damage: 12, reward: 130, cost: 4.2, minWave: 99, weight: 0, noHunt: true, human: true, armorPlate: true, frontArmor: 0.35,
+    scale: 1.08, skin: 0xb08a68, cloth: 0x34383e, pants: 0x262a30,
+    attackRange: 1.8, attackRate: 1.4, knockback: 3,
+    gun: { dmg: 6, burst: 8, burstGap: 0.11, cooldown: 2.9, range: 20, keepMin: 9, keepMax: 17, mag: 24, reload: 3.2, aimTime: 0.8, acc: 0.38, sound: 110 },
+    desc: '扛着轻机枪的重装火力手——八发长点射压制一切移动。正面防弹板减免35%伤害，3.2秒换弹窗口是唯一的输出机会。别和它对枪，绕后或用爆炸物。',
+  },
 };
 
 // 遭遇战剧情中出现的精英名称映射（击杀播报用）

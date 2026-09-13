@@ -182,6 +182,38 @@ const GAMECONFIG = {
       },
     },
   },
+  /* ---------- 小Boss（v15.3）：登场三件套（横幅+号角+慢镜）+ 50%阶段转换 + 弱点部位 + 保底掉落 ----------
+   * 设计原则（调研 L4D/Destiny/Borderlands）：血量约普通精英 8~15 倍、专属技 1~2 个、
+   * 半血狂暴（提速+免硬直防无限控制）、爆头弱点额外倍率、击杀必掉补给箱。
+   */
+  minibosses: {
+    warlord: {
+      name: '战场军阀 · 卡恩', type: 'warlord', scale: 1.32,
+      tag: '清剿队最后的军官——火力即纪律',
+      hp: 1600, speed: 2.6, dmg: 18, reward: 1200, frontArmor: 0.4, weakHead: 1.35,
+      phase2: { banner: '卡恩撕掉了肩章——自由开火！', speedMult: 1.2, cdMult: 0.6 },
+      fragEvery: 10, fragDmg: 30, fragRadius: 4.2,
+      summonEvery: 13, summonType: 'raider', summonN: 2,
+    },
+    ironwall: {
+      name: '铁壁 · 布洛玛', type: 'armored', scale: 1.55,
+      tag: '重甲先锋——绕后击穿它的防护薄弱处',
+      hp: 1500, speed: 2.1, dmg: 30, reward: 900, frontArmor: 0.7, weakHead: 1.5,
+      phase2: { banner: '布洛玛丢弃了盾板——破釜沉舟！', speedMult: 1.55, cdMult: 0.65, dropArmor: true },
+      chargeEvery: 8, slamEvery: 10, slamDmg: 34, slamRadius: 5.5,
+    },
+    banshee: {
+      name: '嚎哭女妖 · 薇丝', type: 'screamer', scale: 1.4,
+      tag: '声波猎手——她的尖啸会震碎你的骨头',
+      hp: 750, speed: 3.3, dmg: 20, reward: 850, weakHead: 1.4,
+      phase2: { banner: '薇丝的喉管撕裂了——尖啸风暴！', speedMult: 1.3, cdMult: 0.55 },
+      sonicEvery: 8, sonicDmg: 16, sonicRadius: 8,
+      summonEvery: 12, summonType: 'runner', summonN: 3,
+    },
+  },
+  // 狩猎模式小Boss轮换阵容（第4波起每3波一个）
+  minibossRoster: ['warlord', 'ironwall', 'banshee'],
+
   radar: { range: 55 },
   /* ---------- 感染体整体强化（v7.0）：攻击欲望/攻击距离/移速 ---------- */
   zombieAggro: {

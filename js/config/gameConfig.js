@@ -43,6 +43,9 @@ const GAMECONFIG = {
     hpPerWave: 0.07,      // 每波血量成长
     speedPerWave: 0.02,   // 每波速度成长
     maxSpeedMult: 1.6,
+    dmgPerWave: 0.015,    // 每波伤害成长（v20.1）
+    maxHpMult: 3.2,       // 血量成长封顶（相对难度基准，v20.1）
+    maxDmgMult: 1.8,      // 伤害成长封顶（v20.1）
   },
 
   // 战斗通用

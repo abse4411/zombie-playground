@@ -264,6 +264,10 @@ button { font-family: var(--font); cursor: pointer; }
 }
 .armor-bar { height: 13px; }
 .stamina-bar { height: 5px; margin-top: 4px; }
+/* 经验升级进度条（v20.1） */
+.xp-bar { height: 7px; margin-top: 4px; }
+.xp-bar #xp-fill { background: linear-gradient(90deg, #7a4fd0, #b05cff); box-shadow: 0 0 8px rgba(176,92,255,.6); }
+.xp-bar #xp-text { font-size: 10px; color: #d8c8ff; }
 #stamina-fill { width: 100%; height: 100%; background: #e8d44d; transition: width .08s linear, background .2s; }
 #stamina-fill.low { background: #ffb044; }
 #stamina-fill.exhausted { background: #ff5a5a; animation: stamFlash .5s steps(2) infinite; }

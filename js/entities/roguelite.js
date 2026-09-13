@@ -30,6 +30,7 @@ const XPGEMS = {
       this.pool.push(gem);
     }
     const tier = xp >= 25 ? 3 : xp >= 10 ? 2 : xp >= 4 ? 1 : 0;
+    gem.tier = tier;
     gem.mesh.material = this._mats[tier];
     gem.mesh.scale.setScalar(tier >= 2 ? 1.5 : 1);
     gem.value = xp;
@@ -40,6 +41,15 @@ const XPGEMS = {
 
   update(dt, game) {
     const p = game.player;
+    // 聚合的宝石拾取提示输出（v20.1）
+    if (this._tipT > 0) {
+      this._tipT -= dt;
+      if (this._tipT <= 0 && this._tipAcc > 0) {
+        const names = ['经验宝石', '精纯宝石', '稀有宝石', '富饶宝石'];
+        HUD.pickup(`💎 ${names[Math.min(3, this._tipBest)]} +${this._tipAcc}`, Math.min(3, (this._tipBest || 0) + 1));
+        this._tipAcc = 0; this._tipBest = 0;
+      }
+    }
     const magnet = (2.2 + (p.xpMagnet || 0)) * (p.synMagnet ? 2 : 1);   // 磁吸半径（星辰引力翻倍 v10.9）
     for (const g of this.pool) {
       if (g.life <= 0) continue;
@@ -55,16 +65,20 @@ const XPGEMS = {
         g.mesh.position.y += (p.pos.y + 1.0 - g.mesh.position.y) * k;
       }
       if (d < 0.7 || g.life <= 0) {
-        if (g.life > 0) this.gain(game, g.value);
+        if (g.life > 0) this.gain(game, g.value, g.tier);
         g.life = 0;
         g.mesh.visible = false;
       }
     }
   },
 
-  gain(game, xp) {
+  gain(game, xp, tier) {
     const p = game.player;
     if (p.synMagnet) p.addMoney(1);   // 星辰引力：拾取宝石+1现金（v10.9）
+    // 拾取名称提示（v20.1）：0.6 秒聚合一次避免刷屏
+    this._tipAcc = (this._tipAcc || 0) + xp;
+    this._tipBest = Math.max(this._tipBest || 0, tier || 0);
+    if (!(this._tipT > 0)) this._tipT = 0.6;
     p.xp += xp;
     while (p.xp >= p.xpNext) {
       p.xp -= p.xpNext;
@@ -81,14 +95,14 @@ const XPGEMS = {
 
 /* ---------- 局内强化池（v10.6 八种战斗强化，v10.9 加连携） ---------- */
 const ROGUE_PERKS = [
-  { id: 'r_atk',    name: '火力全开', icon: '💢', max: 5, desc: '所有武器伤害 +12%', apply: p => p.rogueAtk = (p.rogueAtk || 1) + 0.12 },
-  { id: 'r_rof',    name: '极速扳机', icon: '⚡', max: 5, desc: '射速 +10%',        apply: p => p.rogueRof = (p.rogueRof || 1) + 0.10 },
-  { id: 'r_spd',    name: '疾风步',   icon: '🏃', max: 4, desc: '移动速度 +8%',      apply: p => p.rogueSpd = (p.rogueSpd || 1) + 0.08 },
-  { id: 'r_hp',     name: '铁壁',     icon: '❤', max: 5, desc: '最大生命 +20 并回满', apply: p => { p.maxHp += 20; p.hp = p.maxHp; } },
-  { id: 'r_mag',    name: '磁力核心', icon: '🧲', max: 3, desc: '宝石磁吸范围 +2m',  apply: p => p.xpMagnet = (p.xpMagnet || 0) + 2 },
-  { id: 'r_rel',    name: '快手',     icon: '🧤', max: 3, desc: '换弹速度 +15%',     apply: p => p.rogueRel = (p.rogueRel || 1) - 0.15 },
-  { id: 'r_crit',   name: '弱点洞察', icon: '🎯', max: 4, desc: '暴击率 +8%（2倍伤害）', apply: p => p.critChance = (p.critChance || 0) + 0.08 },
-  { id: 'r_cash',   name: '贪婪',     icon: '💰', max: 3, desc: '金钱获取 +20%',     apply: p => p.cashMult = (p.cashMult || 1) + 0.2 },
+  { id: 'r_atk',    name: '火力全开', icon: '💢', max: 5, desc: '所有武器伤害 +7%',  apply: p => p.rogueAtk = (p.rogueAtk || 1) + 0.07 },
+  { id: 'r_rof',    name: '极速扳机', icon: '⚡', max: 5, desc: '射速 +5%',         apply: p => p.rogueRof = (p.rogueRof || 1) + 0.05 },
+  { id: 'r_spd',    name: '疾风步',   icon: '🏃', max: 4, desc: '移动速度 +5%',      apply: p => p.rogueSpd = (p.rogueSpd || 1) + 0.05 },
+  { id: 'r_hp',     name: '铁壁',     icon: '❤', max: 5, desc: '最大生命 +12 并回满', apply: p => { p.maxHp += 12; p.hp = p.maxHp; } },
+  { id: 'r_mag',    name: '磁力核心', icon: '🧲', max: 3, desc: '宝石磁吸范围 +1.2m', apply: p => p.xpMagnet = (p.xpMagnet || 0) + 1.2 },
+  { id: 'r_rel',    name: '快手',     icon: '🧤', max: 3, desc: '换弹速度 +8%',      apply: p => p.rogueRel = (p.rogueRel || 1) - 0.08 },
+  { id: 'r_crit',   name: '弱点洞察', icon: '🎯', max: 4, desc: '暴击率 +5%（2倍伤害）', apply: p => p.critChance = (p.critChance || 0) + 0.05 },
+  { id: 'r_cash',   name: '贪婪',     icon: '💰', max: 3, desc: '金钱获取 +12%',     apply: p => p.cashMult = (p.cashMult || 1) + 0.12 },
 ];
 
 const LEVELUP = {

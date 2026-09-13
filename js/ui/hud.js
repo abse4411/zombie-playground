@@ -15,6 +15,7 @@ const HUD = {
       hpFill: $('hp-fill'), hpText: $('hp-text'),
       armorFill: $('armor-fill'), armorText: $('armor-text'),
       staminaFill: $('stamina-fill'),
+      xpFill: $('xp-fill'), xpText: $('xp-text'),
       moneyVal: $('money-val'), killsVal: $('kills-val'), headshotVal: $('headshot-val'),
       throwFrag: $('throw-frag'), throwMolo: $('throw-molo'), throwAttr: $('throw-attr'),
       weaponName: $('weapon-name'), ammoMag: $('ammo-mag'), ammoReserve: $('ammo-reserve'),
@@ -219,6 +220,9 @@ const HUD = {
     }
     this.el.moneyVal.textContent = fmtMoney(p.money);
     this.el.killsVal.textContent = `击杀 ${p.kills}`;
+    // 经验升级进度条（v20.1）
+    if (this.el.xpFill) this.el.xpFill.style.width = clamp(p.xp / (p.xpNext || 1), 0, 1) * 100 + '%';
+    if (this.el.xpText) this.el.xpText.textContent = 'Lv.' + p.level;
     this.el.headshotVal.textContent = `爆头 ${p.headshots}`;
     // 医疗包
     const mk = document.getElementById('medkit-count');

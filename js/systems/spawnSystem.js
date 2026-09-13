@@ -28,9 +28,10 @@ class SpawnSystem {
     this.interval = Math.max(H.spawnIntervalMin, H.spawnIntervalStart + H.spawnIntervalPerWave * (wave - 1));
     this.timer = 0.6;
     this.mults = {
-      hp: diff.hp * (1 + H.hpPerWave * (wave - 1)),
+      // v20.1：血量/伤害随波次成长并设上限，避免后期数值爆炸
+      hp: Math.min(H.maxHpMult || 3.2, diff.hp * (1 + H.hpPerWave * (wave - 1))),
       speed: Math.min(H.maxSpeedMult, diff.speed * (1 + H.speedPerWave * (wave - 1))),
-      dmg: diff.dmg,
+      dmg: Math.min(H.maxDmgMult || 1.8, diff.dmg * (1 + (H.dmgPerWave || 0) * (wave - 1))),
       reward: diff.reward,
     };
     this.pool = [];
@@ -177,7 +178,8 @@ class SpawnSystem {
     const chapter = this.game.mode.idx || 0;
     const sc = this.game.mode && this.game.mode.scenario;   // 变异情景加成（v16.1）
     if (!opts.boss && !opts.mini && !opts.dummy && !ZOMBIE_TYPES[typeId].human && ZOMBIE_TYPES[typeId].cost < 10 && wv >= 4) {
-      const mutChance = Math.min(sc ? 0.62 : 0.45, GAMECONFIG.elites.chance + wv * 0.012 + chapter * 0.03 + (sc && sc.mutate || 0));
+      // v20.1：变异概率随波次明显递增（后期接近 saturate）
+      const mutChance = Math.min(sc ? 0.72 : 0.6, GAMECONFIG.elites.chance + wv * 0.018 + chapter * 0.03 + (sc && sc.mutate || 0));
       if (Math.random() < mutChance) {
         const pool = GAMECONFIG.elites.list.slice();
         const extra = (Math.random() < 0.3 ? 1 : 0) + (Math.random() < 0.12 ? 1 : 0) + (Math.random() < 0.05 ? 1 : 0);

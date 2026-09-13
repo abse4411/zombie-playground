@@ -111,13 +111,17 @@ class HuntMode {
         const miniByScenario = this.scenario && this.scenario.miniAtWave && this.wave >= this.scenario.miniAtWave && this.wave % 2 === 0;
         if (GAMECONFIG.minibossRoster && ((this.wave >= 4 && (this.wave - 4) % 3 === 0) || miniByScenario)) {
           const roster = GAMECONFIG.minibossRoster;
-          const mbId = roster[Math.floor(this.wave / 3) % roster.length];
+          // v20.1：小Boss数量随波次上升——4~11波1个，12~19波2个，20+波3个，错峰登场
+          const count = Math.min(3, 1 + Math.floor(this.wave / 8));
           const self = this;
-          setTimeout(() => {
-            const g2 = window.GAME;
-            if (!g2 || g2.state !== 'playing' || g2.mode !== self || !g2.spawner) return;
-            g2.spawner.spawnMiniboss(mbId);
-          }, 2500);
+          for (let i = 0; i < count; i++) {
+            const mbId = roster[(Math.floor(this.wave / 3) + i) % roster.length];
+            setTimeout(() => {
+              const g2 = window.GAME;
+              if (!g2 || g2.state !== 'playing' || g2.mode !== self || !g2.spawner) return;
+              g2.spawner.spawnMiniboss(mbId);
+            }, 2500 + i * 1600);
+          }
         }
       }
     } else {

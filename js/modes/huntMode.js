@@ -128,7 +128,18 @@ class HuntMode {
       this._directorTick(dt);
       g.spawner.directorTick(dt);   // L4D三态导演+尸潮事件（v9.8）
       g.spawner.update(dt);
-      if (g.spawner.exhausted() && g.aliveZombies() === 0) {
+      if (g.spawner.exhausted() && g.aliveWaveZombies() === 0) {
+        // 场外事件尸（尸潮/兽群迁徙）随波次结束退场——不占击杀、不给奖励（v20.6）
+        const retreat = [];
+        for (const zb of g.zombies) {
+          if (!zb.dead && zb._horde) retreat.push(zb);
+        }
+        for (const zb of retreat) {
+          zb.dead = true;
+          PARTICLES.spawn('smoke', zb.pos.x, 1.0, zb.pos.z, 6, { speed: 1.2, life: 0.6, color: [0.4, 0.4, 0.4], color2: [0.2, 0.2, 0.2] });
+          if (zb.group) { disposeObject3D(zb.group); ENGINE.scene.remove(zb.group); zb.group = null; }
+        }
+        if (retreat.length) HUD.toast('🌫 尸潮散去——剩余感染体随波次退场');
         const bonus = GAMECONFIG.economy.waveBonusBase + GAMECONFIG.economy.waveBonusPerWave * this.wave;
         g.player.addMoney(bonus);
         HUD.killfeed(`第 ${this.wave} 波清除 · 奖励 +$${bonus}`, 'big');
@@ -158,7 +169,7 @@ class HuntMode {
     }
     return {
       wave: `第 ${this.wave} 波${scTxt}`,
-      objective: `剩余丧尸 ≈ ${g.aliveZombies() + g.spawner.remaining()} · 尽可能多地击杀`,
+      objective: `剩余丧尸 ≈ ${g.aliveWaveZombies() + g.spawner.remaining()} · 尽可能多地击杀`,
     };
   }
 

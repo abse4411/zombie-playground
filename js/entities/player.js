@@ -174,8 +174,8 @@ class Player {
       // 体力不足：拒绝闪避并给一次性提示（v13.1）
       if (this._stamTipT <= 0) { HUD.toast('💨 体力不足，无法闪避'); this._stamTipT = 1.5; AUDIO.emptyClick(); }
     }
-    if (wantDash && this.dashCd <= 0 && this.onGround && this.stamina >= DS.dashCost) {
-      this.stamina -= DS.dashCost;
+    if (wantDash && this.dashCd <= 0 && this.onGround && this.stamina >= DS.dashCost * (this.staminaCostMult || 1)) {
+      this.stamina -= DS.dashCost * (this.staminaCostMult || 1);   // 轻装疾行：动作消耗降低（v20.6）
       this.dashCd = GAMECONFIG.dash.cooldown;
       this.dashT = GAMECONFIG.dash.time;
       this.iframesT = GAMECONFIG.dash.iframes;
@@ -228,7 +228,7 @@ class Player {
       const S = GAMECONFIG.stamina;
       if (this._stamTipT > 0) this._stamTipT -= dt;
       if (this.sprinting) {
-        this.stamina = Math.max(0, this.stamina - S.sprintDrain * dt);
+        this.stamina = Math.max(0, this.stamina - S.sprintDrain * dt * (this.staminaCostMult || 1));   // 冲刺消耗同样吃减耗乘区（v20.6）
         if (this.stamina <= 0 && !this.exhausted) { this.exhausted = true; HUD.toast('💨 体力耗尽！'); AUDIO.emptyClick(); }
       } else if (this.stamina < this.maxStamina) {
         const regen = (this.moving ? S.walkRegen : S.idleRegen) * (this.staminaRegenMult || 1) * (this.adrenalineT > 0 ? 2 : 1);
@@ -259,6 +259,7 @@ class Player {
     if (this.iframesT > 0) return;   // 闪避无敌帧
     // 钢铁之躯减伤
     if (this.perks.tough > 0) dmg *= (1 - PERKS.tough.tiers[this.perks.tough - 1].val);
+    if (this.dmgTakenMult !== undefined) dmg *= this.dmgTakenMult;   // 铁肩硬背减伤（v20.6）
     const P = GAMECONFIG.player;
     if (this.armor > 0) {
       const ab = Math.min(this.armor, dmg * P.armorAbsorb);
@@ -374,7 +375,7 @@ class Player {
     }
     if (kind === 'adrenaline') {
       this.itemConsume(kind);
-      this.adrenalineT = def.dur || 8;
+      this.adrenalineT = (def.dur || 8) * (this.adrenalineDurMult || 1);   // 肾上腺代谢：持续延长（v20.6）
       AUDIO.streak(); HUD.toast('⚡ 肾上腺素起效！移速/换弹/体力大幅强化 8 秒');
       return true;
     }

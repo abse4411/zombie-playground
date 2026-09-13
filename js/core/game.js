@@ -147,6 +147,7 @@ class Game {
         hp: p.hp, armor: p.armor, maxArmor: p.maxArmor, money: p.money,
         kills: p.kills, headshots: p.headshots, moneyEarned: p.moneyEarned,
         perks: Object.assign({}, p.perks), medkits: p.medkits, medkitHeal: p.medkitHeal,
+        xp: p.xp, xpNext: p.xpNext, level: p.level, rogueLevels: Object.assign({}, p.rogueLevels || {}),
         items: Object.assign({}, p.items), slotMax: Object.assign({}, p.slotMax),
         throwables: { frag: p.throwables.frag.count, molotov: p.throwables.molotov.count, attractor: p.throwables.attractor.count, impact: p.throwables.impact.count },
         stamina: p.stamina,
@@ -211,7 +212,7 @@ class Game {
       ? { kind: 'weapon', inst: build(it.w) }
       : it).filter(it => it && (it.kind !== 'weapon' || it.inst));
     // 数值
-    p.hp = Math.max(1, sv.player.hp);
+    p.hp = Math.min(Math.max(1, sv.player.hp), p.maxHp);
     p.maxArmor = sv.player.maxArmor || 0;
     p.armor = sv.player.armor || 0;
     p.money = sv.player.money;
@@ -230,6 +231,17 @@ class Game {
     p.throwables.attractor.count = sv.player.throwables.attractor;
     if (sv.player.throwables.impact !== undefined) p.throwables.impact.count = sv.player.throwables.impact;
     p.recomputePerks();
+    // 等级与局内强化重放（v20.6：经验等级/三选一强化/连携全部还原；必须在 recomputePerks 之后，否则铁壁等对 maxHp 的加成会被覆盖）
+    p.level = sv.player.level || 1;
+    p.xpNext = sv.player.xpNext || 10;
+    p.xp = sv.player.xp || 0;
+    p.rogueLevels = Object.assign({}, sv.player.rogueLevels || {});
+    for (const pid in p.rogueLevels) {
+      const k = typeof ROGUE_PERKS !== 'undefined' && ROGUE_PERKS.find(x => x.id === pid);
+      if (k) for (let i = 0; i < p.rogueLevels[pid]; i++) k.apply(p);
+    }
+    if (typeof SYNERGY !== 'undefined') SYNERGY.check(this);
+    p.hp = Math.min(Math.max(1, sv.player.hp), p.maxHp);
     p.stamina = Math.min(sv.player.stamina !== undefined ? sv.player.stamina : p.maxStamina, p.maxStamina);
     p.pos.set(sv.player.x, sv.player.y, sv.player.z);
     p.yaw = sv.player.yaw || 0;
@@ -1041,6 +1053,12 @@ class Game {
   aliveZombies() {
     let n = 0;
     for (const z of this.zombies) if (!z.dead) n++;
+    return n;
+  }
+  // 波次判定用：排除尸潮/兽群等场外事件尸（v20.6——事件尸不再卡死波次推进）
+  aliveWaveZombies() {
+    let n = 0;
+    for (const z of this.zombies) if (!z.dead && !z._horde) n++;
     return n;
   }
 }

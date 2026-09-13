@@ -113,6 +113,11 @@ const ROGUE_PERKS = [
   { id: 'r_regen',  name: '战地急救', icon: '🩹', max: 5, desc: '每秒回复 0.6 生命', apply: p => p.hpRegen = (p.hpRegen || 0) + 0.6 },
   { id: 'r_xp',     name: '快速学习', icon: '📘', max: 5, desc: '经验获取 +4%',     apply: p => p.xpMult = (p.xpMult || 1) + 0.04 },
   { id: 'r_res',    name: '深弹链',   icon: '🎒', max: 5, desc: '备用弹药上限 +10%', apply: p => p.reserveMult = (p.reserveMult || 1) + 0.1 },
+  { id: 'r_stamax', name: '耐力强化', icon: '🔋', max: 6, desc: '体力上限 +8',      apply: p => { p.maxStamina += 8; p.stamina += 8; } },
+  { id: 'r_stareg', name: '有氧体能', icon: '🫁', max: 5, desc: '体力回复速度 +10%', apply: p => p.staminaRegenMult = (p.staminaRegenMult || 1) + 0.1 },
+  { id: 'r_stalight', name: '轻装疾行', icon: '🎽', max: 6, desc: '动作体力消耗 -3%', apply: p => p.staminaCostMult = (p.staminaCostMult || 1) - 0.03 },
+  { id: 'r_guard',  name: '铁肩硬背', icon: '🛡️', max: 5, desc: '受到的伤害 -3%',   apply: p => p.dmgTakenMult = (p.dmgTakenMult || 1) - 0.03 },
+  { id: 'r_adr',    name: '肾上腺代谢', icon: '💉', max: 4, desc: '肾上腺素持续 +15%', apply: p => p.adrenalineDurMult = (p.adrenalineDurMult || 1) + 0.15 },
 ];
 
 const LEVELUP = {

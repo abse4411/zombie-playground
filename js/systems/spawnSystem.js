@@ -84,20 +84,33 @@ class SpawnSystem {
         break;
     }
     // 尸潮事件（L4D Horde）：周期触发40秒高强度潮
+    // v20.6 修复：尸潮只从第3波起、每波至多1次（次数随波次重置）——避免尸潮把波次僵尸数量堆到杀不完
     D.hordeT -= dt;
     if (D.hordeT <= 0 && D.hordeActive <= 0 && g.state === 'playing') {
-      D.hordeT = rand(90, 150);
-      D.hordeActive = 40;
-      HUD.banner('🚨 尸潮来袭！', '普通感染体蜂拥而至');
-      AUDIO.hordeHorn();
-      ENGINE.shake(0.25);
+      const wave = (g.mode && g.mode.wave) || 0;
+      if (wave !== D.hordeWaveMark) { D.hordeWaveMark = wave; D.hordeCount = 0; }
+      const minWave = (GAMECONFIG.director && GAMECONFIG.director.hordeMinWave) || 3;
+      const maxPerWave = (GAMECONFIG.director && GAMECONFIG.director.hordeMaxPerWave) || 1;
+      if (wave >= minWave && D.hordeCount < maxPerWave) {
+        D.hordeCount++;
+        D.hordeT = rand(90, 150);
+        D.hordeActive = 40;
+        HUD.banner('🚨 尸潮来袭！', '普通感染体蜂拥而至——尸潮不阻碍波次推进');
+        AUDIO.hordeHorn();
+        ENGINE.shake(0.25);
+      } else {
+        D.hordeT = 25;   // 本波次数用尽/波次未到：稍后再查
+      }
     }
     if (D.hordeActive > 0) {
       D.hordeActive -= dt;
       this.timer -= dt * 2.2;   // 刷速×2.2
       // 额外预算注入（小尸为主）
       if (this.budget < 30) this.budget += dt * 6;
-      if (Math.random() < dt * 1.2) this.spawnOne(Math.random() < 0.8 ? 'walker' : 'runner');
+      if (Math.random() < dt * 1.2) {
+        const zb = this.spawnOne(Math.random() < 0.8 ? 'walker' : 'runner');
+        if (zb) zb._horde = true;   // 场外事件尸：不计入波次清场判定（v20.6）
+      }
     }
     // 兽群巡游（v10.4 Days Gone）：稀有事件——15只成群从一侧横穿地图
     D.migrateT = (D.migrateT === undefined ? rand(180, 300) : D.migrateT) - dt;
@@ -116,6 +129,7 @@ class SpawnSystem {
           const sz = side === 2 ? -S : side === 3 ? S : z0 + rand(-4, 4);
           const z4 = new Zombie(Math.random() < 0.75 ? 'runner' : 'walker', sx, sz, g4.spawner.mults, {});
           z4.riseT = 0; z4.state = 'chase'; z4.pos.y = 0;
+          z4._horde = true;   // 场外事件尸：不计入波次清场判定（v20.6）
           g4.zombies.push(z4);
         }, i * 350);
       }

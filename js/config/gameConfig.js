@@ -106,6 +106,8 @@ const GAMECONFIG = {
   director: {
     minDelay: 42, maxDelay: 72,
     hordeBase: 8, hordePerWave: 1.5,   // 尸潮突袭数量
+    hordeMinWave: 3,                   // 尸潮事件从第3波起（v20.6）
+    hordeMaxPerWave: 1,                // 每波至多触发1次尸潮（v20.6 防堆积卡波次）
     airdropMoney: 320,
     eliteTypes: ['screamer', 'bloater', 'armored'],
   },

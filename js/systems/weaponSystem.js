@@ -875,7 +875,7 @@ class WeaponSystem {
       if (this.p._stamTipT <= 0) { HUD.toast('💨 体力不足，无法踢击'); this.p._stamTipT = 1.5; }
       return;
     }
-    this.p.stamina -= GAMECONFIG.stamina.kickCost;
+    this.p.stamina -= GAMECONFIG.stamina.kickCost * (this.p.staminaCostMult || 1);   // 轻装疾行（v20.6）
     this.kickCd = K.cooldown;
     AUDIO.kick();
     this.kickAnimT = 0.22;
@@ -1139,6 +1139,7 @@ class WeaponSystem {
   // 徒手挥拳的体力门槛：不足时拒绝攻击并节流提示
   _fistStamina(cost) {
     if (this.p.current !== 'fist') return true;
+    cost *= (this.p.staminaCostMult || 1);   // 轻装疾行（v20.6）
     if (this.p.stamina < cost) {
       if (!this._fistTipT || this._fistTipT <= 0) {
         this._fistTipT = 1.2;

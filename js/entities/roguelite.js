@@ -93,16 +93,16 @@ const XPGEMS = {
   },
 };
 
-/* ---------- 局内强化池（v10.6 八种战斗强化，v10.9 加连携） ---------- */
+/* ---------- 局内强化池（v10.6 八种战斗强化，v20.2 每级小步 1~2 点，靠等级上限堆总量） ---------- */
 const ROGUE_PERKS = [
-  { id: 'r_atk',    name: '火力全开', icon: '💢', max: 5, desc: '所有武器伤害 +7%',  apply: p => p.rogueAtk = (p.rogueAtk || 1) + 0.07 },
-  { id: 'r_rof',    name: '极速扳机', icon: '⚡', max: 5, desc: '射速 +5%',         apply: p => p.rogueRof = (p.rogueRof || 1) + 0.05 },
-  { id: 'r_spd',    name: '疾风步',   icon: '🏃', max: 4, desc: '移动速度 +5%',      apply: p => p.rogueSpd = (p.rogueSpd || 1) + 0.05 },
-  { id: 'r_hp',     name: '铁壁',     icon: '❤', max: 5, desc: '最大生命 +12 并回满', apply: p => { p.maxHp += 12; p.hp = p.maxHp; } },
-  { id: 'r_mag',    name: '磁力核心', icon: '🧲', max: 3, desc: '宝石磁吸范围 +1.2m', apply: p => p.xpMagnet = (p.xpMagnet || 0) + 1.2 },
-  { id: 'r_rel',    name: '快手',     icon: '🧤', max: 3, desc: '换弹速度 +8%',      apply: p => p.rogueRel = (p.rogueRel || 1) - 0.08 },
-  { id: 'r_crit',   name: '弱点洞察', icon: '🎯', max: 4, desc: '暴击率 +5%（2倍伤害）', apply: p => p.critChance = (p.critChance || 0) + 0.05 },
-  { id: 'r_cash',   name: '贪婪',     icon: '💰', max: 3, desc: '金钱获取 +12%',     apply: p => p.cashMult = (p.cashMult || 1) + 0.12 },
+  { id: 'r_atk',    name: '火力全开', icon: '💢', max: 8, desc: '所有武器伤害 +2%',  apply: p => p.rogueAtk = (p.rogueAtk || 1) + 0.02 },
+  { id: 'r_rof',    name: '极速扳机', icon: '⚡', max: 6, desc: '射速 +2%',         apply: p => p.rogueRof = (p.rogueRof || 1) + 0.02 },
+  { id: 'r_spd',    name: '疾风步',   icon: '🏃', max: 5, desc: '移动速度 +2%',      apply: p => p.rogueSpd = (p.rogueSpd || 1) + 0.02 },
+  { id: 'r_hp',     name: '铁壁',     icon: '❤', max: 8, desc: '最大生命 +6 并回满', apply: p => { p.maxHp += 6; p.hp = p.maxHp; } },
+  { id: 'r_mag',    name: '磁力核心', icon: '🧲', max: 4, desc: '宝石磁吸范围 +1m', apply: p => p.xpMagnet = (p.xpMagnet || 0) + 1 },
+  { id: 'r_rel',    name: '快手',     icon: '🧤', max: 5, desc: '换弹速度 +2%',      apply: p => p.rogueRel = (p.rogueRel || 1) - 0.02 },
+  { id: 'r_crit',   name: '弱点洞察', icon: '🎯', max: 5, desc: '暴击率 +2%（2倍伤害）', apply: p => p.critChance = (p.critChance || 0) + 0.02 },
+  { id: 'r_cash',   name: '贪婪',     icon: '💰', max: 6, desc: '金钱获取 +2%',     apply: p => p.cashMult = (p.cashMult || 1) + 0.02 },
 ];
 
 const LEVELUP = {

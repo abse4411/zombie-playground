@@ -237,6 +237,9 @@ const SHOP = {
         // 分项升级（v11.6）
         const inst = p.rack[item.def.slot].find(r => r.def.id === item.def.id);
         if (inst && item.upId) {
+          // 武器特点上限（v18.7）：达到有效上限则拒绝（双保险，UI 层已禁用）
+          const line = getUpgradeLines(inst.def).find(L => L.id === item.upId);
+          if (line && (inst.upgrades[item.upId] || 0) >= line.max) { AUDIO.denied(); return false; }
           inst.upgrades = inst.upgrades || {};
           inst.upgrades[item.upId] = (inst.upgrades[item.upId] || 0) + 1;
           // 即时生效：满弹引用新弹容

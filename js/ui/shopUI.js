@@ -73,7 +73,7 @@ const SHOPUI = {
         for (const L of item.lines) {
           const row = document.createElement('div');
           row.className = 'si-line';
-          const dots = '●'.repeat(L.lv) + '<i>' + '○'.repeat(L.max - L.lv) + '</i>';
+          const dots = '●'.repeat(Math.min(L.lv, L.max)) + '<i>' + '○'.repeat(Math.max(0, L.max - L.lv)) + '</i>';
           row.innerHTML = `<div class="si-line-top"><span class="si-line-name">${L.name}</span>
             <span class="si-line-dots${L.maxed ? ' maxed' : ''}">${dots}</span></div>
             <div class="si-line-desc"><b>${L.gain}</b>｜${L.drawback ? `<span class="si-drawback">代价：${L.drawback}</span>` : '<span class="si-nodraw">无副作用</span>'}</div>`;

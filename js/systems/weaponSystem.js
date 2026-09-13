@@ -45,8 +45,13 @@ const W_SPECIALS = {
 };
 
 // 按武器特征返回全部可用升级线（带id的配置对象数组）；近战剔除弹药概念线
+// 每条线的 max = min(配置上限, 武器特点上限)（v18.7）
 function getUpgradeLines(def) {
-  const mk = (id, ovr) => Object.assign({ id }, W_UPGRADES[id] || W_SPECIALS[id], ovr || {});
+  const mk = (id, ovr) => {
+    const line = Object.assign({ id }, W_UPGRADES[id] || W_SPECIALS[id], ovr || {});
+    if (!(ovr && ovr.max)) line.max = lineMaxFor(def, id);
+    return line;
+  };
   if (def.melee) return [
     mk('dmg'),   // 近战威力同样无代价（v18.3）
     mk('rof', { name: '攻速', drawback: '', gain: '攻速 +7%' }),
@@ -62,6 +67,40 @@ function getUpgradeLines(def) {
   return ids.map(id => mk(id));
 }
 function upgradeDef(id) { return W_UPGRADES[id] || W_SPECIALS[id]; }
+
+/* ---------- 按武器特点限制特性升级线上限（v18.7） ----------
+ * 通用线（威力/弹匣容量/换弹速度）全武器统一，不受此限制；
+ * 特性线随武器基础数值收缩，避免升级抹平武器定位差异：
+ * - 射速：冲锋枪/转管级(≥900)只剩1级、步枪高射速档(≥700)最多2级
+ * - 精准：本就极准的狙击(散布≤0.008)只剩1级
+ * - 备用弹药：弹链级备弹(≥250)只剩1级
+ * - 弹丸密度：霰弹弹丸已多(≥8)只剩1级
+ * - 穿甲弹芯：已可穿透多目标(≥2)只剩1级 */
+function lineMaxFor(def, id) {
+  const base = upgradeDef(id).max;
+  if (!def || def.melee) return base;
+  switch (id) {
+    case 'rof':
+      if ((def.rpm || 0) >= 900) return Math.min(base, 1);
+      if ((def.rpm || 0) >= 700) return Math.min(base, 2);
+      return base;
+    case 'acc':
+      if ((def.spread || 1) <= 0.008) return Math.min(base, 1);
+      if ((def.spread || 1) <= 0.015) return Math.min(base, 2);
+      return base;
+    case 'res':
+      if ((def.reserve || 0) >= 250) return Math.min(base, 1);
+      if ((def.reserve || 0) >= 180) return Math.min(base, 2);
+      return base;
+    case 'pel':
+      if ((def.pellets || 1) >= 8) return Math.min(base, 1);
+      return base;
+    case 'psc':
+      if ((def.pierce || 0) >= 2) return Math.min(base, 1);
+      return base;
+  }
+  return base;
+}
 
 /* ---------- 武器属性面板数据（v18.3）：基础值 vs 升级后当前值 ----------
  * 返回 [{k, base, cur, better}] —— better: 1=提升(绿) / -1=下降(红) / 0=不变 */
@@ -126,49 +165,50 @@ class WeaponInstance {
     // 分项升级（v11.5）
     this.upgrades = {};
   }
+  // 有效等级（v18.7）：按武器特点上限钳制——旧存档超限等级不再生效
+  _lv(id) { return Math.min((this.upgrades && this.upgrades[id]) || 0, lineMaxFor(this.def, id)); }
   get magSize() {
     if (!this.def.mag) return 0;   // 近战无弹匣概念
     let m = this.def.mag * (1 + 0.2 * this.lvl);   // 旧总等级仍生效（兼容存档）
-    if (this.upgrades.mag) m += 2 * this.upgrades.mag;   // v18.4：小步长，每级 +2 发
+    if (this._lv('mag')) m += 2 * this._lv('mag');   // v18.4：小步长，每级 +2 发
     return Math.max(1, Math.round(m));
   }
   get dmgMult() {
     let d = 1 + 0.15 * this.lvl;
-    if (this.upgrades.dmg) d *= 1 + 0.06 * this.upgrades.dmg;   // v18.4：每级 +6%
+    if (this._lv('dmg')) d *= 1 + 0.06 * this._lv('dmg');   // v18.4：每级 +6%
     return d;
   }
   get reloadTimeMult() {
     let r = 1;
-    if (this.upgrades.rel) r = Math.max(0.4, r - 0.08 * this.upgrades.rel);   // v18.4：每级 -0.08 秒（按基准1s折算）
-    if (this.upgrades.mag) r *= 1 + 0.06 * this.upgrades.mag;   // 长弹匣换装更慢（v18.3 唯一保留的换弹代价）
+    if (this._lv('rel')) r = Math.max(0.4, r - 0.08 * this._lv('rel'));   // v18.4：每级 -0.08 秒（按基准1s折算）
+    if (this._lv('mag')) r *= 1 + 0.06 * this._lv('mag');   // 长弹匣换装更慢（v18.3 唯一保留的换弹代价）
     return r;
   }
   get rpmMult() {
     let r = 1;
-    if (this.upgrades.rof) r *= 1 + 0.05 * this.upgrades.rof;   // v18.4：每级 +5%
+    if (this._lv('rof')) r *= 1 + 0.05 * this._lv('rof');   // v18.4：每级 +5%
     if (this.def.melee) r *= 1 - 0.04 * (this.upgrades.rng || 0);   // 长握柄挥速代价（v18.3：近战威力不再降攻速）
     return r;
   }
   get spreadMult() {
     let s = 1;
-    if (this.upgrades.acc) s *= 1 - 0.10 * this.upgrades.acc;   // v18.4：每级 -10%
+    if (this._lv('acc')) s *= 1 - 0.10 * this._lv('acc');   // v18.4：每级 -10%
     return s;
   }
   get reserveMaxMult() {
     // v18.4：每级 +30 发（等效乘区，保持调用方兼容）
     let r = 1;
-    if (this.upgrades.res && this.def.reserve) r += 30 * this.upgrades.res / this.def.reserve;
+    const lv = this._lv('res');
+    if (lv && this.def.reserve) r += 30 * lv / this.def.reserve;
     return r;
   }
   // 后坐力乘区（v18.3：射速强化/霰弹弹丸密度的现实代价）
   get recoilMult() {
-    const u = this.upgrades || {};
-    return 1 + 0.06 * (u.rof || 0) + 0.08 * (u.pel || 0);
+    return 1 + 0.06 * this._lv('rof') + 0.08 * this._lv('pel');
   }
   // 移速代价乘区（v18.3：精准枪管/穿甲弹芯/配重锤头/备用弹药/深寒罐的重量代价）
   get movePenalty() {
-    const u = this.upgrades;
-    return 1 - 0.015 * (u.acc || 0) - 0.015 * (u.psc || 0) - 0.01 * (u.knb || 0) - 0.01 * (u.res || 0) - 0.01 * (u.frz || 0);
+    return 1 - 0.015 * this._lv('acc') - 0.015 * this._lv('psc') - 0.01 * this._lv('knb') - 0.01 * this._lv('res') - 0.01 * this._lv('frz');
   }
   // 灼烧 dps 乘区（稠化燃料）
   get burnMult() { return 1 + 0.25 * ((this.upgrades && this.upgrades.bur) || 0); }
@@ -556,7 +596,7 @@ class WeaponSystem {
       { speed: 1.6, vy: 1.5, life: 0.5, color: [1, 0.85, 0.3], color2: [0.9, 0.6, 0.1] });
 
     const moving = this.p.moving || this.p.sprinting;
-    const pellets = (def.pellets || 1) + ((w.upgrades && w.upgrades.pel) || 0);   // 弹丸密度升级（v11.11）
+    const pellets = (def.pellets || 1) + Math.min(((w.upgrades && w.upgrades.pel) || 0), lineMaxFor(def, 'pel'));   // 弹丸密度升级（v11.11，v18.7 按武器上限钳制）
     const spread = lerp(def.spread, def.adsSpread, this.adsT) * (w.spreadMult || 1)
       * (moving ? 1.45 : 1) * (this.p.onGround ? 1 : 1.8);
 
@@ -713,7 +753,7 @@ class WeaponSystem {
     }
     allHits.sort((a, b) => a.t - b.t);
 
-    const take = allHits.slice(0, (def.pierce || 0) + 1 + ((this.w.upgrades && this.w.upgrades.psc) || 0));   // 穿甲弹芯（v11.11）
+    const take = allHits.slice(0, (def.pierce || 0) + 1 + Math.min(((this.w.upgrades && this.w.upgrades.psc) || 0), lineMaxFor(def, 'psc')));   // 穿甲弹芯（v11.11，v18.7 钳制）
     if (take.length) {
       const first = take[0];
       hitZ = first.z; isHead = first.head; bestT = first.t;

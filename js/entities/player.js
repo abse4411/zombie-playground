@@ -409,6 +409,7 @@ class Player {
   }
 
   addMoney(n) {
+    if (!Number.isFinite(n)) return;   // NaN/Infinity 不入账（v19.4 防金钱传染）
     if (this.cashMult > 1) n *= this.cashMult;
     const v = Math.round(n);
     this.money += v;

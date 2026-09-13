@@ -48,6 +48,70 @@ const MENU = {
     document.querySelectorAll('.btn-back').forEach(b =>
       b.addEventListener('click', () => { AUDIO.uiClick(); this.show('screen-menu'); }));
 
+    // 存档管理（v19.4）：导出文件 / 导入文件 / 清空
+    $('btn-save-export').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(SAVE.data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      const d = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      a.href = URL.createObjectURL(blob);
+      a.download = `zombie-playground-save-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      AUDIO.uiClick();
+      HUD.toast('💾 存档已导出到下载目录');
+    });
+    $('btn-save-import').addEventListener('click', () => {
+      if (GAME.state !== 'menu') { HUD.toast('请先退回主菜单再导入存档'); AUDIO.denied(); return; }
+      $('save-file-input').click();
+    });
+    $('save-file-input').addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const text = String(reader.result).trim();
+          let obj = null;
+          try { obj = JSON.parse(text); } catch (e1) { obj = null; }
+          if (obj && typeof obj === 'object' && obj.settings !== undefined) {
+            SAVE.data = Object.assign(SAVE.defaults(), obj);   // 新版 JSON 存档文件
+          } else {
+            SAVE.import(text);   // 兼容旧版 base64 导出码
+          }
+          SAVE.commit();
+          AUDIO.purchase();
+          HUD.toast('✅ 存档已导入');
+          this.refreshContinue(); this.refreshStats();
+        } catch (err) {
+          AUDIO.denied();
+          HUD.toast('❌ 导入失败：' + (err.message || '格式无效'));
+        }
+      };
+      reader.onerror = () => { AUDIO.denied(); HUD.toast('❌ 文件读取失败'); };
+      reader.readAsText(f);
+    });
+    let clearArmed = false;
+    $('btn-save-clear').addEventListener('click', () => {
+      if (GAME.state !== 'menu') { HUD.toast('请先退回主菜单再清空存档'); AUDIO.denied(); return; }
+      if (!clearArmed) {
+        clearArmed = true;
+        $('btn-save-clear').textContent = '⚠ 再点一次确认清空';
+        AUDIO.emptyClick();
+        setTimeout(() => { clearArmed = false; $('btn-save-clear').textContent = '🗑 清空全部存档'; }, 3000);
+        return;
+      }
+      clearArmed = false;
+      $('btn-save-clear').textContent = '🗑 清空全部存档';
+      localStorage.removeItem(SAVE.key);
+      SAVE.data = SAVE.defaults();
+      SAVE.commit();
+      AUDIO.uiClick();
+      HUD.toast('🗑 存档已全部清空');
+      this.refreshContinue(); this.refreshStats();
+    });
+
     // 难度（狩猎）：切换时刷新难度介绍栏
     document.querySelectorAll('#difficulty-row .diff-btn').forEach(b =>
       b.addEventListener('click', () => {

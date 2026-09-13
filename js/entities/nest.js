@@ -70,7 +70,7 @@ const NESTS = {
         nest.hatched++;
         const a = rand(0, TAU);
         const z = new Zombie(Math.random() < 0.7 ? 'walker' : 'runner', nest.x + Math.cos(a) * 1.5, nest.z + Math.sin(a) * 1.5,
-          { hp: 0.85, speed: 1, dmg: 1 }, {});
+          { hp: 0.85, speed: 1, dmg: 1, reward: 1 }, {});   // reward 缺失会导致赏金 NaN（v19.4 修复）
         z.riseT = 0.2; z.state = 'chase'; z.pos.y = 0;
         game.zombies.push(z);
         PARTICLES.dust(nest.x, 0.3, nest.z, 6);

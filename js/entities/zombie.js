@@ -475,10 +475,11 @@ class Zombie {
     this.hp = this.maxHp;
     this.speed = cfg.speed * mults.speed * rand(0.9, 1.12) * affSpd * AG.speedMult;
     this.damage = cfg.damage * mults.dmg * affDmg;
-    this.reward = Math.round(cfg.reward * mults.reward
+    const _rw = cfg.reward * (mults.reward || 1)
       * (GAMECONFIG.economy.rewardGlobalMult || 1)
       * Math.pow(GAMECONFIG.elites.rewardMult, Math.min(3, this.affixes.length))
-      * (this.boss ? GAMECONFIG.boss.rewardMult : 1));
+      * (this.boss ? GAMECONFIG.boss.rewardMult : 1);
+    this.reward = Math.round(Number.isFinite(_rw) ? _rw : cfg.reward);   // 非有限值兜底（v19.4）
     // 幕末专属Boss（v6.9）：独立数值（暴君Ω/灯塔巨像/方舟刽子手）
     if (this.bossCfg) {
       const B = this.bossCfg;

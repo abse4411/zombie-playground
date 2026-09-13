@@ -365,7 +365,7 @@ button { font-family: var(--font); cursor: pointer; }
   background: rgba(0,0,0,.72); backdrop-filter: blur(3px);
 }
 #shop-panel {
-  width: min(880px, 94vw); max-height: 88vh; display: flex; flex-direction: column;
+  width: min(1240px, 96vw); max-height: 90vh; display: flex; flex-direction: column;
   background: var(--panel); border: 1px solid var(--line); box-shadow: 0 0 30px rgba(0,0,0,.9);
 }
 #shop-header {

@@ -16,7 +16,7 @@ const W_UPGRADES = {
           price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.16 * (lv + 1)) },
   rel:  { name: '快速换弹',  max: 4, gain: '换弹时间 -0.08 秒/级', drawback: '', desc: '训练有素的换弹动作，快而不掉弹。',
           price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.26 * (lv + 1)) },
-  rof:  { name: '射速强化',  max: 3, gain: '射速 +5%/级', drawback: '后坐力 +6%/级（连发更难压枪）', desc: '优化自动机循环，射速更快、枪口跳得更凶。',
+  rof:  { name: '攻速',     max: 3, gain: '攻速 +7%/级', drawback: '', desc: '近战专用：挥击更快。枪械射速线已取消（v19.3）。',
           price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.22 * (lv + 1)) },
   acc:  { name: '精准枪管',  max: 3, gain: '散布 -10%/级', drawback: '武器更重：移速 -1.5%/级（精加工重枪管）', desc: '浮置式重枪管，精度更高、分量也更足。',
           price: (base, lv) => Math.round((base > 0 ? base : 600) * 0.20 * (lv + 1)) },
@@ -57,7 +57,9 @@ function getUpgradeLines(def) {
     mk('rof', { name: '攻速', drawback: '', gain: '攻速 +7%' }),
     mk('rng'), mk('knb'),
   ];
-  const ids = ['dmg', 'mag', 'rel', 'rof', 'acc', 'res'];
+  // v19.3：取消枪械"射速强化"线——射速是武器定位的核心标识，不做升级成长
+  // （近战"攻速"线仍保留，见下方近战分支的 rof 覆盖）
+  const ids = ['dmg', 'mag', 'rel', 'acc', 'res'];
   if ((def.pellets || 1) > 1) ids.push('pel');
   if (def.pierce || def.scope) ids.push('psc');
   if (def.launcher) ids.push('blk');
@@ -186,7 +188,8 @@ class WeaponInstance {
   }
   get rpmMult() {
     let r = 1;
-    if (this._lv('rof')) r *= 1 + 0.05 * this._lv('rof');   // v18.4：每级 +5%
+    // v19.3：枪械射速线已取消，rof 加成仅近战"攻速"线保留
+    if (this.def.melee && this._lv('rof')) r *= 1 + 0.07 * this._lv('rof');
     if (this.def.melee) r *= 1 - 0.04 * (this.upgrades.rng || 0);   // 长握柄挥速代价（v18.3：近战威力不再降攻速）
     return r;
   }
@@ -202,9 +205,9 @@ class WeaponInstance {
     if (lv && this.def.reserve) r += 30 * lv / this.def.reserve;
     return r;
   }
-  // 后坐力乘区（v18.3：射速强化/霰弹弹丸密度的现实代价）
+  // 后坐力乘区（v18.3：霰弹弹丸密度的现实代价；v19.3 枪械射速线移除后仅剩弹丸密度）
   get recoilMult() {
-    return 1 + 0.06 * this._lv('rof') + 0.08 * this._lv('pel');
+    return 1 + 0.08 * this._lv('pel');
   }
   // 移速代价乘区（v18.3：精准枪管/穿甲弹芯/配重锤头/备用弹药/深寒罐的重量代价）
   get movePenalty() {

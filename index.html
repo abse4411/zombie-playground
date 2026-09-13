@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>丧尸游乐场 · Zombie Playground</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧟</text></svg>">
-<link rel="stylesheet" href="css/style.css?v=19.2">
+<link rel="stylesheet" href="css/style.css?v=19.3">
 </head>
 <body>
 <div id="boot-screen">
@@ -248,7 +248,7 @@
       <button id="btn-settings">⚙ 设置</button>
     </div>
     <div id="menu-stats"></div>
-    <div class="menu-footer">黎明会机密档案 · 赤潮事件记录 v19.2</div>
+    <div class="menu-footer">黎明会机密档案 · 赤潮事件记录 v19.3</div>
   </div>
 </div>
 
@@ -372,6 +372,7 @@
       <div class="help-item"><b>C / Ctrl</b><span>闪避冲刺（短暂无敌）</span></div>
       <div class="help-item"><b>F</b><span>战术脚踢（大硬直+击退）</span></div>
       <div class="help-item"><b>R</b><span>装填弹药</span></div>
+      <div class="help-item"><b>H</b><span>快速使用医疗包（1.2秒包扎，受击打断）</span></div>
       <div class="help-item"><b>1 / 2 / 3</b><span>切换武器槽位（多武器再按循环）</span></div>
       <div class="help-item"><b>4</b><span>投掷武器槽：左键蓄力投掷（再按4换雷种）</span></div>
       <div class="help-item"><b>5</b><span>道具槽：左键使用道具（再按5换道具）</span></div>
@@ -390,10 +391,11 @@
       <p>💡 尖啸者的嚎叫会召唤尸潮，吐酸者会远程吐酸，膨胀者死亡会自爆——学会排优先级。</p>
       <p>💡 装甲暴兵正面有重甲，绕后攻击或使用高穿透武器。被包围时 F 脚踢 + C 闪避可以脱身。</p>
       <p>💡 连续快速击杀会触发连杀奖金；狩猎模式中留意"尸潮突袭"与"空投补给"事件。</p>
+      <p>💡 强化实验室：商城"升级台"悬停或点击升级项可在武器模型旁预览属性变化；威力/弹匣/换弹全武器通用，射速等特性强化按武器定位设上限。</p>
       <p>💡 变异情景：狩猎第3波起每波可能抽到全局修正（铁皮进化/狂潮尸海/血色赏金等）——顶部信息栏会显示当前情景，负面强化必配赏金补偿，提前换枪布雷应对。</p>
       <p>💡 尸潮爆发警报：3秒倒计时后感染体将从四面八方环形合围——背靠窄口或提前在开阔地布雷是生存关键。</p>
       <p>💡 装备管理：武器栏位数量由角色决定、商城可扩容（主/副/近战各最多3把）。[4]投掷武器左键蓄力投掷、[5]道具栏左键使用（护甲板/弹药袋/肾上腺素）、[G]丢弃手中武器或道具——丢弃的武器躺在地上，按 E 亲手拾取（槽满自动替换手中武器）；金钱/弹药等不占容量的物资靠近自动拾取，道具计数满后需按E收进背包。武器全丢光会进入赤手空拳状态：左键轻击耗10体力、右键重击耗18体力。背包满了就无法再拾取道具，先用G或背包丢弃腾地方。</p>
-      <p>💡 支援道具（商城🛠支援页购买）：打开背包 [Tab] 在"支援道具"区点击使用——✈战机轰炸沿面前弹带投弹（小心友伤）、📦空投补给、🛸攻击无人机伴飞索敌、🔫哨戒机枪扇形自动防守。小Boss击杀也可能掉落。</p>
+      <p>💡 支援道具（商城🛠支援页购买）：打开背包 [Tab] 在"支援道具"区点击使用——✈战机轰炸：轰炸机临空沿红色弹幕带投下12枚航弹（小心友伤）、📦空投补给：降落伞缓降，全弹药+医疗×3+$800+投掷物礼包、🛸攻击无人机伴飞35秒自动索敌、🔫哨戒机枪240发弹链150°扇形防守，弹打完会冒烟报废。小Boss击杀也可能掉落支援道具。</p>
     </div>
     <button class="btn-back" data-back="menu">◂ 返回主菜单</button>
   </div>
@@ -519,57 +521,57 @@
 <div id="toast" class="hidden"></div>
 
 <!-- ==================== 脚本（按依赖顺序加载） ==================== -->
-<script src="js/lib/three.min.js?v=19.2"></script>
+<script src="js/lib/three.min.js?v=19.3"></script>
 <!-- 配置层 -->
-<script src="js/config/gameConfig.js?v=19.2"></script>
-<script src="js/core/resources.js?v=19.2"></script>
-<script src="js/systems/mapStructs.js?v=19.2"></script>
+<script src="js/config/gameConfig.js?v=19.3"></script>
+<script src="js/core/resources.js?v=19.3"></script>
+<script src="js/systems/mapStructs.js?v=19.3"></script>
 <!-- 核心层 -->
-<script src="js/core/utils.js?v=19.2"></script>
-<script src="js/core/artkit.js?v=19.2"></script>
-<script src="js/core/audio.js?v=19.2"></script>
-<script src="js/core/input.js?v=19.2"></script>
-<script src="js/core/touch.js?v=19.2"></script>
-<script src="js/core/particles.js?v=19.2"></script>
-<script src="js/core/collision.js?v=19.2"></script>
-<script src="js/core/engine.js?v=19.2"></script>
+<script src="js/core/utils.js?v=19.3"></script>
+<script src="js/core/artkit.js?v=19.3"></script>
+<script src="js/core/audio.js?v=19.3"></script>
+<script src="js/core/input.js?v=19.3"></script>
+<script src="js/core/touch.js?v=19.3"></script>
+<script src="js/core/particles.js?v=19.3"></script>
+<script src="js/core/collision.js?v=19.3"></script>
+<script src="js/core/engine.js?v=19.3"></script>
 <!-- 实体层 -->
-<script src="js/entities/fpbody.js?v=19.2"></script>
-<script src="js/entities/player.js?v=19.2"></script>
-<script src="js/entities/zombie.js?v=19.2"></script>
-<script src="js/entities/projectile.js?v=19.2"></script>
-<script src="js/entities/combatFx.js?v=19.2"></script>
-<script src="js/entities/support.js?v=19.2"></script>
-<script src="js/entities/loot.js?v=19.2"></script>
-<script src="js/entities/destructible.js?v=19.2"></script>
-<script src="js/entities/supplyCrate.js?v=19.2"></script>
-    <script src="js/entities/nest.js?v=19.2"></script>
-    <script src="js/entities/roguelite.js?v=19.2"></script>
+<script src="js/entities/fpbody.js?v=19.3"></script>
+<script src="js/entities/player.js?v=19.3"></script>
+<script src="js/entities/zombie.js?v=19.3"></script>
+<script src="js/entities/projectile.js?v=19.3"></script>
+<script src="js/entities/combatFx.js?v=19.3"></script>
+<script src="js/entities/support.js?v=19.3"></script>
+<script src="js/entities/loot.js?v=19.3"></script>
+<script src="js/entities/destructible.js?v=19.3"></script>
+<script src="js/entities/supplyCrate.js?v=19.3"></script>
+    <script src="js/entities/nest.js?v=19.3"></script>
+    <script src="js/entities/roguelite.js?v=19.3"></script>
 <!-- 系统层 -->
-<script src="js/systems/gunModels.js?v=19.2"></script>
-    <script src="js/systems/weaponSystem.js?v=19.2"></script>
-<script src="js/systems/spawnSystem.js?v=19.2"></script>
-<script src="js/systems/shopSystem.js?v=19.2"></script>
-<script src="js/systems/saveSystem.js?v=19.2"></script>
-<script src="js/systems/achvSystem.js?v=19.2"></script>
+<script src="js/systems/gunModels.js?v=19.3"></script>
+    <script src="js/systems/weaponSystem.js?v=19.3"></script>
+<script src="js/systems/spawnSystem.js?v=19.3"></script>
+<script src="js/systems/shopSystem.js?v=19.3"></script>
+<script src="js/systems/saveSystem.js?v=19.3"></script>
+<script src="js/systems/achvSystem.js?v=19.3"></script>
 <!-- UI层 -->
-<script src="js/ui/hud.js?v=19.2"></script>
-<script src="js/ui/damageNumbers.js?v=19.2"></script>
-<script src="js/ui/gunPreview.js?v=19.2"></script>
-    <script src="js/ui/codexPreview.js?v=19.2"></script>
-    <script src="js/ui/shopUI.js?v=19.2"></script>
-<script src="js/ui/storyUI.js?v=19.2"></script>
-<script src="js/ui/backpack.js?v=19.2"></script>
-<script src="js/ui/charPreview.js?v=19.2"></script>
-    <script src="js/ui/menuScene.js?v=19.2"></script>
-<script src="js/ui/menu.js?v=19.2"></script>
+<script src="js/ui/hud.js?v=19.3"></script>
+<script src="js/ui/damageNumbers.js?v=19.3"></script>
+<script src="js/ui/gunPreview.js?v=19.3"></script>
+    <script src="js/ui/codexPreview.js?v=19.3"></script>
+    <script src="js/ui/shopUI.js?v=19.3"></script>
+<script src="js/ui/storyUI.js?v=19.3"></script>
+<script src="js/ui/backpack.js?v=19.3"></script>
+<script src="js/ui/charPreview.js?v=19.3"></script>
+    <script src="js/ui/menuScene.js?v=19.3"></script>
+<script src="js/ui/menu.js?v=19.3"></script>
 <!-- 模式层 -->
-<script src="js/modes/huntMode.js?v=19.2"></script>
-<script src="js/modes/encounterMode.js?v=19.2"></script>
-<script src="js/modes/tutorialMode.js?v=19.2"></script>
+<script src="js/modes/huntMode.js?v=19.3"></script>
+<script src="js/modes/encounterMode.js?v=19.3"></script>
+<script src="js/modes/tutorialMode.js?v=19.3"></script>
 <!-- 主循环 -->
-<script src="js/net/net.js?v=19.2"></script>
-<script src="js/core/game.js?v=19.2"></script>
-<script src="js/main.js?v=19.2"></script>
+<script src="js/net/net.js?v=19.3"></script>
+<script src="js/core/game.js?v=19.3"></script>
+<script src="js/main.js?v=19.3"></script>
 </body>
 </html>

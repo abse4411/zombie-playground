@@ -770,7 +770,8 @@ class WeaponSystem {
         if (d.dead) continue;
         const c = { minX: d.x - d.cfg.w / 2, maxX: d.x + d.cfg.w / 2, minZ: d.z - d.cfg.w / 2, maxZ: d.z + d.cfg.w / 2, minY: 0, maxY: d.cfg.h };
         const t = rayOneAABB(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, c);
-        if (t !== null && t < nearestT) { nearestT = t; nearest = d; }
+        // v21.9：可破坏物自身碰撞体也在墙体列表中（t 恰好等于 wallT）——用容差包含相等命中，否则子弹永远打不掉箱子
+        if (t !== null && t <= nearestT + 0.05) { nearestT = Math.min(nearestT, t); nearest = d; }
       }
       if (nearest) {
         nearest.hit(def.damage * this.w.dmgMult, game);

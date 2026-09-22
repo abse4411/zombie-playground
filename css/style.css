@@ -917,3 +917,102 @@ body.touch .lu-card { max-width: 100%; width: 92%; display: flex; align-items: c
   opacity: 1;
 }
 #dark-veil.hidden { display: block !important; opacity: 0; }
+
+/* ============================================================
+ * v21.4 HUD 重排版 —— 参考 Apex/CoD 现代射击 HUD 设计语言：
+ * 左下玩家状态（分层条+切角面板）/ 右下武器弹药（大数字）/ 中央留白 /
+ * 情境化显色（低弹药红脉冲）/ 药丸式槽位 / 顶部信息弱化
+ * ============================================================ */
+#hud-bl {
+  left: 18px; bottom: 18px; width: 300px;
+  padding: 12px 14px 10px;
+  background: linear-gradient(135deg, rgba(10,12,16,.72), rgba(10,12,16,.45));
+  border: 1px solid rgba(255,255,255,.08);
+  border-left: 3px solid var(--gold);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
+  backdrop-filter: blur(6px);
+  border-radius: 3px;
+}
+.bar {
+  height: 18px; margin-bottom: 5px;
+  background: rgba(0,0,0,.5);
+  border: none;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  overflow: hidden;
+}
+.bar div { transition: width .1s ease-out; }
+.hp-bar { height: 22px; }
+.hp-bar #hp-fill { background: linear-gradient(90deg, #2fae5f, #6fe08a); box-shadow: 0 0 12px rgba(80,220,130,.35); }
+.armor-bar { height: 12px; margin-bottom: 4px; }
+.armor-bar #armor-fill { background: linear-gradient(90deg, #3a7fd0, #7ab8ff); box-shadow: 0 0 10px rgba(90,160,255,.4); }
+.stamina-bar { height: 4px; margin-top: 3px; background: rgba(0,0,0,.6); }
+.stamina-bar #stamina-fill { background: linear-gradient(90deg, #d0a23a, #ffd76a); }
+.xp-bar { height: 5px; margin-top: 3px; background: rgba(0,0,0,.6); }
+.bar span { text-shadow: 0 1px 2px #000; font-weight: 700; }
+#money-row {
+  margin-top: 8px; display: flex; align-items: center; gap: 8px;
+  font-size: 16px;
+}
+#money-row .money-tag {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; background: var(--gold); color: #1a1408;
+  font-weight: 900; border-radius: 2px; font-size: 14px;
+}
+#money-row #money-val { color: var(--gold); font-weight: 900; letter-spacing: 1px; }
+#money-row #kills-val, #money-row #headshot-val { font-size: 12px; color: rgba(255,255,255,.65); }
+#medkit-row, #bp-hint {
+  display: inline-block; margin: 8px 6px 0 0; padding: 3px 9px;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 20px; font-size: 12px; color: rgba(255,255,255,.85);
+}
+#medkit-row i, #bp-hint i { color: var(--gold); font-style: normal; }
+
+#hud-br {
+  right: 18px; bottom: 18px;
+  padding: 12px 16px 10px;
+  background: linear-gradient(225deg, rgba(10,12,16,.72), rgba(10,12,16,.45));
+  border: 1px solid rgba(255,255,255,.08);
+  border-right: 3px solid var(--gold);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  backdrop-filter: blur(6px);
+  border-radius: 3px;
+  min-width: 250px;
+}
+#weapon-name { font-size: 14px; text-transform: uppercase; letter-spacing: 3px; color: rgba(255,255,255,.92); }
+#ammo-row { margin: 2px 0 8px; line-height: 1; }
+#ammo-mag { font-size: 52px; font-weight: 900; letter-spacing: 1px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.6); }
+#ammo-mag.low { color: #ffb03a; animation: ammo-pulse .8s ease infinite; }
+#ammo-mag.empty { color: var(--red); animation: ammo-pulse .45s ease infinite; }
+@keyframes ammo-pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+#ammo-reserve { font-size: 19px; color: rgba(255,255,255,.55); font-weight: 700; }
+#slots-row { display: flex; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
+#slots-row .slot {
+  padding: 3px 9px; background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1); border-radius: 14px;
+  font-size: 11.5px; color: rgba(255,255,255,.7);
+  transition: all .12s;
+}
+#slots-row .slot b { color: var(--gold); margin-right: 3px; }
+#slots-row .slot.active {
+  background: rgba(255,215,106,.14); border-color: rgba(255,215,106,.65);
+  color: #fff; box-shadow: 0 0 10px rgba(255,200,80,.25);
+}
+#throwables-row { display: flex; gap: 6px; justify-content: flex-end; align-items: center; margin-bottom: 6px; }
+#throwables-row > span:not(.slot-key-hint) {
+  padding: 2px 8px; background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1); border-radius: 12px; font-size: 12px;
+}
+#throwables-row .slot-key-hint { font-size: 10.5px; color: rgba(255,255,255,.4); }
+
+#hud-top { top: 14px; }
+#wave-label { font-size: 17px; letter-spacing: 5px; font-weight: 700; text-shadow: 0 2px 8px #000; }
+#objective-label { font-size: 12px; letter-spacing: 2px; color: rgba(255,255,255,.6); margin-top: 2px; }
+#killfeed { top: auto; bottom: 46%; right: 18px; }
+#killfeed .kf {
+  margin-bottom: 4px; padding: 3px 10px;
+  background: rgba(8,10,14,.62); border-radius: 3px;
+  border-right: 2px solid rgba(255,255,255,.25);
+  font-size: 12.5px; backdrop-filter: blur(3px);
+}
+#killfeed .kf.head { border-right-color: var(--gold); }
+#killfeed .kf.big { border-right-color: var(--red); }

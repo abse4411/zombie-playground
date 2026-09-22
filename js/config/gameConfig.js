@@ -262,6 +262,11 @@ const GAMECONFIG = {
     { id: 'womb', icon: '☣', name: '变异温床', desc: '变异感染体概率 +22% —— 赏金 +40%', mutate: 0.22, reward: 1.4 },
     { id: 'bounty', icon: '💰', name: '血色赏金', desc: '赏金翻倍 —— 但它们也硬得可怕', reward: 2.0, hp: 1.3 },
     { id: 'elite', icon: '💀', name: '猎王领地', desc: '小Boss 提前登岛、精英频出 —— 赏金 +35%', mutate: 0.1, miniAtWave: 4, reward: 1.35 },
+    { id: 'acid', icon: '🧪', name: '腐酸血脉', desc: '感染体死亡时留下腐蚀酸洼 —— 赏金 +35%', acidDeath: true, reward: 1.35 },
+    { id: 'bone', icon: '🦴', name: '骨甲异化', desc: '骨质装甲增生：全体承受伤害 -25% —— 赏金 +35%', bone: true, reward: 1.35 },
+    { id: 'volatile', icon: '💥', name: '自爆血脉', desc: '感染体尸变自爆，成堆时连锁殉爆 —— 赏金 +45%', volatile: true, reward: 1.45 },
+    { id: 'giant', icon: '🧬', name: '巨人血清', desc: '体形巨大化 +30%、生命 +50% 但迟缓 —— 赏金 +45%', giant: true, hp: 1.1, speed: 0.9, reward: 1.45 },
+    { id: 'blackout', icon: '🌑', name: '血月低语', desc: '血月蔽日视野受限，它们在暗处窥伺 —— 赏金 +30%', dark: true, reward: 1.3 },
   ],
 
   /* ---------- 尸潮爆发（v16.2）：一次性大规模合围 ---------- */

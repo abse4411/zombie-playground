@@ -89,6 +89,7 @@ class HuntMode {
             if (!g3 || g3.state !== 'playing' || g3.mode !== self2) return;
             HUD.banner(S.icon + ' 变异情景 · ' + S.name, S.desc);
             AUDIO.hordeHorn();
+            if (S.dark) { const veil = document.getElementById('dark-veil'); if (veil) veil.classList.remove('hidden'); }   // 血月蔽日（v21.3）
             if (S.burst) g3.spawner.hordeBurst(GAMECONFIG.hordeBurst.baseN + this.wave * GAMECONFIG.hordeBurst.perWave * 0.7);
           }, 1400);
         }
@@ -140,6 +141,8 @@ class HuntMode {
           if (zb.group) { disposeObject3D(zb.group); ENGINE.scene.remove(zb.group); zb.group = null; }
         }
         if (retreat.length) HUD.toast('🌫 尸潮散去——剩余感染体随波次退场');
+        const veil = document.getElementById('dark-veil');
+        if (veil) veil.classList.add('hidden');   // 波次结束血月退散（v21.3）
         const bonus = GAMECONFIG.economy.waveBonusBase + GAMECONFIG.economy.waveBonusPerWave * this.wave;
         g.player.addMoney(bonus);
         HUD.killfeed(`第 ${this.wave} 波清除 · 奖励 +$${bonus}`, 'big');

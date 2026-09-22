@@ -1028,6 +1028,8 @@ class Game {
   }
 
   _cleanupWorld() {
+    const veil = document.getElementById('dark-veil');
+    if (veil) veil.classList.add('hidden');   // v21.3：换局移除血月视野限制
     for (const z of this.zombies) z.dispose();
     this.zombies = [];
     this.boss = null;   // 清除Boss引用（防残留引用跨局污染血条，v15.4）

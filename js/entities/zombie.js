@@ -1651,6 +1651,8 @@ class Zombie {
       const fx = Math.sin(this.group.rotation.y), fz = Math.cos(this.group.rotation.y);
       if ((fx * tx + fz * tz) / tl > 0.35) amount *= (1 - cfg.frontArmor);
     }
+    // 骨甲异化情景（v21.3）：骨质装甲全体减伤 25%
+    if (this.boneArmor) amount *= 0.75;
     // 人类敌人：受击打断瞄准节奏（v15.1）——主动压制可让射手开不了枪
     if (cfg.human && cfg.gun && this.aimT > 0) this.aimT = Math.min(this.aimT + 0.5, cfg.gun.aimTime * 1.9);
     // 小Boss弱点部位（v15.3）：爆头额外倍率（Borderlands式 crit spot）
@@ -1710,6 +1712,16 @@ class Zombie {
     AUDIO.zombieDie(d, this.growlPitch);
     PARTICLES.blood(this.pos.x, 1.1 * this.group.scale.x, this.pos.z, 14);
     if (typeof BLOODPOOLS !== 'undefined') BLOODPOOLS.spawn(this.pos.x, this.pos.z, overkill || this.boss);
+    // 变异情景死亡形态（v21.3）：腐酸血脉留酸洼 / 自爆血脉殉爆（可连锁，伤害已压低）
+    const sc21 = game.mode && game.mode.scenario;
+    if (sc21 && !this.dummy) {
+      if (sc21.acidDeath && typeof spawnAcidPool === 'function') {
+        spawnAcidPool(game, this.pos.x, this.pos.z, { poolDps: 8, poolRadius: 1.6, poolTime: 4 });
+      }
+      if (sc21.volatile && typeof explodeGrenade === 'function') {
+        explodeGrenade(game, this.pos.x, 0.8, this.pos.z, { damage: 12, radius: 2.2, selfMult: 0.5 });
+      }
+    }
     this._gibDeath(headshot, overkill);
     if (game.player.synVampire && !this.dummy && game.player.alive) game.player.hp = Math.min(game.player.maxHp, game.player.hp + 1);
     if (typeof XPGEMS !== 'undefined' && !this.dummy) XPGEMS.drop(this.pos.x, 0.6, this.pos.z, this.boss ? 30 : this.type.cost >= 3 ? 8 : this.type.cost >= 2 ? 4 : 2);

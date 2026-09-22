@@ -205,6 +205,14 @@ class SpawnSystem {
     const zb = new Zombie(typeId, sx, sz, this.mults, opts);
     // 嗜血狂怒情景（v16.1）：攻击欲望强化（attackRate 越小出手越频繁）
     if (sc && sc.aggro) zb.type.attackRate /= sc.aggro;
+    // 巨人血清情景（v21.3）：变异形态——体形+30%、生命+50%（迟缓走 speed 乘区）
+    if (sc && sc.giant && !opts.boss && !opts.mini && !opts.dummy) {
+      zb.group.scale.multiplyScalar(1.3);
+      zb.maxHp = Math.round(zb.maxHp * 1.5); zb.hp = zb.maxHp;
+      zb.reward = Math.round(zb.reward * 1.3);
+    }
+    // 骨甲异化情景（v21.3）：全体带骨质装甲减伤
+    if (sc && sc.bone) zb.boneArmor = true;
     // 血月强化
     const wm = this.game.weatherMult;
     if (wm) {

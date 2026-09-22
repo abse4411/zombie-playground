@@ -213,6 +213,20 @@ function buildZombieModel(cfg, outlines) {
     const arm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.62, 0.15), skin);
     arm.position.y = -0.3;
     armPivot.add(arm); g.add(armPivot); arms.push(armPivot);
+    // 手掌 + 爪指（v21.5 精致化）
+    const hand = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.14, 0.17), skin);
+    hand.position.y = -0.66;
+    armPivot.add(hand);
+    for (let f = 0; f < 3; f++) {
+      const claw = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.09, 0.028), bloodMat);
+      claw.position.set(-0.05 + f * 0.05, -0.76, 0.02);
+      armPivot.add(claw);
+    }
+    // 小臂撕裂伤口
+    const wound = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.02), bloodMat);
+    wound.position.set(side * 0.005, -0.42, 0.08);
+    wound.rotation.z = rand(-0.3, 0.3);
+    armPivot.add(wound);
   }
   for (const side of [-1, 1]) {
     const legPivot = new THREE.Group();
@@ -220,6 +234,29 @@ function buildZombieModel(cfg, outlines) {
     const leg = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.78, 0.19), pants);
     leg.position.y = -0.39;
     legPivot.add(leg); g.add(legPivot); legs.push(legPivot);
+    // 脚/破鞋（v21.5 精致化）
+    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.11, 0.32), ART.mat(0x1e2226));
+    shoe.position.set(0, -0.83, 0.05);
+    legPivot.add(shoe);
+    const sole = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.03, 0.33), ART.mat(0x121418));
+    sole.position.set(0, -0.89, 0.05);
+    legPivot.add(sole);
+  }
+
+  // 脸部血污 / 乱发 / 肩部骨骼凸起（v21.5 精致化：个体辨识度）
+  {
+    const hairC = [0x1a1614, 0x2a2018, 0x3a2e20, 0x141210][randi(0, 3)];
+    const hair = new THREE.Mesh(new THREE.BoxGeometry(0.36 * headS, rand(0.08, 0.16), 0.36 * headS), ART.mat(hairC));
+    hair.position.set(rand(-0.02, 0.02), head.position.y + 0.19 * headS, rand(-0.03, 0.03));
+    g.add(hair); headBits.push(hair);
+    for (let i = 0; i < 2; i++) {
+      const gore = new THREE.Mesh(new THREE.BoxGeometry(rand(0.05, 0.1), rand(0.04, 0.08), 0.02), bloodMat);
+      gore.position.set(rand(-0.14, 0.14) * headS, head.position.y + rand(-0.12, 0.1), 0.175 * headS);
+      g.add(gore); headBits.push(gore);
+    }
+    const shoulderBone = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 5), ART.toon(cfg.skin));
+    shoulderBone.position.set(rand(-1, 1) > 0 ? 0.26 : -0.26, 1.5, 0);
+    g.add(shoulderBone);
   }
 
   // 美漫描边（躯干/头/四肢）

@@ -60,13 +60,21 @@ class Projectile {
     // 分轴移动 + 撞墙反弹（手雷弹开继续引信倒计时；燃烧瓶 wallHit 即炸）
     let px = p.x; p.x += this.vx * dt;
     if (pointBlocked(p.x, p.y, p.z)) {
-      p.x = px; this.vx *= -0.4; this.wallHit = true;
-      if (this.kind === 'frag' && !this.opts.R) { AUDIO.tone(2100, 0.05, 'square', 0.1); PARTICLES.impact(p.x, p.y, p.z); }   // 反弹火花+金属声（v20.3）
+      p.x = px;
+      const imp = Math.abs(this.vx);
+      this.vx *= -0.4;
+      if (imp < 0.8) this.vx = 0;   // v21.6：微速清零——台阶缝隙不再无限抖动
+      this.wallHit = true;
+      if (this.kind === 'frag' && !this.opts.R && imp > 1.2) { AUDIO.tone(2100, 0.05, 'square', 0.1); PARTICLES.impact(p.x, p.y, p.z); }   // 只有明显撞击才出声/火花
     }
     let pz = p.z; p.z += this.vz * dt;
     if (pointBlocked(p.x, p.y, p.z)) {
-      p.z = pz; this.vz *= -0.4; this.wallHit = true;
-      if (this.kind === 'frag' && !this.opts.R) { AUDIO.tone(2100, 0.05, 'square', 0.1); PARTICLES.impact(p.x, p.y, p.z); }
+      p.z = pz;
+      const imp2 = Math.abs(this.vz);
+      this.vz *= -0.4;
+      if (imp2 < 0.8) this.vz = 0;
+      this.wallHit = true;
+      if (this.kind === 'frag' && !this.opts.R && imp2 > 1.2) { AUDIO.tone(2100, 0.05, 'square', 0.1); PARTICLES.impact(p.x, p.y, p.z); }
     }
     p.y += this.vy * dt;
 
@@ -308,7 +316,7 @@ function explodeGrenade(game, x, y, z, cfg, selfMult) {
     const d = dist2d(x, z, zb.pos.x, zb.pos.z);
     // 爆炸垂直衰减（v14.1）：高差过大不波及（防爆楼层穿透）
     const dyZ = Math.abs((y || 0) - (zb.pos.y + 0.9));
-    if (d < cfg.radius && dyZ < cfg.radius * 0.9) {
+    if (d < cfg.radius && dyZ < Math.min(2.2, cfg.radius * 0.5)) {   // v21.6：垂直门收紧，二楼免疫脚下爆炸
       const dmg = cfg.damage * (1 - (d / cfg.radius) * 0.55);
       // 爆风击退：从爆心向外推
       const nx = (zb.pos.x - x) / (d || 1), nz = (zb.pos.z - z) / (d || 1);
@@ -319,7 +327,7 @@ function explodeGrenade(game, x, y, z, cfg, selfMult) {
   }
   const pr = cfg.radius * 0.75;
   const dyP = Math.abs((y || 0) - (game.player.pos.y + 0.9));
-  if (pd < pr && dyP < cfg.radius * 0.9 && game.player.alive) {
+  if (pd < pr && dyP < Math.min(2.2, cfg.radius * 0.5) && game.player.alive) {   // v21.6 收紧：二楼免疫脚下爆炸
     game.player.takeDamage(cfg.damage * selfMult * (1 - pd / pr), game);
   }
   // 波及尸巢（v10.3 燃烧/爆炸烧巢）
@@ -374,13 +382,15 @@ class Zone {
       this.tick = 0.25;
       const step = this.dps * 0.25;
       const selfMult = this.kind === 'fire' ? 0.35 : 0.5;
+      const hGate = 1.6;   // v21.6：地面火/酸只波及 1.6m 内的目标——二楼站桩不再被脚下火烤
       for (const zb of game.zombies) {
         if (zb.dead || zb.state === 'rise') continue;
-        if (dist2d(this.x, this.z, zb.pos.x, zb.pos.z) < this.r) {
+        if (dist2d(this.x, this.z, zb.pos.x, zb.pos.z) < this.r && Math.abs(zb.pos.y) < hGate) {
           zb.takeDamage(step, false, null, game);
         }
       }
-      if (game.player.alive && dist2d(this.x, this.z, game.player.pos.x, game.player.pos.z) < this.r) {
+      if (game.player.alive && dist2d(this.x, this.z, game.player.pos.x, game.player.pos.z) < this.r
+        && Math.abs(game.player.pos.y) < hGate) {
         game.player.takeDamage(step * selfMult, game);
       }
     }

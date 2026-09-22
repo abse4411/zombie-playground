@@ -132,6 +132,7 @@ const LEVELUP = {
   },
 
   queue(game) {
+    if (game && game.mode && game.mode.rogueOff) return;   // v21.8：剧情模式禁用三选一
     this.pending++;
     if (!this.isOpen) this.show(game);
   },

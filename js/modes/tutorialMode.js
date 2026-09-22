@@ -6,6 +6,7 @@
 class TutorialMode {
   constructor(game) {
     this.game = game;
+    this.rogueOff = true;   // v21.8：教学模式不引入经验宝石与三选一强化
     this.stepIdx = -1;
     this.moveDist = 0;
     this.sprintT = 0;

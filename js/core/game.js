@@ -654,6 +654,7 @@ class Game {
     for (const pr of this.projectiles) pr.update(dt, this);
     this.projectiles = this.projectiles.filter(pr => !pr.dead);
     for (const f of this.fireZones) f.update(dt, this);
+    if (typeof BLOODPOOLS !== 'undefined') BLOODPOOLS.update(dt);   // v21.7 血泊渐隐
     this.fireZones = this.fireZones.filter(f => !f.dead);
     for (const a of this.acidPools) a.update(dt, this);
     this.acidPools = this.acidPools.filter(a => !a.dead);

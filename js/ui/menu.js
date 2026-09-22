@@ -529,7 +529,7 @@ const MENU = {
         c.className = 'codex-card';
         const hex = '#' + z.skin.toString(16).padStart(6, '0');
         c.innerHTML = `
-          <h4><span class="codex-dot" style="background:${hex};color:${hex}"></span>${z.name}</h4>
+          <h4><span class="codex-dot" style="background:${hex};color:${hex}"></span>${z.name}${z.cost >= 10 ? ' <span style="color:#ff6a5a">☠ BOSS</span>' : ''}</h4>
           <div class="cx-role">${z.role}${z.parkOnly ? ' · 仅游乐园出没' : ''}</div>
           <p>${z.desc}</p>
           <div class="cx-stats">
@@ -693,17 +693,24 @@ const MENU = {
         c.className = 'codex-card';
         c.innerHTML = `
           <h4><span class="codex-dot" style="background:#c05299;color:#c05299"></span>${k.icon} ${k.name}</h4>
-          <div class="cx-role">强化针剂 · ${k.tiers.length}级</div>
+          <div class="cx-role">强化针剂 · ${k.tiers.length}级 · 起步 $${k.tiers[0].price}</div>
           <p>${k.desc}</p>
           <div class="cx-stats">
-            ${k.tiers.map((t, i) => `<span>Lv.${i + 1} <b>${k.valName(t.val)} · $${t.price}</b></span>`).join('')}
+            <span>满级效果 <b>${k.valName(k.tiers[k.tiers.length - 1].val)}</b></span>
+            <span>每级 <b>${k.valName(+(k.tiers[0].val).toFixed(2))}</b></span>
+            <span>等级 <b>${k.tiers.length}</b></span>
           </div>`;
         c.addEventListener('click', () => {
           AUDIO.uiClick();
           this._pvSet({
             name: k.icon + ' ' + k.name,
-            role: '强化针剂 · ' + k.tiers.length + '级',
-            stats: k.tiers.map((t, i) => ['Lv.' + (i + 1), k.valName(t.val) + ' · $' + t.price]),
+            role: '强化针剂 · ' + k.tiers.length + '级 · 起步 $' + k.tiers[0].price,
+            stats: [
+              ['每级效果', k.valName(+(k.tiers[0].val).toFixed(2))],
+              ['满级效果', k.valName(k.tiers[k.tiers.length - 1].val)],
+              ['等级上限', k.tiers.length + ' 级'],
+              ['起步价', '$' + k.tiers[0].price + '（逐级递增）'],
+            ],
             desc: k.desc,
           });
           CODEXPREVIEW._clear();

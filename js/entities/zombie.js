@@ -1654,7 +1654,7 @@ class Zombie {
         GIBS.spawn(this.pos.x, 1.1 * s, this.pos.z, 0.3 * s, 0.3 * s, 0.32 * s, m.cloth, { dx: 0, dz: 0 }, 1.5);
         GIBS.spawn(this.pos.x, 0.8 * s, this.pos.z, 0.26 * s, 0.2 * s, 0.3 * s, m.skin, { dx: 0.4, dz: 0.2 }, 1.2);
       }
-      PARTICLES.blood(this.pos.x, 1.1 * s, this.pos.z, 24, true);
+      PARTICLES.blood(this.pos.x, 1.1 * s, this.pos.z, 32, true);   // v21.7 加量
     } else if (!headshot && m.quadruped) {
       for (const piv of m.legs) if (piv.children[0]) this._gibPiece(piv.children[0], 1.2);
     } else if (!headshot && Math.random() < 0.45) {
@@ -1747,7 +1747,7 @@ class Zombie {
     }
     const d = game.player ? dist2d(this.pos.x, this.pos.z, game.player.pos.x, game.player.pos.z) : 0;
     AUDIO.zombieDie(d, this.growlPitch);
-    PARTICLES.blood(this.pos.x, 1.1 * this.group.scale.x, this.pos.z, 14);
+    PARTICLES.blood(this.pos.x, 1.1 * this.group.scale.x, this.pos.z, 20);   // v21.7 加量
     if (typeof BLOODPOOLS !== 'undefined') BLOODPOOLS.spawn(this.pos.x, this.pos.z, overkill || this.boss);
     // 变异情景死亡形态（v21.3）：腐酸血脉留酸洼 / 自爆血脉殉爆（可连锁，伤害已压低）
     const sc21 = game.mode && game.mode.scenario;
@@ -1761,7 +1761,8 @@ class Zombie {
     }
     this._gibDeath(headshot, overkill);
     if (game.player.synVampire && !this.dummy && game.player.alive) game.player.hp = Math.min(game.player.maxHp, game.player.hp + 1);
-    if (typeof XPGEMS !== 'undefined' && !this.dummy) XPGEMS.drop(this.pos.x, 0.6, this.pos.z, this.boss ? 30 : this.type.cost >= 3 ? 8 : this.type.cost >= 2 ? 4 : 2);
+    // v21.8：剧情模式无经验宝石
+    if (typeof XPGEMS !== 'undefined' && !this.dummy && !(game.mode && game.mode.rogueOff)) XPGEMS.drop(this.pos.x, 0.6, this.pos.z, this.boss ? 30 : this.type.cost >= 3 ? 8 : this.type.cost >= 2 ? 4 : 2);
     if (!this.dummy && typeof CHESTS !== 'undefined' && (this.boss || this.affix)) CHESTS.drop(this.pos.x, this.pos.z, this.boss ? 2 : 1);
     // 小Boss保底掉落（v15.3）：Boss级补给箱 + 击杀播报 + 概率支援道具（v16.3）
     if (this.mini && typeof CHESTS !== 'undefined') {
@@ -1781,6 +1782,7 @@ class Zombie {
   }
 
   dispose() {
+    if (this.hpbar && typeof HPBARS !== 'undefined') HPBARS.remove(this);   // v21.6 修复：血条残留跨局
     ENGINE.scene.remove(this.group);
     ENGINE.scene.remove(this.shadow);
     // 人类狙击手激光线（v15.1）：随实例销毁

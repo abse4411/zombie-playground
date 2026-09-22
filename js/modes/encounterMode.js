@@ -5,6 +5,7 @@
 class EncounterMode {
   constructor(game, missionIdx, skipIntro) {
     this.game = game;
+    this.rogueOff = true;   // v21.8：剧情模式不引入经验宝石与三选一强化
     this.idx = missionIdx;
     this.m = MISSIONS[missionIdx];
     this.skipIntro = !!skipIntro;

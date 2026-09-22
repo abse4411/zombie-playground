@@ -752,6 +752,7 @@ class WeaponSystem {
         continue;
       }
       z.takeDamage(h.dmg, h.head, h.pt, game, kbPow ? { x: h.dir.x * kbPow, z: h.dir.z * kbPow } : null);
+      PARTICLES.blood(h.pt.x, h.pt.y, h.pt.z, h.head ? 5 : 2, h.head);   // v21.7：中弹血液喷溅
       DMGNUM.spawn(h.pt.x, h.pt.y, h.pt.z, Math.round(h.dmg), h.head);
       HUD.hitmarker(h.head);
       if (h.head) { AUDIO.headshot(); if (!z.dead) game.hitstop(GAMECONFIG.feel.hitstopHead); }
@@ -780,17 +781,34 @@ class WeaponSystem {
     let hitZ = null, isHead = false;
 
     // 收集全部丧尸命中（v7.5 穿透：按距离排序取前 pierce+1 个）
+    // v21.6：爬行姿态（潜行者等）受击球压低至趴地高度；新增腿部/手部受击球——贴地扫射与打腿都能命中
     const allHits = [];
     for (const z of game.zombies) {
       if (z.dead) continue;
       const s = z.group.scale.x, fy = z.pos.y;
+      const crawl = z.type.crawl;
       const hr = (z.type.headBig ? 0.32 : 0.23) * s;
+      const headY = crawl ? fy + 0.5 * s : fy + 1.68 * s;
+      const torY = crawl ? fy + 0.3 * s : fy + 0.95 * s;
       let t = raySphere(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z,
-        z.pos.x, fy + 1.68 * s, z.pos.z, hr);
+        z.pos.x, headY, z.pos.z, hr);
       if (t !== null && t < bestT) { allHits.push({ z, t, head: true }); continue; }
       t = raySphere(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z,
-        z.pos.x, fy + 0.95 * s, z.pos.z, 0.42 * s);
-      if (t !== null && t < bestT) allHits.push({ z, t, head: false });
+        z.pos.x, torY, z.pos.z, 0.42 * s);
+      if (t !== null && t < bestT) { allHits.push({ z, t, head: false }); continue; }
+      if (crawl) continue;   // 爬行体无站立四肢
+      // 腿部×2（命中按身体伤害）
+      for (const lx of [-0.16, 0.16]) {
+        t = raySphere(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z,
+          z.pos.x + lx * s, fy + 0.35 * s, z.pos.z, 0.19 * s);
+        if (t !== null && t < bestT) { allHits.push({ z, t, head: false }); break; }
+      }
+      // 手部/前伸臂×2
+      for (const ax of [-0.37, 0.37]) {
+        t = raySphere(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z,
+          z.pos.x + ax * s, fy + 1.12 * s, z.pos.z, 0.17 * s);
+        if (t !== null && t < bestT) { allHits.push({ z, t, head: false }); break; }
+      }
     }
     allHits.sort((a, b) => a.t - b.t);
 

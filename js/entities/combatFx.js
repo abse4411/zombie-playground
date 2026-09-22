@@ -225,6 +225,7 @@ const BLOODPOOLS = {
     }
     pool.dead = false;
     pool.mesh.visible = true;
+    pool.age = 0;
     const s = big ? rand(0.9, 1.5) : rand(0.45, 0.8);
     pool.mesh.scale.set(s, s * rand(0.7, 1), 1);
     pool.mesh.rotation.z = rand(0, TAU);
@@ -232,5 +233,15 @@ const BLOODPOOLS = {
     pool.mesh.position.z = z + rand(-0.2, 0.2);
   },
 
-  clear() { for (const p of this.list) p.mesh.visible = false; this.list = []; },
+  // v21.7：血泊随时间渐隐消散（18秒后开始淡出，26秒消失）
+  update(dt) {
+    for (const p of this.list) {
+      if (p.dead) continue;
+      p.age = (p.age || 0) + dt;
+      if (p.age > 26) { p.dead = true; p.mesh.visible = false; p.mesh.material.opacity = 0.75; continue; }
+      if (p.age > 18) p.mesh.material.opacity = Math.max(0, 0.75 * (1 - (p.age - 18) / 8));
+    }
+  },
+
+  clear() { for (const p of this.list) { p.mesh.visible = false; p.mesh.material.opacity = 0.75; } this.list = []; },
 };

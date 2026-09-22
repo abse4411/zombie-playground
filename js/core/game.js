@@ -785,6 +785,8 @@ class Game {
       if (l.autoCollects(this)) continue;   // 自动拾取物不进列表（靠近触碰即收）
       const d = dist2d(l.group.position.x, l.group.position.z, p.pos.x, p.pos.z);
       if (d > 2.6) continue;
+      // v21.9：高度门——E 拾取列表同样忽略跨楼层掉落物
+      if (Math.abs(p.pos.y - l.group.position.y) > 1.6) continue;
       rows.push({ l, d });
     }
     rows.sort((a, b) => a.d - b.d);

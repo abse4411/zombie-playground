@@ -332,6 +332,8 @@ class LootDrop {
     // - 双满（计数满+背包满）：完全不可拾，列表红字提示
     const p = game.player.pos;
     const d = dist2d(this.group.position.x, this.group.position.z, p.x, p.z);
+    // v21.9：高度门——二楼不再吸附/触碰一楼掉落物（掉落物贴近其所在地面）
+    if (Math.abs(p.y - this.group.position.y) > 1.6) return;
     if (!this.canCollect(game).ok) return;
     if (this.autoCollects(game)) {
       if (d < 1.8) {

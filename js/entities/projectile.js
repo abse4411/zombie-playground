@@ -87,7 +87,7 @@ class Projectile {
         if (dx2 * dx2 + dz2 * dz2 < 0.42 && p.y < zb.pos.y + 1.9 * zb.group.scale.x) {
           this._finish(game);
           const M = throwMult(game);
-          explodeGrenade(game, p.x, p.y, p.z, { damage: 120 * M.dmg, radius: 6 * M.rad * (this.opts.radiusMult || 1), selfMult: 0.4 * (1 + (this.opts.selfBonus || 0)) });
+          explodeGrenade(game, p.x, p.y, p.z, { damage: (this.opts.dmgBase || 120) * M.dmg, radius: (this.opts.radBase || 6) * M.rad * (this.opts.radiusMult || 1), selfMult: 0.4 * (1 + (this.opts.selfBonus || 0)) });
           return;
         }
       }
@@ -112,7 +112,7 @@ class Projectile {
     if (this.kind === 'gl' && (this.wallHit || p.y <= this.r + 0.01 || this.fuse <= 0)) {
       this._finish(game);
       const M = throwMult(game);
-      explodeGrenade(game, p.x, p.y, p.z, { damage: 120 * M.dmg, radius: 6 * M.rad * (this.opts.radiusMult || 1), selfMult: 0.4 * (1 + (this.opts.selfBonus || 0)) });
+      explodeGrenade(game, p.x, p.y, p.z, { damage: (this.opts.dmgBase || 120) * M.dmg, radius: (this.opts.radBase || 6) * M.rad * (this.opts.radiusMult || 1), selfMult: 0.4 * (1 + (this.opts.selfBonus || 0)) });
       return;
     }
     // 极爆手雷（v20.4 RGN式冲击引信）：保险期(1.2s)内正常弹跳，解除后碰丧尸/墙/地立即爆炸，4s备份引信

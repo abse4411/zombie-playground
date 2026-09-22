@@ -384,6 +384,7 @@ class WeaponSystem {
     if (INPUT.justPressed('KeyQ')) this._lastInv();
     if (INPUT.justPressed('KeyR')) this._startReload();
     if (INPUT.justPressed('KeyF')) this._kick(game);
+    if (INPUT.justPressed('KeyV')) this._gunBash(game);   // v21.1：枪托击打
     if (INPUT.justPressed('KeyH')) this.p.useMedkit();
     // G键丢弃（v18.2）：武器抛出 / 投掷物·道具各丢1个
     if (INPUT.justPressed('KeyG')) this._dropCurrent(game);
@@ -429,7 +430,7 @@ class WeaponSystem {
     if (this.chargeThrow && this._chargeFromSlot) this._updateTraj();
     else this._hideTraj();
 
-    this.cooldown -= dt; this.switchT -= dt; this._emptyCd -= dt; this.kickCd -= dt;
+    this.cooldown -= dt; this.switchT -= dt; this._emptyCd -= dt; this.kickCd -= dt; this.bashCd = (this.bashCd || 0) - dt;
     if (this.reloadT > 0) {
       this.reloadT -= dt;
       if (this.reloadT <= 0) this._finishReload();
@@ -496,10 +497,11 @@ class WeaponSystem {
           game._fragWindowT = 3;
           // 高爆装药（v11.11）：半径+12%/级，自伤+10%/级
           const blkLv = (w.upgrades && w.upgrades.blk) || 0;
+          const spd = def.glSpeed || 16;
           game.projectiles.push(new Projectile('gl',
             origin.x + dir.x * 0.5, origin.y - 0.08, origin.z + dir.z * 0.5,
-            dir.x * 16, dir.y * 16 + 1.5, dir.z * 16,
-            { fuse: 3, radiusMult: 1 + 0.06 * blkLv, selfBonus: 0.05 * blkLv }));
+            dir.x * spd, dir.y * spd + 1.5, dir.z * spd,
+            { fuse: 3, radiusMult: 1 + 0.06 * blkLv, selfBonus: 0.05 * blkLv, dmgBase: def.glDmg, radBase: def.glRad }));
         }
       }
     } else
@@ -866,6 +868,39 @@ class WeaponSystem {
   }
 
   /* ---------- 战术脚踢（Dying Light 式群体控制） ---------- */
+  // 枪托击打（v21.1）：主/副武器右前砸击——CoD式武器近战，比脚踢快但伤害低、击退强
+  _gunBash(game) {
+    if (this.bashCd > 0) return;
+    const cur = this.p.current;
+    if (cur !== 'primary' && cur !== 'secondary') return;   // 仅持枪时可用
+    const B = { damage: 16, range: 1.6, arc: 0.5, knockback: 7.5, stagger: 0.9, cooldown: 0.55, stamina: 8 };
+    if (this.p.stamina < B.stamina) {
+      AUDIO.emptyClick();
+      if (this.p._stamTipT <= 0) { HUD.toast('💨 体力不足，无法砸击'); this.p._stamTipT = 1.5; }
+      return;
+    }
+    this.p.stamina -= B.stamina * (this.p.staminaCostMult || 1);
+    this.bashCd = B.cooldown;
+    this._fireKick = Math.max(this._fireKick || 0, 0.7);
+    this.bashAnimT = 0.26;
+    AUDIO.melee(false);
+    const p = this.p;
+    const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
+    let hitAny = false;
+    for (const z of game.zombies) {
+      if (z.dead) continue;
+      const dx = z.pos.x - p.pos.x, dz = z.pos.z - p.pos.z;
+      const d = Math.hypot(dx, dz);
+      if (d > B.range + 0.3 * z.group.scale.x) continue;
+      if ((dx * fx + dz * fz) / (d || 1) < Math.cos(B.arc + 0.7)) continue;
+      z.stagger = Math.max(z.stagger, B.stagger);
+      z.takeDamage(B.damage * p.dmgMult, false, { x: z.pos.x, y: 1.1 * z.group.scale.x, z: z.pos.z }, game,
+        { x: fx * B.knockback, z: fz * B.knockback });
+      hitAny = true;
+    }
+    if (hitAny) { AUDIO.impact(); ENGINE.shake(0.1); this.hitstopT = 0.03; }
+  }
+
   _kick(game) {
     if (this.kickCd > 0) return;
     const K = GAMECONFIG.kick;

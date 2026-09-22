@@ -134,6 +134,14 @@ class Game {
 
   /* ---------- 狩猎保存/继续（v14.3） ---------- */
   // 波次间歇或手动保存时快照；恢复时重打保存的那一波（刷怪重置，玩家进度全保留）
+  // 角色专属针剂写回存档（v21.0）
+  syncCharPerks() {
+    if (!this.player || !this.player.charStats) return;
+    if (!SAVE.data.charPerks) SAVE.data.charPerks = {};
+    SAVE.data.charPerks[this.player.charStats.id] = Object.assign({}, this.player.perks);
+    SAVE.commit();
+  }
+
   captureHuntSave() {
     const g = this, p = g.player, m = g.mode;
     if (!p || !m || m.constructor.name !== 'HuntMode') return null;
@@ -220,6 +228,7 @@ class Game {
     p.headshots = sv.player.headshots || 0;
     p.moneyEarned = sv.player.moneyEarned || 0;
     p.perks = Object.assign(zeroPerks(), sv.player.perks || {});
+    this.syncCharPerks();   // v21.0：恢复后把局内针剂等级写回角色档
     p.medkits = sv.player.medkits;
     if (sv.player.medkitHeal) p.medkitHeal = sv.player.medkitHeal;
     // 道具与栏位（v18.1）
@@ -377,9 +386,10 @@ class Game {
     if (typeof META !== 'undefined') META.apply(this.player);
     // 成就酬金发放（v8.2奖励）
     if (SAVE.data.bonusMoney > 0) { this.player.money += SAVE.data.bonusMoney; HUD.toast(`🏆 成就酬金 +$${SAVE.data.bonusMoney}`); SAVE.data.bonusMoney = 0; }
-    // 角色属性（v6.2）
+    // 角色属性（v6.2）；强化针剂按角色独立载入（v21.0：各角色等级互不共享、跨局持久）
     const ch = getCharacter(SAVE.data.character || 'raven');
     this.player.charStats = ch;
+    this.player.perks = Object.assign(zeroPerks(), (SAVE.data.charPerks || {})[ch.id] || {});
     this.player.recomputePerks();
     this.player.maxHp = ch.hp + (this.player.perks.hp > 0 ? PERKS.hp.tiers[this.player.perks.hp - 1].val : 0);
     this.player.hp = this.player.maxHp;

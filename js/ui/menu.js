@@ -184,7 +184,19 @@ const MENU = {
       });
     }
     // 帧率上限
-    const fBtns = document.querySelectorAll('.fcap-btn');
+/* 左上角性能监控开关（v21.0） */
+    const refreshPerf = () => {
+      const on = SAVE.data.settings.showPerf !== false;
+      document.querySelectorAll('.perf-btn').forEach(b => b.classList.toggle('active', (b.dataset.pf === '1') === on));
+      const el = document.getElementById('fps-counter');
+      if (el) el.style.display = on ? '' : 'none';
+    };
+    document.querySelectorAll('.perf-btn').forEach(b => b.addEventListener('click', () => {
+      SAVE.data.settings.showPerf = b.dataset.pf === '1';
+      SAVE.commit(); AUDIO.uiClick(); refreshPerf();
+    }));
+    refreshPerf();
+        const fBtns = document.querySelectorAll('.fcap-btn');
     const setFcapActive = () => fBtns.forEach(b => b.classList.toggle('active', +b.dataset.fc === (SAVE.data.settings.fpsCap || 0)));
     setFcapActive();
     fBtns.forEach(b => b.addEventListener('click', () => {

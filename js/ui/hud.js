@@ -338,7 +338,9 @@ const HUD = {
     // 内存监控（v12.1）：几何/纹理数量 + JS 堆（Chrome），长会话增长即可视化
     let mem = '';
     if (performance.memory) mem = ` · Heap${(performance.memory.usedJSHeapSize / 1048576).toFixed(0)}M`;
-    this.el.fps.textContent = `${Math.round(ENGINE._fpsEma)} FPS · ${ft.toFixed(1)}ms · ${gs.calls}dc · G${gs.geos} T${gs.texs}${mem}`;
+    const perfOn = !SAVE.data.settings || SAVE.data.settings.showPerf !== false;   // v21.0：可隐藏
+    this.el.fps.style.display = perfOn ? '' : 'none';
+    if (perfOn) this.el.fps.textContent = `${Math.round(ENGINE._fpsEma)} FPS · ${ft.toFixed(1)}ms · ${gs.calls}dc · G${gs.geos} T${gs.texs}${mem}`;
     this.el.fps.style.color = ft > 24 ? '#ff7766' : ft > 17 ? '#ffd23f' : 'rgba(255,255,255,.5)';
 
     // 队友列表（联机）

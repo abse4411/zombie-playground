@@ -14,6 +14,7 @@ const SAVE = {
       tutorialDone: false,
       bestWave: {},           // mapId -> 最深波次
       huntBest: { wave: 0, kills: 0 },
+      charPerks: {},          // 角色 -> 强化针剂等级（v21.0：针剂按角色独立、跨局持久）
     };
   },
 

@@ -346,6 +346,7 @@ const SHOP = {
         const oldMax = p.maxHp;
         p.perks[item.id]++;
         p.recomputePerks();
+        if (game.syncCharPerks) game.syncCharPerks();   // v21.0：写回角色专属档
         if (item.id === 'hp') p.hp += p.maxHp - oldMax;
         if (item.id === 'armor') p.armor = p.maxArmor;
         if (item.id === 'stamina') p.stamina = p.maxStamina;   // 耐力针剂：购买即回满（v13.2）

@@ -198,6 +198,16 @@ function buildZombieModel(cfg, outlines) {
         P(new THREE.BoxGeometry(0.05, 0.6, 0.05), ART.mat(0x2e5228), 0.34, 1.15, 0.06, 0.4);        // 藤臂右
         P(new THREE.BoxGeometry(0.05, 0.55, 0.05), ART.mat(0x2e5228), -0.34, 1.2, 0.06, -0.4);      // 藤臂左
         break;
+      case 'burrower': // 铲状巨爪双手 + 泥壳背甲（v22.4）
+        P(new THREE.BoxGeometry(0.3, 0.16, 0.2), ART.mat(0x8a7a5a, 0x2a2214), 0.38, 1.15, 0.05);
+        P(new THREE.BoxGeometry(0.3, 0.16, 0.2), ART.mat(0x8a7a5a, 0x2a2214), -0.38, 1.15, 0.05);
+        P(new THREE.BoxGeometry(0.44, 0.3, 0.1), ART.mat(0x5a4a30, 0x1c150c), 0, 1.5, -0.16);
+        break;
+      case 'corroder': // 酸囊双肩 + 滴酸爪（v22.4）
+        P(new THREE.BoxGeometry(0.16, 0.16, 0.12), ART.mat(0x9cc45a, 0x2a3a14), 0.3, 1.52, 0);
+        P(new THREE.BoxGeometry(0.16, 0.16, 0.12), ART.mat(0x9cc45a, 0x2a3a14), -0.3, 1.5, 0);
+        for (let i = 0; i < 3; i++) P(new THREE.BoxGeometry(0.025, 0.1, 0.025), ART.mat(0x9cc45a, 0x2a3a14), 0.37 - i * 0.03, 1.15 - i * 0.05, 0.13);
+        break;
       case 'brute': // 外露心脏 + 不对称巨右臂 + 装甲残片
         P(new THREE.BoxGeometry(0.16, 0.16, 0.1), ART.mat(0xa82020, 0x400808), 0.12, 1.28, 0.17);
         P(new THREE.BoxGeometry(0.22, 0.7, 0.22), ART.mat(0x8a4a42, 0x200606), 0.52, 1.15, 0);
@@ -1385,6 +1395,29 @@ class Zombie {
       if (this.whisperT <= 0) { this.whisperT = rand(3.5, 6.5); AUDIO.whisper(dist); }
     }
 
+    // 掘地者（v22.4）：周期潜地——无敌+高速逼近，破土时扬尘
+    if (cfg.burrow) {
+      this.burrowCd = (this.burrowCd === undefined ? 6 : this.burrowCd) - dt;
+      if (this.burrowDive > 0) {
+        this.burrowDive -= dt;
+        this.diveInvuln = true;
+        spd *= 2.8;
+        this.group.position.y = -0.35;
+        if (Math.random() < dt * 8) PARTICLES.spawn('smoke', this.pos.x, 0.2, this.pos.z, 1,
+          { speed: 1.2, vy: 0.8, life: 0.5, color: [0.45, 0.36, 0.24], color2: [0.25, 0.2, 0.13] });
+        if (this.burrowDive <= 0) {
+          this.group.position.y = 0;
+          this.diveInvuln = false;
+          PARTICLES.spawn('smoke', this.pos.x, 0.4, this.pos.z, 10, { speed: 2.4, vy: 2, life: 0.6, color: [0.5, 0.4, 0.26], color2: [0.28, 0.22, 0.14] });
+          AUDIO.impact();
+        }
+      } else {
+        if (this.burrowCd <= 0 && dist > 6) { this.burrowDive = 2.2; this.burrowCd = 7; this.diveInvuln = true; }
+        if (this.group.position.y !== 0) this.group.position.y = 0;
+        this.diveInvuln = false;
+      }
+    }
+
     // 硬直
     if (this.stagger > 0) { this.stagger -= dt; mvx = 0; mvz = 0; spd = 0; }
 
@@ -1451,6 +1484,11 @@ class Zombie {
       this.windup -= dt;
       if (this.windup < 0 && p.alive && dist < cfg.attackRange + 0.55 && vNear) {
         p.takeDamage(this.damage, game, this.pos);
+        // 腐蚀者（v22.4）：攻击额外剥离护甲
+        if (cfg.corrode && p.armor > 0) {
+          p.armor = Math.max(0, p.armor - 15);
+          HUD.toast('🧪 护甲被腐蚀 -15');
+        }
         if (cfg.knockback) {
           p.vel.x += nx * cfg.knockback; p.vel.z += nz * cfg.knockback; p.vel.y += 3.2;
         }
@@ -1679,6 +1717,7 @@ class Zombie {
 
   takeDamage(amount, isHead, hitPoint, game, kb) {
     if (this.dead) return;
+    if (this.diveInvuln) return;   // v22.4 掘地者潜地中无敌
     const cfg = this.type;
     // 装甲暴兵：正面减伤
     if (cfg.frontArmor && !isHead && game) {

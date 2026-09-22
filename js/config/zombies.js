@@ -24,6 +24,20 @@ const ZOMBIE_TYPES = {
     attackRange: 1.7, attackRate: 1.0, lungeRange: 8, lungeSpeed: 9.5, grabSlow: 1.2,
     desc: '四肢着地匍匐前进，轮廓极低难以瞄准。进入8米后会猛扑——听脚步声，别回头。',
   },
+  burrower: {
+    id: 'burrower', name: '掘地者', role: '潜地突进单位',
+    hp: 210, speed: 1.5, damage: 20, reward: 75, cost: 3, minWave: 6, weight: 2.5,
+    scale: 1.05, skin: 0x6a5638, cloth: 0x3a2f22, pants: 0x2a2218, burrow: true,
+    attackRange: 1.8, attackRate: 1.2,
+    desc: '硅化前肢的挖掘专家——每7秒潜入地底（无敌且高速逼近），在你脚边破土而出。潜地时别浪费子弹，看准破土瞬间。',
+  },
+  corroder: {
+    id: 'corroder', name: '腐蚀者', role: '反装甲单位',
+    hp: 240, speed: 1.7, damage: 12, reward: 80, cost: 3, minWave: 6, weight: 2.5,
+    scale: 1.08, skin: 0x8aa04a, cloth: 0x42522a, pants: 0x334020, corrode: true,
+    attackRange: 1.8, attackRate: 1.1,
+    desc: '指爪分泌强腐蚀酶——攻击额外剥离15点护甲。穿甲流克星：优先击杀或用远程放风筝。',
+  },
   spitter: {
     id: 'spitter', name: '吐酸者', role: '远程压制的腐败池',
     hp: 170, speed: 1.5, damage: 14, reward: 55, cost: 2.4, minWave: 4, weight: 4,

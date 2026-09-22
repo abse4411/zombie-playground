@@ -151,6 +151,10 @@ const GAMECONFIG = {
                   desc: '立即将护甲修复至上限（需已装备装甲）' },
     adrenaline: { name: '肾上腺素', icon: '⚡', max: 3, price: 850, use: 'adrenaline', dur: 8,
                   desc: '8秒内移速+45%、换弹速度+35%、体力回复翻倍' },
+    armorkit:   { name: '护甲修理包', icon: '🧰', max: 4, price: 450, use: 'armor',
+                  desc: '将护甲修复至上限（比护甲板便宜，需已装备装甲）' },
+    ammobox:    { name: '弹药箱', icon: '📦', max: 4, price: 550, use: 'ammo',
+                  desc: '立即为所有武器补充大量备用弹药' },
   },
 
   /* ---------- 武器栏位扩容（v18.1）：角色基准槽数 + 商城升级档 ---------- */
@@ -267,6 +271,9 @@ const GAMECONFIG = {
     { id: 'volatile', icon: '💥', name: '自爆血脉', desc: '感染体尸变自爆，成堆时连锁殉爆 —— 赏金 +45%', volatile: true, reward: 1.45 },
     { id: 'giant', icon: '🧬', name: '巨人血清', desc: '体形巨大化 +30%、生命 +50% 但迟缓 —— 赏金 +45%', giant: true, hp: 1.1, speed: 0.9, reward: 1.45 },
     { id: 'blackout', icon: '🌑', name: '血月低语', desc: '血月蔽日视野受限，它们在暗处窥伺 —— 赏金 +30%', dark: true, reward: 1.3 },
+    { id: 'hardened', icon: '⚒', name: '甲壳几丁质', desc: '感染体表皮几丁化：承受伤害 -15%，但移速 -10% —— 赏金 +30%', bone: true, speed: 0.9, reward: 1.3 },
+    { id: 'nestboom', icon: '🥚', name: '爆破孢囊', desc: '尸巢孵化加速、感染体尸体爆出孢雾（小额酸伤）—— 赏金 +40%', volatile: true, reward: 1.4 },
+    { id: 'jamscreen', icon: '📡', name: '电子干扰', desc: 'EMP 风暴干扰瞄具：所有枪械散布 +30% —— 赏金 +40%，高手向', jam: true, reward: 1.4 },
   ],
 
   /* ---------- 尸潮爆发（v16.2）：一次性大规模合围 ---------- */
@@ -298,6 +305,16 @@ const GAMECONFIG = {
       id: 'sentry', icon: '🔫', name: '哨戒机枪', max: 2, pack: 1, price: 2800,
       desc: '部署自动哨戒塔：150°扇形自动索敌20米，240发弹链打完冒烟报废。占好位置比什么都强。',
       stats: [['弹药', '240发'], ['扇形', '150° / 20m'], ['火力', '22 dmg / 0.11s']],
+    },
+    meddrone: {
+      id: 'meddrone', icon: '🚁', name: '医疗无人机', max: 2, pack: 1, price: 2600,
+      desc: '白十字无人机伴飞24秒：6米范围内每秒为玩家回复3点生命——且行且奶，移动作战核心。',
+      stats: [['持续', '24s'], ['治疗范围', '6m'], ['回复', '3 HP/s']],
+    },
+    tesla: {
+      id: 'tesla', icon: '⚡', name: '电弧塔', max: 2, pack: 1, price: 3200,
+      desc: '部署特斯拉线圈：自动电击14米内最近感染体，电弧链跳至2米内另一目标并造成麻痹。充能耗尽后烧毁。',
+      stats: [['充能', '50次'], ['索敌', '14m'], ['电弧', '26 dmg ×2链 / 0.8s']],
     },
   },
 

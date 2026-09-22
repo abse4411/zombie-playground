@@ -16,7 +16,7 @@ class Game {
     this.mode = null;
     this.zombies = [];
     this.projectiles = [];
-    this.fireZones = [];
+    this.fireZones = []; this.gasClouds = [];
     this.acidPools = [];
     this.loots = [];
     this.destructibles = [];
@@ -1042,7 +1042,7 @@ class Game {
     this.projectiles = [];
     for (const f of this.fireZones) { disposeObject3D(f.mesh); ENGINE.scene.remove(f.mesh); }
     for (const a of this.acidPools) { disposeObject3D(a.mesh); ENGINE.scene.remove(a.mesh); }
-    this.fireZones = []; this.acidPools = [];
+    this.fireZones = []; this.gasClouds = []; this.acidPools = [];
     for (const l of this.loots) l.dispose();
     this.loots = [];
     for (const d of this.deployments) d.dispose();   // 支援实体释放（v16.3）

@@ -10,7 +10,7 @@
  * 3. 术语区分：弹匣容量=单个弹匣装弹数；备用弹药=弹匣之外携带的子弹总量
  */
 /* 投掷物种类顺序（v20.4 加入极爆手雷）：4键循环/选中顺延共用 */
-const THROW_KINDS = ['frag', 'impact', 'molotov', 'attractor'];
+const THROW_KINDS = ['frag', 'impact', 'sticky', 'emp', 'gas', 'molotov', 'attractor'];
 
 const W_UPGRADES = {
   dmg:  { name: '威力强化',  max: 10, gain: '伤害 +3%/级', drawback: '', desc: '重装药弹头，单发威力更高。',
@@ -149,7 +149,7 @@ function weaponPreviewRows(inst, upId) {
 }
 
 /* 道具槽种类顺序（v18.1）：数字键5循环切换 */
-const ITEM_KINDS = ['medkit', 'armorplate', 'adrenaline'];   // v19.6：弹药袋改为拾取即用，移出道具栏
+const ITEM_KINDS = ['medkit', 'armorplate', 'adrenaline', 'armorkit', 'ammobox'];   // v22.2：+护甲修理包/弹药箱
 
 /* 赤手空拳（v18.2）：全部武器丢光后的徒手状态——左键轻击/右键重击，消耗体力 */
 const FIST_DEF = {
@@ -638,8 +638,9 @@ class WeaponSystem {
 
     const moving = this.p.moving || this.p.sprinting;
     const pellets = (def.pellets || 1) + Math.min(((w.upgrades && w.upgrades.pel) || 0), lineMaxFor(def, 'pel'));   // 弹丸密度升级（v11.11，v18.7 按武器上限钳制）
+    const jam = GAME.mode && GAME.mode.scenario && GAME.mode.scenario.jam;
     const spread = lerp(def.spread, def.adsSpread, this.adsT) * (w.spreadMult || 1)
-      * (moving ? 1.45 : 1) * (this.p.onGround ? 1 : 1.8);
+      * (moving ? 1.45 : 1) * (this.p.onGround ? 1 : 1.8) * (jam ? 1.3 : 1);   // v22.5 电子干扰
 
     game.stats.shots++;
     const hits = new Map();   // zombie -> {dmg, head, pt}

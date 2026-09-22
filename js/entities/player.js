@@ -373,6 +373,24 @@ class Player {
       AUDIO.purchase(); HUD.pickup('🛡 护甲板已装贴——装甲修复完毕', 1);
       return true;
     }
+    if (kind === 'armorkit') {
+      if (this.maxArmor <= 0) { HUD.toast('🧰 未装备装甲——先在商城购买"装甲板甲"'); AUDIO.emptyClick(); return false; }
+      if (this.armor >= this.maxArmor) { HUD.toast('🛡 护甲完好，无需修复'); AUDIO.emptyClick(); return false; }
+      this.itemConsume(kind);
+      this.armor = this.maxArmor;
+      AUDIO.purchase(); HUD.pickup('🧰 护甲修理完毕', 1);
+      return true;
+    }
+    if (kind === 'ammobox') {
+      this.itemConsume(kind);
+      for (const slot of ['primary', 'secondary']) {
+        for (const w of this.rack[slot]) {
+          w.reserve = Math.min(Math.floor(w.def.reserve * this.reserveMult * 1.4), w.reserve + Math.floor(w.def.reserve * this.reserveMult * 0.6));
+        }
+      }
+      AUDIO.purchase(); HUD.pickup('📦 弹药箱已开——全武器备弹大幅补充', 1);
+      return true;
+    }
     if (kind === 'adrenaline') {
       this.itemConsume(kind);
       this.adrenalineT = (def.dur || 8) * (this.adrenalineDurMult || 1);   // 肾上腺代谢：持续延长（v20.6）

@@ -9,6 +9,9 @@ const PROJ_CFG = {
   frag:    { r: 0.11, c: 0x3d5a3d, e: 0x000000, g: 13 },
   impact:  { r: 0.11, c: 0x8a2a2a, e: 0xff4030, g: 13 },
   molotov: { r: 0.12, c: 0x8a4b1f, e: 0x552200, g: 13 },
+  sticky:  { r: 0.12, c: 0x6a5a2a, e: 0x2a220a, g: 13 },
+  emp:     { r: 0.13, c: 0x3a6a9a, e: 0x1a4a8a, g: 13 },
+  gas:     { r: 0.13, c: 0x5a7a2a, e: 0x2a4a0a, g: 13 },
   acid:    { r: 0.15, c: 0x66cc33, e: 0x2a6600, g: 9 },
   gl:      { r: 0.13, c: 0x334422, e: 0x223311, g: 11 },  // 榴弹
 };
@@ -150,6 +153,49 @@ class Projectile {
       }
       return;
     }
+    // 粘性炸药（v22.2）：触尸/触墙即粘住，短引信后重爆
+    if (this.kind === 'sticky' && !this.stuck && (this.wallHit || this._touchZombie(game))) {
+      this.stuck = true; this.stuckT = 1.8;
+      this.vx = this.vy = this.vz = 0;
+      AUDIO.tone(900, 0.06, 'square', 0.12);
+    }
+    if (this.kind === 'sticky' && this.stuck) {
+      this.stuckT -= dt;
+      if (this.stuckT <= 0) {
+        const M = throwMult(game);
+        this._finish(game);
+        explodeGrenade(game, p.x, p.y, p.z, { damage: THROWABLES.sticky.damage * M.dmg, radius: THROWABLES.sticky.radius * M.rad, selfMult: THROWABLES.sticky.selfMult });
+      }
+      return;
+    }
+    // 粘性炸药：始终未粘住也按引信引爆（v22.2 兜底）
+    if (this.kind === 'sticky' && this.fuse <= 0) {
+      const M = throwMult(game);
+      this._finish(game);
+      explodeGrenade(game, p.x, p.y, p.z, { damage: THROWABLES.sticky.damage * M.dmg, radius: THROWABLES.sticky.radius * M.rad, selfMult: THROWABLES.sticky.selfMult });
+      return;
+    }
+    // 电磁脉冲雷（v22.2）：落地/触墙即引爆脉冲——人类敌人瘫痪、感染体减速，无杀伤
+    if (this.kind === 'emp' && (this.wallHit || this.landed || this.fuse <= 0)) {
+      this._finish(game);
+      AUDIO.shot(1200, 0.4, 0.6);
+      PARTICLES.spawn('spark', p.x, 1.0, p.z, 40, { speed: 9, vy: 2.5, life: 0.6, color: [0.5, 0.8, 1], color2: [0.1, 0.3, 0.9] });
+      for (const zb of game.zombies) {
+        if (zb.dead || zb.state === 'rise') continue;
+        if (dist2d(p.x, p.z, zb.pos.x, zb.pos.z) > THROWABLES.emp.radius) continue;
+        if (zb.type.human && zb.type.gun) { zb.aimT = -1; zb.stagger = Math.max(zb.stagger || 0, 2.5); }
+        else zb.slowT = Math.max(zb.slowT || 0, 2);
+      }
+      return;
+    }
+    // 毒气雷（v22.2）：落地/触墙即释放毒云
+    if (this.kind === 'gas' && (this.landed || this.wallHit || this.fuse <= 0)) {
+      const M = throwMult(game);
+      this._finish(game);
+      spawnGasCloud(game, p.x, p.z, { dps: THROWABLES.gas.dps * M.dmg, radius: THROWABLES.gas.radius * M.rad, duration: THROWABLES.gas.duration * M.dur });
+      AUDIO.fireIgnite();
+      return;
+    }
     // 燃烧瓶：碰到丧尸立即碎裂起火（v20.3——碰到东西就炸：墙/地/丧尸，不再穿身飞过）
     if (this.kind === 'molotov') {
       for (const zb of game.zombies) {
@@ -240,6 +286,17 @@ class Projectile {
     this.mesh.geometry.dispose(); this.mesh.material.dispose();
   }
 }
+
+/* 粘性炸药触尸检测（v22.2） */
+Projectile.prototype._touchZombie = function (game) {
+  const p = this.pos;
+  for (const zb of game.zombies) {
+    if (zb.dead || zb.state === 'rise') continue;
+    const dx = zb.pos.x - p.x, dz = zb.pos.z - p.z;
+    if (dx * dx + dz * dz < 0.42 && p.y < zb.pos.y + 1.9 * zb.group.scale.x) return true;
+  }
+  return false;
+};
 
 /* ---------- 声波诱饵场（v10.4 Days Gone） ---------- */
 const ATTRACTORS = { list: [] };
@@ -373,6 +430,9 @@ class Zone {
     if (this.kind === 'fire') {
       const a = Math.random() * TAU, rr = Math.random() * this.r;
       PARTICLES.flames(this.x + Math.cos(a) * rr, 0.2, this.z + Math.sin(a) * rr, 2);
+    } else if (this.kind === 'gas') {
+      const a = Math.random() * TAU, rr = Math.random() * this.r;
+      PARTICLES.acidSplash(this.x + Math.cos(a) * rr, 0.4 + Math.random() * 0.8, this.z + Math.sin(a) * rr);
     } else if (Math.random() < 0.3) {
       PARTICLES.acidSplash(this.x + rand(-this.r, this.r) * 0.7, 0.2, this.z + rand(-this.r, this.r) * 0.7);
     }
@@ -382,10 +442,11 @@ class Zone {
       this.tick = 0.25;
       const step = this.dps * 0.25;
       const selfMult = this.kind === 'fire' ? 0.35 : 0.5;
-      const hGate = 1.6;   // v21.6：地面火/酸只波及 1.6m 内的目标——二楼站桩不再被脚下火烤
+      const hGate = this.kind === 'gas' ? 2.2 : 1.6;   // v21.6 高度门；毒云略高（v22.2）
       for (const zb of game.zombies) {
         if (zb.dead || zb.state === 'rise') continue;
         if (dist2d(this.x, this.z, zb.pos.x, zb.pos.z) < this.r && Math.abs(zb.pos.y) < hGate) {
+          if (this.kind === 'gas') zb.slowT = Math.max(zb.slowT || 0, 1.2);
           zb.takeDamage(step, false, null, game);
         }
       }
@@ -398,6 +459,7 @@ class Zone {
 }
 
 function spawnFireZone(game, x, z, cfg) { game.fireZones.push(new Zone(x, z, 'fire', cfg)); }
+function spawnGasCloud(game, x, z, cfg) { game.gasClouds.push(new Zone(x, z, 'gas', cfg)); }
 function spawnAcidPool(game, x, z, R) { if (R) game.acidPools.push(new Zone(x, z, 'acid', R)); }
 
 /* ---------- 吐酸者弹道 ---------- */

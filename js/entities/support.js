@@ -24,6 +24,8 @@ const SUPPORTFX = {
       case 'supply': game.deployments.push(new SupportCrate(game)); break;
       case 'drone': game.deployments.push(new SupportDrone(game)); break;
       case 'sentry': game.deployments.push(new SentryGun(game)); break;
+      case 'meddrone': game.deployments.push(new HealDrone(game)); break;
+      case 'tesla': game.deployments.push(new TeslaPylon(game)); break;
     }
     return true;
   },
@@ -513,5 +515,109 @@ class SentryGun {
   dispose() {
     ENGINE.scene.remove(this.group);
     this.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+  }
+}
+
+
+/* ---------- 医疗无人机（v22.3）：伴飞24s，6m内 3HP/s 治疗 ---------- */
+class HealDrone {
+  constructor(game) {
+    const p = game.player;
+    this.life = 24 * supportMult(game).dur;
+    this.phase = rand(0, TAU);
+    this.dead = false;
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 0.44), new THREE.MeshLambertMaterial({ color: 0xd8dde2 }));
+    const cross1 = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.02, 0.07), new THREE.MeshLambertMaterial({ color: 0x3aa05a }));
+    const cross2 = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.02, 0.22), cross1.material);
+    cross1.position.y = cross2.position.y = 0.06;
+    const rotor = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.01, 0.06), new THREE.MeshLambertMaterial({ color: 0x22262a }));
+    rotor.position.y = 0.09;
+    this.rotor = rotor;
+    g.add(body, cross1, cross2, rotor);
+    ENGINE.scene.add(g);
+    this.group = g;
+    HUD.toast('🚁 医疗无人机上线——跟随治疗中');
+  }
+  update(dt, game) {
+    this.life -= dt;
+    if (this.life <= 0 || game.player.dead) { this.dead = true; disposeObject3D(this.group); ENGINE.scene.remove(this.group); return; }
+    const p = game.player;
+    this.phase += dt;
+    const tx = p.pos.x + Math.sin(this.phase * 0.8) * 1.6;
+    const tz = p.pos.z + Math.cos(this.phase * 0.8) * 1.6;
+    const ty = p.pos.y + 2.4 + Math.sin(this.phase * 2) * 0.12;
+    this.group.position.x += (tx - this.group.position.x) * Math.min(1, dt * 3);
+    this.group.position.z += (tz - this.group.position.z) * Math.min(1, dt * 3);
+    this.group.position.y += (ty - this.group.position.y) * Math.min(1, dt * 3);
+    this.rotor.rotation.y += dt * 30;
+    // 治疗：6m内 3HP/s
+    if (p.alive && p.hp < p.maxHp && dist2d(this.group.position.x, this.group.position.z, p.pos.x, p.pos.z) < 6) {
+      p.hp = Math.min(p.maxHp, p.hp + 3 * dt);
+      if (Math.random() < dt * 6) PARTICLES.spawn('spark', p.pos.x, p.pos.y + 1.2, p.pos.z, 1,
+        { speed: 0.8, vy: 1.4, life: 0.5, color: [0.4, 1, 0.6], color2: [0.1, 0.5, 0.3] });
+    }
+  }
+}
+
+/* ---------- 电弧塔（v22.3）：14m 自动电击，链跳2目标，50充能 ---------- */
+class TeslaPylon {
+  constructor(game) {
+    const p = game.player;
+    const SM = supportMult(game);
+    this.charges = Math.round(50 * SM.dur);
+    this.fireT = 0.6;
+    this.dead = false;
+    const S = ENGINE.mapDef.size - 2;
+    this.x = clamp(p.pos.x + Math.sin(p.yaw) * -1.8, -S, S);
+    this.z = clamp(p.pos.z + Math.cos(p.yaw) * -1.8, -S, S);
+    const g = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.44, 0.24, 8), new THREE.MeshLambertMaterial({ color: 0x33383e }));
+    base.position.y = 0.12;
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 1.5, 8), new THREE.MeshLambertMaterial({ color: 0x4a525a }));
+    pole.position.y = 0.95;
+    const coil = new THREE.Mesh(new THREE.SphereGeometry(0.19, 10, 8), new THREE.MeshStandardMaterial({ color: 0x8ad8ff, emissive: 0x2a7ab0, emissiveIntensity: 1.2 }));
+    coil.position.y = 1.85;
+    g.add(base, pole, coil);
+    this.coil = coil;
+    g.position.set(this.x, 0, this.z);
+    ENGINE.scene.add(g);
+    this.group = g;
+    HUD.toast('⚡ 电弧塔部署完毕——自动放电中');
+  }
+  update(dt, game) {
+    this.fireT -= dt;
+    // 线圈呼吸光
+    this.coil.material.emissiveIntensity = 0.9 + Math.sin(ENGINE.time * 6) * 0.4;
+    if (this.charges <= 0) return;
+    let best = null, bd = 14;
+    for (const z of game.zombies) {
+      if (z.dead || z.state === 'rise') continue;
+      const d = dist2d(z.pos.x, z.pos.z, this.x, this.z);
+      if (d < bd) { bd = d; best = z; }
+    }
+    if (best && this.fireT <= 0) {
+      this.fireT = 0.8;
+      this.charges--;
+      const SM = supportMult(game);
+      const ty = best.pos.y + 1.1 * best.group.scale.x;
+      if (typeof TRACERS !== 'undefined') TRACERS.fire({ x: this.x, y: 1.85, z: this.z }, { x: best.pos.x, y: ty, z: best.pos.z });
+      best.takeDamage(26 * SM.dmg, false, { x: best.pos.x, y: ty, z: best.pos.z }, game, null);
+      best.stagger = Math.max(best.stagger || 0, 0.9);
+      // 链跳：2m内最近另一目标
+      let chain = null, cd = 2;
+      for (const z2 of game.zombies) {
+        if (z2.dead || z2 === best || z2.state === 'rise') continue;
+        const d2 = dist2d(z2.pos.x, z2.pos.z, best.pos.x, best.pos.z);
+        if (d2 < cd) { cd = d2; chain = z2; }
+      }
+      if (chain) {
+        chain.takeDamage(26 * SM.dmg * 0.7, false, { x: chain.pos.x, y: chain.pos.y + 1.1 * chain.group.scale.x, z: chain.pos.z }, game, null);
+        chain.stagger = Math.max(chain.stagger || 0, 0.7);
+      }
+      AUDIO.shot(900, 0.06, 0.3);
+      if (this.charges <= 0) HUD.toast('⚡ 电弧塔充能耗尽——线圈烧毁');
+    }
+    if (this.charges <= 0) { this.dead = true; disposeObject3D(this.group); ENGINE.scene.remove(this.group); }
   }
 }

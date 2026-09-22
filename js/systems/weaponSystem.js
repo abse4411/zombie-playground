@@ -65,7 +65,7 @@ function getUpgradeLines(def) {
   const ids = ['dmg', 'mag', 'rel', 'acc', 'res'];
   if ((def.pellets || 1) > 1) ids.push('pel');
   if (def.pierce || def.scope) ids.push('psc');
-  if (def.launcher) ids.push('blk');
+  if (def.launcher || def.dual) ids.push('blk');
   if (def.flame) ids.push('bur');
   if (def.chain) ids.push('hop');
   if (def.frost) ids.push('frz');
@@ -458,8 +458,17 @@ class WeaponSystem {
     }
     const def = w.def;
 
+    // 双模式武器（v21.2 GL-8）：右键切换步枪/榴弹，不进 ADS
+    if (def.dual) {
+      if (INPUT.rmb && !this._prevRmbDual) {
+        w.mode = w.mode === 'grenade' ? 'rifle' : 'grenade';
+        HUD.toast(w.mode === 'grenade' ? '💥 GL-8 切换榴弹模式' : '🔫 GL-8 切换步枪模式');
+        AUDIO.reloadStart();
+      }
+      this._prevRmbDual = INPUT.rmb;
+    }
     // ADS
-    const wantAds = INPUT.rmb && this.reloadT <= 0 && !def.melee;
+    const wantAds = INPUT.rmb && this.reloadT <= 0 && !def.melee && !def.dual;
     this.adsT = clamp(this.adsT + (wantAds ? 1 : -1) * dt * 9, 0, 1);
     p.ads = this.adsT > 0.5;
     // 狙击两段开镜（v7.0）：开镜状态下滚动滚轮切换 1×/2× 倍率（滚轮在开镜时不切枪）
@@ -543,6 +552,30 @@ class WeaponSystem {
             if (typeof GAME !== 'undefined' && GAME.playerBody) bodyAct(GAME.playerBody, 'swing', 0.32);
             this._meleeHit(def, game, false);
           }
+        }
+      }
+    } else if (def.dual && w.mode === 'grenade') {
+      // 榴弹模式（v21.2）：独立榴弹膛 glMag，换弹时补满
+      if (INPUT.consumeLmb() && this.cooldown <= 0 && this.switchT <= 0 && this.reloadT <= 0) {
+        if (w.glMag === undefined) w.glMag = def.glMagSize || 6;
+        if (w.glMag <= 0) {
+          if (this._emptyCd <= 0) { AUDIO.emptyClick(); this._emptyCd = 0.3; if (SAVE.data.settings.autoReload !== false) this._startReload(); }
+        } else {
+          w.glMag--;
+          this.cooldown = 60 / (def.glRpm || 60);
+          AUDIO.shot(def.sound.freq - 140, 0.18, 1.1);
+          this.recoilKick = Math.min(1, this.recoilKick + 0.7);
+          ENGINE.shake(0.12);
+          const cam = ENGINE.camera;
+          const origin = new THREE.Vector3();
+          cam.getWorldPosition(origin);
+          const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+          game._fragWindowT = 3;
+          const blkLv = (w.upgrades && w.upgrades.blk) || 0;
+          game.projectiles.push(new Projectile('gl',
+            origin.x + dir.x * 0.5, origin.y - 0.08, origin.z + dir.z * 0.5,
+            dir.x * (def.glSpeed || 18), dir.y * (def.glSpeed || 18) + 1.5, dir.z * (def.glSpeed || 18),
+            { fuse: 3, radiusMult: 1 + 0.06 * blkLv, selfBonus: 0.05 * blkLv, dmgBase: def.glDmg, radBase: def.glRad }));
         }
       }
     } else {
@@ -959,6 +992,7 @@ class WeaponSystem {
     if (!w) return;
     const take = Math.min(w.magSize - w.mag, w.reserve);
     w.mag += take; w.reserve -= take;
+    if (w.def.dual) w.glMag = w.def.glMagSize || 6;   // v21.2：榴弹膛随换弹补满
     AUDIO.reloadEnd();
   }
 

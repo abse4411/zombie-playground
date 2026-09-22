@@ -21,7 +21,7 @@ const SHOP = {
       for (const id in WEAPONS) {
         const w = WEAPONS[id];
         if (w.slot !== tabId) continue;
-        if (w.unlockBy) continue;   // 成就专属武器不入商城（v8.4）
+        if (w.unlockBy || w.chestOnly) continue;   // 成就/宝箱限定武器不入商城
         const rackInst = p.rack[tabId].find(r => r.def.id === id);
         const owned = !!rackInst;
         const equipped = p.weapons[tabId] && p.weapons[tabId].def.id === id;

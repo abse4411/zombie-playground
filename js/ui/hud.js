@@ -267,13 +267,19 @@ const HUD = {
         this.el.weaponName.textContent = '★ ' + w.def.name;
         this.el.weaponName.className = 'mastery';
       } else {
-        this.el.weaponName.textContent = w.def.name + (w.lvl ? ` Lv.${w.lvl}` : '');
+        const modeTag = w.def.dual ? (w.mode === 'grenade' ? ' 💥榴弹' : ' 🔫步枪') : '';
+        this.el.weaponName.textContent = w.def.name + (w.lvl ? ` Lv.${w.lvl}` : '') + modeTag;
         this.el.weaponName.className = w.lvl ? ('wpn-lv' + w.lvl) : '';
       }
       if (w.def.melee) {
         this.el.ammoMag.textContent = '∞';
         this.el.ammoMag.className = '';
         this.el.ammoReserve.textContent = '';
+      } else if (w.def.dual && w.mode === 'grenade') {
+        if (w.glMag === undefined) w.glMag = w.def.glMagSize || 6;
+        this.el.ammoMag.textContent = w.glMag;
+        this.el.ammoReserve.textContent = '榴弹膛';
+        this.el.ammoMag.className = w.glMag === 0 ? 'empty' : '';
       } else {
         this.el.ammoMag.textContent = w.mag;
         this.el.ammoReserve.textContent = '/ ' + w.reserve;

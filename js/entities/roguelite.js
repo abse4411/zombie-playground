@@ -258,7 +258,18 @@ const CHESTS = {
     const rewards = [];
     for (let i = 0; i < n; i++) {
       const roll = Math.random();
-      if (roll < 0.4) {
+      // 宝箱限定武器（v21.2）：未持有 GL-8 时 25% 掉宝窗口
+      const hasGlrb = p.rack.primary.some(r => r.def.id === 'glrb')
+        || (p.storage || []).some(it => it && it.kind === 'weapon' && it.inst && it.inst.def.id === 'glrb');
+      if (!hasGlrb && roll < 0.25) {
+        rewards.push({ icon: '🔫', text: '稀有武器：GL-8 双头犬！', apply: () => {
+          const inst = new WeaponInstance(WEAPONS.glrb);
+          inst.mag = inst.magSize; inst.reserve = inst.def.reserve;
+          p.rack.primary.push(inst);
+          if (!p.weapons.primary) p.weapons.primary = inst;
+          HUD.toast('🔫 宝箱开出稀有武器 GL-8 双头犬——右键切换榴弹模式！');
+        } });
+      } else if (roll < 0.4) {
         const cash = randi(300, 800) * c.tier;
         rewards.push({ icon: '💰', text: `现金 +$${cash}`, apply: () => p.addMoney(cash) });
       } else if (roll < 0.65) {

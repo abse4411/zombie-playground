@@ -88,6 +88,17 @@ const WEAPONS = {
     sound: { freq: 340, dur: 0.2, boom: 1.3 },
     desc: '截短双管——贴脸一炮撕碎一切，两发之间有生命危险的装填间隙。赌徒的武器。',
   },
+  glrb: {
+    id: 'glrb', name: 'GL-8 双头犬', slot: 'primary', price: 0, chestOnly: true,
+    weight: 1.0,
+    damage: 24, rpm: 420, mag: 30, reserve: 150, reserveMax: 300,
+    reloadTime: 2.3, spread: 0.018, adsSpread: 0.01, auto: true,
+    pellets: 1, headMult: 1.5, range: 90, falloff: { start: 30, end: 60, min: 0.6 },
+    recoil: 0.014, color: 0x3c4438, len: 0.82,
+    sound: { freq: 400, dur: 0.12, boom: 0.9 },
+    dual: true, glDmg: 120, glRad: 5.5, glSpeed: 18, glRpm: 60, glMagSize: 6,
+    desc: '【宝箱限定】双管下挂榴弹发射器的突击步枪——右键切换步枪/榴弹模式：步枪弹雨压制，榴弹轰开尸堆。行走的火力支点。',
+  },
   gatling: {
     id: 'gatling', name: '加特林转管机枪', slot: 'primary', price: 5200,
     weight: 1.22,

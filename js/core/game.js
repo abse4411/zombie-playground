@@ -677,6 +677,17 @@ class Game {
     if (typeof NESTS !== 'undefined') NESTS.update(dt, this);
     // 经验宝石（v10.6）
     if (typeof XPGEMS !== 'undefined') XPGEMS.update(dt, this);
+    // 调试作弊模式（v25.4）：无限金钱 + 无限生命；F9 快捷切换
+    if (INPUT.justPressed('F9')) {
+      SAVE.data.settings.cheat = !SAVE.data.settings.cheat;
+      SAVE.commit();
+      HUD.toast(SAVE.data.settings.cheat ? '🛠 作弊模式开启：无限金钱 / 无限生命' : '🛠 作弊模式关闭');
+    }
+    if (SAVE.data.settings.cheat && p.alive) {
+      if (p.money < 9999999) p.money = 9999999;
+      if (p.hp < p.maxHp) p.hp = p.maxHp;
+    }
+
     // 宝箱（v10.7）
     if (typeof CHESTS !== 'undefined') CHESTS.update(dt, this);
     // 掉落物

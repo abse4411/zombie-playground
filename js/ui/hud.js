@@ -346,7 +346,7 @@ const HUD = {
     if (performance.memory) mem = ` · Heap${(performance.memory.usedJSHeapSize / 1048576).toFixed(0)}M`;
     const perfOn = !SAVE.data.settings || SAVE.data.settings.showPerf !== false;   // v21.0：可隐藏
     this.el.fps.style.display = perfOn ? '' : 'none';
-    if (perfOn) this.el.fps.textContent = `${Math.round(ENGINE._fpsEma)} FPS · ${ft.toFixed(1)}ms · ${gs.calls}dc · G${gs.geos} T${gs.texs}${mem}`;
+    if (perfOn) this.el.fps.textContent = (SAVE.data.settings.cheat ? '🛠 CHEAT · ' : '') + `${Math.round(ENGINE._fpsEma)} FPS · ${ft.toFixed(1)}ms · ${gs.calls}dc · G${gs.geos} T${gs.texs}${mem}`;   // v25.4 作弊标识
     this.el.fps.style.color = ft > 24 ? '#ff7766' : ft > 17 ? '#ffd23f' : 'rgba(255,255,255,.5)';
 
     // 队友列表（联机）

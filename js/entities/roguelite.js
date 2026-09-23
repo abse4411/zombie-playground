@@ -325,7 +325,28 @@ const META_PERKS = [
   { id: 'm_cash',  name: '赏金嗅觉', icon: '💰', max: 4, cost: lv => 160 + lv * 190, desc: lv => `金钱获取 +${lv * 6}%` },
   { id: 'm_armor', name: '插板背心', icon: '🛡', max: 3, cost: lv => 200 + lv * 260, desc: lv => `开局护甲 +${lv * 15}` },
   { id: 'm_crit',  name: '猎手直觉', icon: '🎯', max: 3, cost: lv => 220 + lv * 280, desc: lv => `暴击率 +${lv * 3}%` },
+  /* ---- v25.0 角色专属强化 ---- */
+  { id: 'm_ravregen', name: '战场直觉', icon: '🧠', max: 4, cost: lv => 180 + lv * 190, desc: lv => `脱战每秒回复 ${lv * 1.5} 生命` },
+  { id: 'm_nightmed', name: '野战医疗', icon: '⛑', max: 4, cost: lv => 170 + lv * 180, desc: lv => `医疗包治疗 +${lv * 25}%` },
+  { id: 'm_nightstam', name: '耐力强化', icon: '🫀', max: 4, cost: lv => 160 + lv * 170, desc: lv => `体力上限 +${lv * 12}` },
+  { id: 'm_basbul', name: '堡垒意志', icon: '🏰', max: 4, cost: lv => 190 + lv * 200, desc: lv => `护甲上限 +${lv * 25} 并立即装满` },
+  { id: 'm_baskb', name: '震慑浪潮', icon: '🌊', max: 4, cost: lv => 180 + lv * 190, desc: lv => `近战击退 +${lv * 15}%` },
+  { id: 'm_aprmed', name: '杏林妙手', icon: '🌿', max: 4, cost: lv => 170 + lv * 180, desc: lv => `医疗包治疗 +${lv * 25}%` },
+  { id: 'm_ghostads', name: '开镜专精', icon: '🔭', max: 4, cost: lv => 210 + lv * 210, desc: lv => `开镜状态下伤害 +${lv * 6}%` },
+  { id: 'm_ghostmag', name: '深呼吸', icon: '🎒', max: 4, cost: lv => 190 + lv * 190, desc: lv => `备用弹药上限 +${lv * 20}%` },
+  { id: 'm_demoblast', name: '爆破大师', icon: '🧨', max: 4, cost: lv => 200 + lv * 200, desc: lv => `爆炸伤害 +${lv * 8}%` },
+  { id: 'm_demoth', name: '弹药库', icon: '📦', max: 3, cost: lv => 220 + lv * 220, desc: lv => `投掷物携带上限 +${lv}` },
 ];
+
+/* v25.0 角色专属实验室池：每角色基础强化 + 专属强化，等级独立存档互不共享 */
+const META_CHAR_POOLS = {
+  raven:       ['m_hp', 'm_atk', 'm_rel', 'm_crit', 'm_cash', 'm_ravregen'],
+  nightingale: ['m_hp', 'm_mag', 'm_rel', 'm_cash', 'm_nightmed', 'm_nightstam'],
+  bastion:     ['m_hp', 'm_armor', 'm_atk', 'm_basbul', 'm_baskb'],
+  apricot:     ['m_hp', 'm_mag', 'm_rel', 'm_cash', 'm_aprmed', 'm_armor'],
+  ghost:       ['m_atk', 'm_crit', 'm_spd', 'm_ghostads', 'm_ghostmag'],
+  demo:        ['m_atk', 'm_armor', 'm_crit', 'm_demoblast', 'm_demoth'],
+};
 
 const META = {
   // 局末结算：击杀/波次/评级→SP
@@ -350,34 +371,82 @@ const META = {
     return sp;
   },
 
-  lv(id) { return (SAVE.data.meta && SAVE.data.meta.levels[id]) || 0; },
+  /* v25.0：等级按角色独立存档（互不共享），首次读取时迁移旧全局等级 */
+  _levels() {
+    if (!SAVE.data.meta) SAVE.data.meta = { sp: 0 };
+    if (!SAVE.data.meta.charLevels) {
+      const old = SAVE.data.meta.levels || {};
+      SAVE.data.meta.charLevels = {};
+      for (const cid in META_CHAR_POOLS) {
+        const dst = {};
+        for (const pid of META_CHAR_POOLS[cid]) if (old[pid]) dst[pid] = old[pid];
+        SAVE.data.meta.charLevels[cid] = dst;
+      }
+      delete SAVE.data.meta.levels;
+      SAVE.commit();
+    }
+    const c = SAVE.data.character || 'raven';
+    if (!SAVE.data.meta.charLevels[c]) SAVE.data.meta.charLevels[c] = {};
+    return SAVE.data.meta.charLevels[c];
+  },
+
+  charName() {
+    let c = SAVE.data.character || 'raven';
+    if (!META_CHAR_POOLS[c]) c = 'raven';
+    if (typeof CHARACTERS !== 'undefined') {
+      const arr = Array.isArray(CHARACTERS) ? CHARACTERS : Object.values(CHARACTERS);
+      const found = arr.find(x => x && x.id === c);
+      if (found && found.name) return found.name;
+    }
+    return c;
+  },
+
+  lv(id) { return this._levels()[id] || 0; },
 
   buy(id) {
-    if (!SAVE.data.meta) SAVE.data.meta = { sp: 0, levels: {} };
+    if (!SAVE.data.meta) SAVE.data.meta = { sp: 0 };
     const k = META_PERKS.find(x => x.id === id);
-    const lv = this.lv(id);
+    if (!k) return false;
+    const L = this._levels();
+    const lv = L[id] || 0;
     if (lv >= k.max) return false;
     const cost = k.cost(lv);
     if (SAVE.data.meta.sp < cost) return false;
     SAVE.data.meta.sp -= cost;
-    SAVE.data.meta.levels[id] = lv + 1;
+    L[id] = lv + 1;
     SAVE.commit();
     AUDIO.purchase();
     return true;
   },
 
-  // 开局应用全部永久强化
+  // 开局应用当前角色的永久强化（v25.0：按角色专属池）
   apply(p) {
-    if (!SAVE.data.meta) return;
-    const L = id => this.lv(id);
-    if (L('m_hp')) { p.maxHp += L('m_hp') * 8; p.hp = p.maxHp; }
-    if (L('m_atk')) p.metaAtk = 1 + L('m_atk') * 0.04;
-    if (L('m_spd')) p.metaSpd = 1 + L('m_spd') * 0.03;
-    if (L('m_mag')) p.xpMagnet = (p.xpMagnet || 0) + L('m_mag') * 0.8;
-    if (L('m_rel')) p.metaRel = 1 - L('m_rel') * 0.04;
-    if (L('m_cash')) p.cashMult = (p.cashMult || 1) + L('m_cash') * 0.06;
-    if (L('m_armor')) { p.maxArmor = Math.max(p.maxArmor, L('m_armor') * 15); p.armor = L('m_armor') * 15; }
-    if (L('m_crit')) p.critChance = (p.critChance || 0) + L('m_crit') * 0.03;
+    const c = SAVE.data.character || 'raven';
+    const pool = META_CHAR_POOLS[c] || META_CHAR_POOLS.raven;
+    for (const id of pool) {
+      const lv = this.lv(id);
+      if (lv <= 0) continue;
+      switch (id) {
+        case 'm_hp':    p.maxHp += lv * 8; p.hp = p.maxHp; break;
+        case 'm_atk':   p.metaAtk = 1 + lv * 0.04; break;
+        case 'm_spd':   p.metaSpd = 1 + lv * 0.03; break;
+        case 'm_mag':   p.xpMagnet = (p.xpMagnet || 0) + lv * 0.8; break;
+        case 'm_rel':   p.metaRel = 1 - lv * 0.04; break;
+        case 'm_cash':  p.cashMult = (p.cashMult || 1) + lv * 0.06; break;
+        case 'm_armor': p.maxArmor += lv * 15; p.armor = (p.armor || 0) + lv * 15; break;
+        case 'm_crit':  p.critChance = (p.critChance || 0) + lv * 0.03; break;
+        case 'm_ravregen': p.hpRegen = (p.hpRegen || 0) + lv * 1.5; break;
+        case 'm_nightmed': p.medkitHealMult = 1 + lv * 0.25; break;
+        case 'm_nightstam': p.maxStamina += lv * 12; p.stamina = (p.stamina || 0) + lv * 12; break;
+        case 'm_basbul': p.maxArmor += lv * 25; p.armor = p.maxArmor; break;
+        case 'm_baskb': p.kbMult = 1 + lv * 0.15; break;
+        case 'm_aprmed': p.medkitHealMult = 1 + lv * 0.25; break;
+        case 'm_ghostads': p.adsDmgBonus = 1 + lv * 0.06; break;
+        case 'm_ghostmag': p.reserveMult = (p.reserveMult || 1) + lv * 0.2; break;
+        case 'm_demoblast': p.explodeMult = (p.explodeMult || 1) + lv * 0.08; break;   // v25.0 叠加在角色被动之上
+        case 'm_demoth': p.throwMaxBonus = (p.throwMaxBonus || 0) + lv; break;
+      }
+    }
   },
 };
 

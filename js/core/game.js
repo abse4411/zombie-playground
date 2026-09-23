@@ -382,8 +382,6 @@ class Game {
       }
       if (this.weapons) this.weapons._buildViewmodel();
     }
-    // 元进度永久强化（v10.8）
-    if (typeof META !== 'undefined') META.apply(this.player);
     // 成就酬金发放（v8.2奖励）
     if (SAVE.data.bonusMoney > 0) { this.player.money += SAVE.data.bonusMoney; HUD.toast(`🏆 成就酬金 +$${SAVE.data.bonusMoney}`); SAVE.data.bonusMoney = 0; }
     // 角色属性（v6.2）；强化针剂按角色独立载入（v21.0：各角色等级互不共享、跨局持久）
@@ -395,7 +393,7 @@ class Game {
     this.player.hp = this.player.maxHp;
     if (ch.armorStart > 0) { this.player.maxArmor = Math.max(this.player.maxArmor, ch.armorStart); this.player.armor = ch.armorStart; }
     this.player.medkits = ch.medkits;
-    this.player.medkitHeal = ch.medkitHeal || GAMECONFIG.inventory.medkitHeal;
+    this.player.medkitHeal = (ch.medkitHeal || GAMECONFIG.inventory.medkitHeal) * (this.player.medkitHealMult || 1);   // v25.0 野战医疗/杏林妙手乘区
     // 武器栏位容量（v18.1）：按角色 slots 配置（商城扩容为局内升级，重开会重置为角色基准）
     this.player.slotMax = Object.assign({ primary: 2, secondary: 1, melee: 1 }, ch.slots || {});
     if (!this.player.items) this.player.items = { armorplate: 0, adrenaline: 0, armorkit: 0, ammobox: 0, megamed: 0, heavyplate: 0 };
@@ -425,6 +423,8 @@ class Game {
       this.player.throwMaxBonus = 0;
       this.player.scopePenaltyHalf = false;
     }
+    // 元进度永久强化（v25.0：移到角色被动之后应用——雷公爆炸乘区/等级不被覆盖；按角色专属池）
+    if (typeof META !== 'undefined') META.apply(this.player);
     // 各槽超容裁剪（v18.1）：被动开局武器/继承武器可能超出角色槽数，退背包或折现
     for (const slot of ['primary', 'secondary', 'melee']) {
       const rack = this.player.rack[slot];

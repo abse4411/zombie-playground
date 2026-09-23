@@ -821,7 +821,7 @@ class WeaponSystem {
       const first = take[0];
       hitZ = first.z; isHead = first.head; bestT = first.t;
       const calcDmg = (t2, head2) => {
-        let d2 = def.damage * this.w.dmgMult * this.p.dmgMult * (this.p.rogueAtk || 1) * (this.p.metaAtk || 1) * ((this.p.stimT > 0) ? 1.25 : 1) * (head2 ? def.headMult : 1);   // v24.2 战斗兴奋剂
+        let d2 = def.damage * this.w.dmgMult * this.p.dmgMult * (this.p.rogueAtk || 1) * (this.p.metaAtk || 1) * ((this.p.stimT > 0) ? 1.25 : 1) * ((this.adsT > 0.5 && this.p.adsDmgBonus) ? this.p.adsDmgBonus : 1) * (head2 ? def.headMult : 1);   // v25.0 幽灵开镜专精   // v24.2 战斗兴奋剂
         // 暴击（v10.6）
         let crit = false;
         if (this.p.critChance > 0 && Math.random() < this.p.critChance) { d2 *= 2; crit = true; }

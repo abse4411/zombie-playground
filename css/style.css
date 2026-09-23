@@ -1016,3 +1016,12 @@ body.touch .lu-card { max-width: 100%; width: 92%; display: flex; align-items: c
 }
 #killfeed .kf.head { border-right-color: var(--gold); }
 #killfeed .kf.big { border-right-color: var(--red); }
+
+/* v25.0 实验室角色标头 */
+.meta-char-head {
+  grid-column: 1 / -1;
+  padding: 10px 14px; margin-bottom: 4px;
+  background: rgba(255,215,106,.07); border: 1px solid rgba(255,215,106,.25);
+  border-radius: 3px; color: var(--gold); font-size: 14px; letter-spacing: 1px;
+}
+.meta-char-head b { font-size: 16px; }

@@ -477,11 +477,19 @@ const MENU = {
 
   /* ---------- 强化实验室（v10.8 元进度） ---------- */
   buildMeta() {
-    if (!SAVE.data.meta) SAVE.data.meta = { sp: 0, levels: {} };
+    if (!SAVE.data.meta) SAVE.data.meta = { sp: 0 };
     document.querySelector('#meta-sp b').textContent = SAVE.data.meta.sp;
     const grid = document.getElementById('meta-grid');
     grid.innerHTML = '';
-    for (const k of META_PERKS) {
+    // v25.0：实验室按角色——显示当前角色与专属说明
+    const charName = META.charName();
+    const pool = META_CHAR_POOLS[SAVE.data.character || 'raven'] || META_CHAR_POOLS.raven;
+    const head = document.createElement('div');
+    head.className = 'meta-char-head';
+    head.innerHTML = `<b>🧬 ${charName}</b> 的专属强化实验室 —— 每个角色的强化等级独立存放、单独升级，切换角色互不影响`;
+    grid.appendChild(head);
+    for (const pid of pool) {
+      const k = META_PERKS.find(x => x.id === pid);
       const lv = META.lv(k.id);
       const maxed = lv >= k.max;
       const cost = maxed ? 0 : k.cost(lv);

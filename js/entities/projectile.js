@@ -513,9 +513,17 @@ class Zone {
   }
 }
 
-function spawnFireZone(game, x, z, cfg) { game.fireZones.push(new Zone(x, z, 'fire', cfg)); }
-function spawnGasCloud(game, x, z, cfg) { game.gasClouds.push(new Zone(x, z, 'gas', cfg)); }
-function spawnAcidPool(game, x, z, R) { if (R) game.acidPools.push(new Zone(x, z, 'acid', R)); }
+/* v25.6 区域效果上限：毒液喷射器等高频生成防堆积——超限回收最旧的 */
+function capZones(arr, max) {
+  while (arr.length >= max) {
+    const old = arr.shift();
+    old.dead = true;
+    if (old.mesh) { old.mesh.geometry.dispose(); old.mesh.material.dispose(); ENGINE.scene.remove(old.mesh); }
+  }
+}
+function spawnFireZone(game, x, z, cfg) { capZones(game.fireZones, 14); game.fireZones.push(new Zone(x, z, 'fire', cfg)); }
+function spawnGasCloud(game, x, z, cfg) { capZones(game.gasClouds, 8); game.gasClouds.push(new Zone(x, z, 'gas', cfg)); }
+function spawnAcidPool(game, x, z, R) { if (!R) return; capZones(game.acidPools, 12); game.acidPools.push(new Zone(x, z, 'acid', R)); }
 
 /* ---------- 吐酸者弹道 ---------- */
 function spawnAcid(game, zombie, R) {

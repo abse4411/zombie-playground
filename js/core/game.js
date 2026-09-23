@@ -693,6 +693,11 @@ class Game {
     // 掉落物
     for (const l of this.loots) l.update(dt, this);
     this.loots = this.loots.filter(l => !l.dead);
+    // v25.6 掉落物上限：高频击杀（毒液喷射器等）防无限堆积卡死——超限自动结算最旧的（奖励照发）
+    while (this.loots.length > 48) {
+      const old = this.loots.shift();
+      if (!old.dead) old.collect(this, false);
+    }
 
     // 地面拾取列表 + E键拾取（v18.2）：优先级 拾取 > 补给箱 > 商城
     this._updatePickupList(dt);

@@ -414,10 +414,17 @@ class WeaponSystem {
       if (ik && this.switchT <= 0 && INPUT.consumeLmb()) {
         this._useAnimT = 0.5;
         if (p.useItem(ik)) {
-          // 用完最后一个：自动收枪
+          // 用完最后一个：还有其他道具则手持模型自动顺延（v25.10），全部用完才收枪
           if (this.p.itemCount(ik) <= 0) {
             const kinds = this._itemKinds();
             if (!kinds.length) this._holsterFromItem();
+            else {
+              const nk = this._selItem();
+              if (nk) {
+                this._buildItemViewmodel(nk);
+                HUD.pickup(`${GAMECONFIG.items[nk].icon} 已切换 ${GAMECONFIG.items[nk].name} ×${this.p.itemCount(nk)}`, 1);
+              }
+            }
           }
         }
       }
@@ -1178,10 +1185,19 @@ class WeaponSystem {
     this._hideTraj();
     const power = clamp(this.chargePower || 0.4, 0.25, 1);
     this._throw(kind, game, power);
-    // 投掷槽：丢空自动收枪回上一把武器
+    // 投掷槽：该种类用完——还有其他投掷物则自动顺延到下一种（v25.10），全部用完才收枪回上一把武器
     if (fromSlot && this.p.current === 'throw') {
       const t = this.p.throwables[kind];
-      if (!t || t.count <= 0) this._holsterFromThrow();
+      if (!t || t.count <= 0) {
+        if (!this._anyThrowOwned()) this._holsterFromThrow();
+        else {
+          const nk = this._selKind();
+          if (nk) {
+            this._buildThrowViewmodel(nk);
+            HUD.pickup(`💣 已切换 ${THROWABLES[nk].name} ×${this.p.throwables[nk].count}`, 1);
+          }
+        }
+      }
     }
   }
 

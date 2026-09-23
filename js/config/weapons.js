@@ -104,7 +104,7 @@ const WEAPONS = {
     weight: 0.8,
     damage: 16, rpm: 200, mag: 6, reserve: 36, reserveMax: 72,
     reloadTime: 2.1, spread: 0.01, adsSpread: 0.006, auto: false,
-    pellets: 1, headMult: 1.2, range: 7, falloff: null, pierce: 2, stun: true,
+    pellets: 1, headMult: 1.2, range: 7, falloff: null, chain: 2, stun: true,
     recoil: 0.005, color: 0x2a3a4a, len: 0.34,
     sound: { freq: 1100, dur: 0.07, boom: 0.3 },
     desc: '执法级电击枪：射出 twin-dart 电弧，命中必麻痹1.5秒并电弧链跳2个目标——养丧尸围栏的控场神器。',

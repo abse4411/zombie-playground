@@ -153,6 +153,27 @@ const SHOPUI = {
         btn.classList.add('maxed');
       }
       card.appendChild(btn);
+      // v25.3：出售入口——已持有武器/道具在所有商城页可见（回收价上限原价50%）
+      if (item.kind === 'weapon' && item.owned && item.sellPrice) {
+        const sellBtn = document.createElement('button');
+        sellBtn.className = 'si-btn si-sell';
+        sellBtn.textContent = `出售回收 +$${item.sellPrice}`;
+        sellBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (SHOP.sell(this.game, 'weapon', item.id)) { AUDIO.uiClick(); this.render(); HUD.update(this.game); }
+        });
+        card.appendChild(sellBtn);
+      }
+      if (item.kind === 'item' && p.items[item.id] > 0) {
+        const sellBtn = document.createElement('button');
+        sellBtn.className = 'si-btn si-sell';
+        sellBtn.textContent = `出售 +$${SHOP.sellPriceForItem(item.id)}`;
+        sellBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (SHOP.sell(this.game, 'item', item.id)) { AUDIO.uiClick(); this.render(); HUD.update(this.game); }
+        });
+        card.appendChild(sellBtn);
+      }
       // 3D 预览（v7.4）+ 属性面板（v18.3）：悬停/点击卡片展示武器模型与属性变化
       if (item.def || item.id === 'frag' || item.id === 'molotov') {
         const prevDef = item.def || THROWABLES[item.id];

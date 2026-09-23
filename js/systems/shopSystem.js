@@ -35,6 +35,7 @@ const SHOP = {
           desc: w.desc,
           price: owned ? (w.melee ? 0 : GAMECONFIG.economy.ammoPrice) : w.price,
           owned, state: owned ? (needAmmo ? 'ammo' : 'owned') : 'buy',
+          sellPrice: owned ? this.sellPriceForWeapon(inst || new WeaponInstance(w)) : 0,
           lvl: inst ? inst.lvl : 0,
           upSum: inst ? inst.tierLevel : 0,
           stats: w.melee

@@ -10,7 +10,7 @@
  * 3. 术语区分：弹匣容量=单个弹匣装弹数；备用弹药=弹匣之外携带的子弹总量
  */
 /* 投掷物种类顺序（v20.4 加入极爆手雷）：4键循环/选中顺延共用 */
-const THROW_KINDS = ['frag', 'impact', 'sticky', 'emp', 'gas', 'incendiary', 'cryo', 'molotov', 'attractor'];
+const THROW_KINDS = ['frag', 'impact', 'sticky', 'emp', 'gas', 'incendiary', 'cryo', 'cluster', 'concussion', 'molotov', 'attractor'];
 
 const W_UPGRADES = {
   dmg:  { name: '威力强化',  max: 10, gain: '伤害 +3%/级', drawback: '', desc: '重装药弹头，单发威力更高。',
@@ -149,7 +149,7 @@ function weaponPreviewRows(inst, upId) {
 }
 
 /* 道具槽种类顺序（v18.1）：数字键5循环切换 */
-const ITEM_KINDS = ['medkit', 'armorplate', 'adrenaline', 'armorkit', 'ammobox', 'megamed', 'heavyplate'];   // v22.2：+护甲修理包/弹药箱
+const ITEM_KINDS = ['medkit', 'armorplate', 'adrenaline', 'armorkit', 'ammobox', 'megamed', 'heavyplate', 'nanobot', 'combatstim'];   // v22.2：+护甲修理包/弹药箱
 
 /* 赤手空拳（v18.2）：全部武器丢光后的徒手状态——左键轻击/右键重击，消耗体力 */
 const FIST_DEF = {
@@ -754,6 +754,7 @@ class WeaponSystem {
       }
       z.takeDamage(h.dmg, h.head, h.pt, game, kbPow ? { x: h.dir.x * kbPow, z: h.dir.z * kbPow } : null);
       if (def.stun && !z.dead) z.stagger = Math.max(z.stagger || 0, 1.5);   // v23.1 泰瑟枪：命中麻痹
+      if (def.acid && Math.random() < 0.3 && typeof spawnAcidPool === 'function') spawnAcidPool(game, h.pt.x, h.pt.z, { poolDps: 6, poolRadius: 0.8, poolTime: 3 });   // v24.1 毒液喷射器酸洼
       PARTICLES.blood(h.pt.x, h.pt.y, h.pt.z, h.head ? 5 : 2, h.head);   // v21.7：中弹血液喷溅
       DMGNUM.spawn(h.pt.x, h.pt.y, h.pt.z, Math.round(h.dmg), h.head);
       HUD.hitmarker(h.head);
@@ -820,7 +821,7 @@ class WeaponSystem {
       const first = take[0];
       hitZ = first.z; isHead = first.head; bestT = first.t;
       const calcDmg = (t2, head2) => {
-        let d2 = def.damage * this.w.dmgMult * this.p.dmgMult * (this.p.rogueAtk || 1) * (this.p.metaAtk || 1) * (head2 ? def.headMult : 1);
+        let d2 = def.damage * this.w.dmgMult * this.p.dmgMult * (this.p.rogueAtk || 1) * (this.p.metaAtk || 1) * ((this.p.stimT > 0) ? 1.25 : 1) * (head2 ? def.headMult : 1);   // v24.2 战斗兴奋剂
         // 暴击（v10.6）
         let crit = false;
         if (this.p.critChance > 0 && Math.random() < this.p.critChance) { d2 *= 2; crit = true; }
@@ -883,7 +884,7 @@ class WeaponSystem {
     const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
     // 加长握柄（v11.11）：范围 +0.1m/级（v20.8）；配重锤头：击退 +9%/级
     const range = def.range + ((wi.upgrades && wi.upgrades.rng) || 0) * 0.1 + (heavy ? 0.4 : 0);
-    const dmg = def.damage * this.w.dmgMult * p.dmgMult * (heavy ? 2.2 : 1);
+    const dmg = def.damage * this.w.dmgMult * p.dmgMult * ((p.stimT > 0) ? 1.25 : 1) * (heavy ? 2.2 : 1);   // v24.2 兴奋剂
     const kbPow = GAMECONFIG.feel.kbMelee * (heavy ? 2.2 : 1) * (1 + 0.09 * ((wi.upgrades && wi.upgrades.knb) || 0)) * ((this.p && this.p.knbMult) || 1);   // v20.8：每级 +9%
     let hitAny = false;
     game.stats.shots++;
@@ -900,6 +901,10 @@ class WeaponSystem {
         { x: fx * kbPow, z: fz * kbPow });
       DMGNUM.spawn(z.pos.x, 1.5 * z.group.scale.x, z.pos.z, Math.round(dmg), heavy);
       hitAny = true;
+    }
+    // 碎颅爆破锤（v24.1）：重击命中触发小范围爆破
+    if (def.blastHeavy && heavy && hitAny) {
+      explodeGrenade(game, p.pos.x - Math.sin(p.yaw) * -1.4, 1.0, p.pos.z - Math.cos(p.yaw) * -1.4, { damage: 60, radius: 2.5, selfMult: 0.25 });
     }
     // 近战破坏场景物（v11.1）：范围内可破坏物受近战伤害（独立于丧尸命中）
     if (game.destructibles) {

@@ -28,6 +28,8 @@ const SUPPORTFX = {
       case 'tesla': game.deployments.push(new TeslaPylon(game)); break;
       case 'mortar': game.deployments.push(new MortarTeam(game)); break;
       case 'mines': game.deployments.push(new MineField(game)); break;
+      case 'napalm': game.deployments.push(new NapalmStrike(game)); break;
+      case 'orbital': game.deployments.push(new OrbitalLaser(game)); break;
     }
     return true;
   },
@@ -704,6 +706,90 @@ class MineField {
     if (this.life <= 0 || !anyAlive) {
       for (const m of this.mines) if (!m.dead) { m.g.visible = false; disposeObject3D(m.g); ENGINE.scene.remove(m.g); }
       this.dead = true;
+    }
+  }
+}
+
+
+/* ---------- 凝固汽油空袭（v24.3）：沿玩家前方48m弹幕带生成8片火区 ---------- */
+class NapalmStrike {
+  constructor(game) {
+    this.dead = false;
+    const p = game.player;
+    const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
+    HUD.banner('🔥 凝固汽油空袭', '弹幕带已标记——3秒后覆盖');
+    AUDIO.hordeHorn();
+    setTimeout(() => {
+      try {
+        if (!window.GAME || window.GAME.state === 'menu') return;
+        const SM = supportMult(GAME);
+        for (let i = 0; i < 8; i++) {
+          const d = 6 + i * 6 + rand(-1.5, 1.5);
+          const ox = rand(-4, 4);
+          spawnFireZone(GAME, p.pos.x + fx * d + fz * ox, p.pos.z + fz * d - fx * ox,
+            { dps: 30 * SM.dmg, radius: 2.8 * SM.rad, duration: 8 * SM.dur });
+        }
+        AUDIO.fireIgnite();
+        HUD.toast('🔥 凝固汽油覆盖完毕——整条街都在燃烧');
+      } catch (e) {}
+    }, 3000);
+    // 立即结束部署记录（火区由系统管理）
+    setTimeout(() => { this.dead = true; }, 3100);
+  }
+  update(dt, game) {}
+}
+
+/* ---------- 轨道激光（v24.3）：8s 扇面扫掠光束 ---------- */
+class OrbitalLaser {
+  constructor(game) {
+    const p = game.player;
+    this.life = 8;
+    this.cx = p.pos.x; this.cz = p.pos.z;
+    this.ang = Math.atan2(-Math.sin(p.yaw), -Math.cos(p.yaw)) - 1.05;
+    this.dead = false;
+    this.beam = new THREE.Mesh(
+      new THREE.BoxGeometry(1.8, 0.12, 60),
+      new THREE.MeshBasicMaterial({ color: 0xff5a3a, transparent: true, opacity: 0.75, depthWrite: false })
+    );
+    this.beam.position.set(this.cx, 14, this.cz);
+    ENGINE.scene.add(this.beam);
+    this.glow = new THREE.Mesh(new THREE.CircleGeometry(4, 24),
+      new THREE.MeshBasicMaterial({ color: 0xff8a5a, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false }));
+    this.glow.rotation.x = -Math.PI / 2;
+    this.glow.position.set(this.cx, 0.08, this.cz);
+    ENGINE.scene.add(this.glow);
+    HUD.banner('🛰 轨道激光充能完毕', '天基武器扫掠扇面——撤离光束路径');
+    AUDIO.hordeHorn();
+  }
+  update(dt, game) {
+    this.life -= dt;
+    if (this.life <= 0) {
+      this.dead = true;
+      disposeObject3D(this.beam); ENGINE.scene.remove(this.beam);
+      disposeObject3D(this.glow); ENGINE.scene.remove(this.glow);
+      return;
+    }
+    this.ang += dt * 0.26;   // 扫掠速度
+    const dirx = Math.sin(this.ang), dirz = Math.cos(this.ang);
+    this.beam.rotation.y = this.ang;
+    this.beam.position.x = this.cx + dirx * 30;
+    this.beam.position.z = this.cz + dirz * 30;
+    this.glow.position.x = this.cx; this.glow.position.z = this.cz;
+    this.glow.material.opacity = 0.2 + Math.sin(ENGINE.time * 10) * 0.1;
+    // 光束伤害：点到线距离 < 0.9+体宽 的丧尸每帧 40dps×dt
+    const SM = supportMult(game);
+    for (const z of game.zombies) {
+      if (z.dead || z.state === 'rise') continue;
+      const rx = z.pos.x - this.cx, rz = z.pos.z - this.cz;
+      const proj = rx * dirx + rz * dirz;
+      if (proj < 0 || proj > 60) continue;
+      const px = this.cx + dirx * proj, pz = this.cz + dirz * proj;
+      const dl = dist2d(z.pos.x, z.pos.z, px, pz);
+      if (dl < 1.1 * z.group.scale.x) {
+        z.takeDamage(40 * SM.dmg * dt, false, { x: z.pos.x, y: 1.1 * z.group.scale.x, z: z.pos.z }, game, null);
+        if (Math.random() < dt * 10) PARTICLES.spawn('spark', z.pos.x, 1.1 * z.group.scale.x, z.pos.z, 2,
+          { speed: 3, vy: 2, life: 0.4, color: [1, 0.6, 0.3], color2: [1, 0.2, 0.1] });
+      }
     }
   }
 }

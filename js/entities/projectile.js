@@ -14,6 +14,8 @@ const PROJ_CFG = {
   gas:     { r: 0.13, c: 0x5a7a2a, e: 0x2a4a0a, g: 13 },
   incendiary: { r: 0.12, c: 0xa8482a, e: 0x58200a, g: 13 },
   cryo:    { r: 0.13, c: 0x7ac0e8, e: 0x2a6a9a, g: 13 },
+  cluster: { r: 0.12, c: 0x4a5a3a, e: 0x1a2a0a, g: 13 },
+  concussion: { r: 0.13, c: 0x3a4a5a, e: 0x14202a, g: 13 },
   acid:    { r: 0.15, c: 0x66cc33, e: 0x2a6600, g: 9 },
   gl:      { r: 0.13, c: 0x334422, e: 0x223311, g: 11 },  // 榴弹
 };
@@ -56,6 +58,7 @@ class Projectile {
   get pos() { return this.mesh.position; }
 
   update(dt, game) {
+    if (this.dead) return;   // v24.x 防御：已终结的投射物不再重复引爆
     const p = this.pos;
     this.fuse -= dt;
     if (this.armT > 0) this.armT -= dt;
@@ -187,6 +190,33 @@ class Projectile {
         if (dist2d(p.x, p.z, zb.pos.x, zb.pos.z) > THROWABLES.emp.radius) continue;
         if (zb.type.human && zb.type.gun) { zb.aimT = -1; zb.stagger = Math.max(zb.stagger || 0, 2.5); }
         else zb.slowT = Math.max(zb.slowT || 0, 2);
+      }
+      return;
+    }
+    // 集束手雷（v24.2）：母弹起爆散落四枚子弹药
+    if (this.kind === 'cluster' && this.fuse <= 0) {
+      const M = throwMult(game);
+      this._finish(game);
+      explodeGrenade(game, p.x, p.y, p.z, { damage: THROWABLES.cluster.damage * M.dmg, radius: THROWABLES.cluster.radius * M.rad, selfMult: THROWABLES.cluster.selfMult });
+      for (const [ox2, oz2] of [[1.4, 0.6], [-1.2, 1.1], [0.8, -1.4], [-1.5, -0.7]]) {
+        const bomblet = new Projectile('frag', p.x + ox2, 0.5, p.z + oz2, rand(-1, 1), 2, rand(-1, 1), { fuse: 0.45 });
+        bomblet.opts.R = { damage: Math.round(THROWABLES.cluster.damage * 0.6 * M.dmg), radius: 2.6 * M.rad, selfMult: 0.3 };
+        game.projectiles.push(bomblet);
+      }
+      return;
+    }
+    // 震爆弹（v24.2）：纯冲击波掀飞
+    if (this.kind === 'concussion' && (this.landed || this.wallHit || this.fuse <= 0)) {
+      this._finish(game);
+      AUDIO.explode(dist2d(p.x, p.z, game.player.pos.x, game.player.pos.z));
+      PARTICLES.explosion(p.x, 0.8, p.z);
+      for (const zb of game.zombies) {
+        if (zb.dead || zb.state === 'rise') continue;
+        const d2 = dist2d(p.x, p.z, zb.pos.x, zb.pos.z);
+        if (d2 > THROWABLES.concussion.radius) continue;
+        const nx = (zb.pos.x - p.x) / (d2 || 1), nz = (zb.pos.z - p.z) / (d2 || 1);
+        zb.takeDamage(8, false, { x: zb.pos.x, y: 1.1 * zb.group.scale.x, z: zb.pos.z }, game, { x: nx * 22, z: nz * 22 });
+        zb.stagger = Math.max(zb.stagger || 0, 1.2);
       }
       return;
     }

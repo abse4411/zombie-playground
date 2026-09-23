@@ -44,7 +44,7 @@ class Player {
     this.storageMax = 6;
     this.current = 'secondary';
     this.lastWeapon = null;   // Q键切换上一把武器 {slot, defId}
-    this.throwables = { frag: { count: 2 }, molotov: { count: 1 }, attractor: { count: 0 }, impact: { count: 0 }, sticky: { count: 0 }, emp: { count: 0 }, gas: { count: 0 }, incendiary: { count: 0 }, cryo: { count: 0 } };
+    this.throwables = { frag: { count: 2 }, molotov: { count: 1 }, attractor: { count: 0 }, impact: { count: 0 }, sticky: { count: 0 }, emp: { count: 0 }, gas: { count: 0 }, incendiary: { count: 0 }, cryo: { count: 0 }, cluster: { count: 0 }, concussion: { count: 0 } };
     // 道具栏（v18.1）：5键槽位字段道具（医疗包计数沿用 medkits，其余在此）
     this.items = { armorplate: 0, adrenaline: 0 };   // v19.6：弹药袋改为拾取即用
     this.itemSel = 'medkit';     // 道具槽当前选中
@@ -114,6 +114,10 @@ class Player {
 
     // 战地急救（v20.4 肉鸽强化）：每秒回血
     if (this.hpRegen > 0 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + this.hpRegen * dt);
+    // 纳米修复机器人（v24.2）：临时每秒+3
+    if (this.tempRegen > 0) { this.tempRegen -= dt; if (this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + 3 * dt); }
+    // 战斗兴奋剂（v24.2）：倒计时
+    if (this.stimT > 0) this.stimT -= dt;
 
     // ---- 视角 ----
     const m = INPUT.consumeMouse();
@@ -372,6 +376,18 @@ class Player {
       this.itemConsume(kind);
       this.armor = this.maxArmor;
       AUDIO.purchase(); HUD.pickup('🛡 护甲板已装贴——装甲修复完毕', 1);
+      return true;
+    }
+    if (kind === 'nanobot') {
+      this.itemConsume(kind);
+      this.tempRegen = (def.dur || 10) * (this.adrenalineDurMult || 1);
+      AUDIO.streak(); HUD.pickup('🤖 纳米蜂群注入——持续修复中', 1);
+      return true;
+    }
+    if (kind === 'combatstim') {
+      this.itemConsume(kind);
+      this.stimT = (def.dur || 12) * (this.adrenalineDurMult || 1);
+      AUDIO.streak(); HUD.pickup('💉 战斗兴奋剂——伤害 +25%！', 2);
       return true;
     }
     if (kind === 'megamed') {

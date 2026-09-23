@@ -198,6 +198,14 @@ function buildZombieModel(cfg, outlines) {
         P(new THREE.BoxGeometry(0.05, 0.6, 0.05), ART.mat(0x2e5228), 0.34, 1.15, 0.06, 0.4);        // 藤臂右
         P(new THREE.BoxGeometry(0.05, 0.55, 0.05), ART.mat(0x2e5228), -0.34, 1.2, 0.06, -0.4);      // 藤臂左
         break;
+      case 'shieldbearer': // 防暴盾 + 面罩（v24.4）
+        P(new THREE.BoxGeometry(0.16, 0.9, 0.08), ART.mat(0x2e3e48, 0x0c1418), -0.32, 1.15, 0.18);
+        P(new THREE.BoxGeometry(0.06, 0.5, 0.05), ART.mat(0x8ad8ff, 0x1a4a6a), -0.32, 1.5, 0.2);
+        break;
+      case 'frostwalker': // 冰晶簇 + 白霜臂（v24.4）
+        for (let i = 0; i < 3; i++) P(new THREE.ConeGeometry(0.05, 0.16, 5), ART.mat(0xbfe8ff, 0x1a4a6a), -0.12 + i * 0.12, 1.55, -0.14).rotation.x = -0.3;
+        P(new THREE.BoxGeometry(0.14, 0.14, 0.03), ART.mat(0xbfe8ff, 0x1a4a6a), 0.2, 1.25, 0.16);
+        break;
       case 'broodmother': // 卵腹 + 尾刺 + 产道口（v23.4）
         P(new THREE.BoxGeometry(0.52, 0.44, 0.4), ART.mat(0x9a5a7a, 0x301a28), 0, 0.92, 0.02);
         P(new THREE.ConeGeometry(0.09, 0.34, 6), ART.mat(0x6a3a52, 0x200e18), 0, 1.05, -0.26).rotation.x = 2.4;
@@ -1404,6 +1412,10 @@ class Zombie {
       if (this.whisperT <= 0) { this.whisperT = rand(3.5, 6.5); AUDIO.whisper(dist); }
     }
 
+    // 狂暴军团情景（v24.5）：残血狂暴加速
+    if (game.mode && game.mode.scenario && game.mode.scenario.berserk && this.hp < this.maxHp * 0.3) {
+      spd *= 1.6;
+    }
     // 孵卵蜂后（v23.4）：周期吐出感染体
     if (cfg.brood) {
       this.broodT = (this.broodT === undefined ? 5 : this.broodT) - dt;
@@ -1522,6 +1534,12 @@ class Zombie {
         if (cfg.corrode && p.armor > 0) {
           p.armor = Math.max(0, p.armor - 15);
           HUD.toast('🧪 护甲被腐蚀 -15');
+        }
+        // 寒霜行者（v24.4）：攻击冻僵减速
+        if (cfg.frostatk) {
+          p.slowT = Math.max(p.slowT || 0, 1.5);
+          PARTICLES.spawn('spark', p.pos.x, p.pos.y + 1.0, p.pos.z, 4,
+            { speed: 1.5, vy: 1, life: 0.5, color: [0.6, 0.9, 1], color2: [0.2, 0.5, 0.9] });
         }
         if (cfg.knockback) {
           p.vel.x += nx * cfg.knockback; p.vel.z += nz * cfg.knockback; p.vel.y += 3.2;

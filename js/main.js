@@ -2,7 +2,7 @@
  * 入口 —— 初始化所有子系统（v12.1：资源文件化 + 异步启动）
  * ============================================================ */
 let GAME = null;
-window.__ASSET_VER = '23.5';   // JSON 资源缓存版本（与页面 ?v= 同步）
+window.__ASSET_VER = '24.6';   // JSON 资源缓存版本（与页面 ?v= 同步）
 
 window.addEventListener('DOMContentLoaded', async () => {
   const $ = id => document.getElementById(id);

@@ -157,6 +157,10 @@ const GAMECONFIG = {
                   desc: '战地外科合剂：瞬间回满全部生命，无需施法（H键医疗包的豪华替代）' },
     heavyplate: { name: '重型插板', icon: '🏋', max: 3, price: 950, use: 'heavyplate',
                   desc: '加装陶瓷复合板：护甲上限 +30 并立即装满——可叠加突破上限' },
+    nanobot:    { name: '纳米修复机器人', icon: '🤖', max: 3, price: 800, use: 'nanobot', dur: 10,
+                  desc: '注射纳米蜂群：10秒内每秒修复3点生命' },
+    combatstim: { name: '战斗兴奋剂', icon: '💉', max: 3, price: 900, use: 'stim', dur: 12,
+                  desc: '12秒内所有武器伤害 +25%——短暂而致命的爆发窗口' },
     ammobox:    { name: '弹药箱', icon: '📦', max: 4, price: 550, use: 'ammo',
                   desc: '立即为所有武器补充大量备用弹药' },
   },
@@ -281,6 +285,9 @@ const GAMECONFIG = {
     { id: 'plague', icon: '🧫', name: '瘟疫之风', desc: '全体感染体行走滴酸、身后留下一路酸洼 —— 赏金 +45%', plagueTrail: true, reward: 1.45 },
     { id: 'glass', icon: '🔮', name: '玻璃大炮', desc: '你造成的伤害 +25%，但受到的伤害也 +50% —— 赏金 +60%', glass: true, reward: 1.6 },
     { id: 'swarmfeast', icon: '🐦', name: '群尸盛宴', desc: '同屏上限 +80%、刷怪近乎连续 —— 赏金 +55%', cap: 1.8, interval: 0.55, reward: 1.55 },
+    { id: 'acidrain', icon: '🌧', name: '酸雨倾盆', desc: '天降酸雨：身边随机落下酸洼 —— 赏金 +40%', acidRain: true, reward: 1.4 },
+    { id: 'berserk', icon: '😡', name: '狂暴军团', desc: '重伤感染体陷入狂暴：残血时移速 +60% —— 赏金 +40%', berserk: true, reward: 1.4 },
+    { id: 'headhunter', icon: '🎯', name: '猎首通缉', desc: '爆头击杀赏金 ×3 —— 瞄准他们的脑袋', headhunter: true, reward: 1.2 },
   ],
 
   /* ---------- 尸潮爆发（v16.2）：一次性大规模合围 ---------- */
@@ -322,6 +329,16 @@ const GAMECONFIG = {
       id: 'mortar', icon: '🎯', name: '迫击炮小队', max: 2, pack: 1, price: 3400,
       desc: '后方迫击炮班支援20秒：每4秒自动向视野内随机感染体落下一发150伤炮弹——挂机收割者福音。',
       stats: [['持续', '20s'], ['间隔', '4s'], ['单发', '150伤 / 3.5m']],
+    },
+    napalm: {
+      id: 'napalm', icon: '🔥', name: '凝固汽油空袭', max: 2, pack: 1, price: 3600,
+      desc: '低空掠过倾泻凝固汽油：沿48米弹幕带生成8片持续火区——把一条街变成火葬场。',
+      stats: [['弹幕带', '48m × 8m'], ['火区', '8片 / 8s'], ['火伤', '30 DPS']],
+    },
+    orbital: {
+      id: 'orbital', icon: '🛰', name: '轨道激光', max: 1, pack: 1, price: 4800,
+      desc: '天基武器充能8秒：灼热光束以你为中心扫过一个扇面，光束所过之处皆成灰烬。',
+      stats: [['持续', '8s'], ['光束', '40 DPS / 1.8m宽'], ['扫掠', '120° 扇面']],
     },
     mines: {
       id: 'mines', icon: '💣', name: '地雷空投', max: 2, pack: 1, price: 2400,

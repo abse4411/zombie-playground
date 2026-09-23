@@ -655,6 +655,15 @@ class Game {
     this.projectiles = this.projectiles.filter(pr => !pr.dead);
     for (const f of this.fireZones) f.update(dt, this);
     if (typeof BLOODPOOLS !== 'undefined') BLOODPOOLS.update(dt);   // v21.7 血泊渐隐
+    // 酸雨倾盆情景（v24.5）：每5秒在玩家附近随机落酸洼
+    if (this.mode && this.mode.scenario && this.mode.scenario.acidRain) {
+      this._acidRainT = (this._acidRainT === undefined ? 3 : this._acidRainT) - dt;
+      if (this._acidRainT <= 0) {
+        this._acidRainT = 5;
+        const a = rand(0, TAU), rr = rand(5, 13);
+        if (typeof spawnAcidPool === 'function') spawnAcidPool(this, this.player.pos.x + Math.cos(a) * rr, this.player.pos.z + Math.sin(a) * rr, { poolDps: 8, poolRadius: 1.4, poolTime: 4 });
+      }
+    }
     this.fireZones = this.fireZones.filter(f => !f.dead);
     for (const a of this.acidPools) a.update(dt, this);
     this.acidPools = this.acidPools.filter(a => !a.dead);
@@ -869,7 +878,8 @@ class Game {
     this.killStreak++;
     { const d = SAVE.data; d.bestStreak = Math.max(d.bestStreak || 0, this.killStreak); }
     const streakMult = 1 + Math.min(GAMECONFIG.streak.maxMult + (p.streakCapBonus || 0), this.killStreak * GAMECONFIG.streak.multPerKill);
-    const total = Math.round((z.reward + (headshot ? GAMECONFIG.economy.headshotBonus : 0)) * streakMult);
+    const hh = GAMECONFIG.scenarios && GAMECONFIG.scenarios.some(x => x.id === 'headhunter') && this.mode && this.mode.scenario && this.mode.scenario.headhunter;
+    const total = Math.round((z.reward + (headshot ? GAMECONFIG.economy.headshotBonus : 0)) * streakMult * (hh && headshot ? 3 : 1));   // v24.5 猎首通缉：爆头×3
     p.addMoney(total);
     SAVE.data.totalKills++;
     if (p.kills % 25 === 0) SAVE.commit();

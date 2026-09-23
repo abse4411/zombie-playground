@@ -38,6 +38,20 @@ const ZOMBIE_TYPES = {
     attackRange: 1.7, attackRate: 1.2,
     desc: '腐烂的躯体一路滴淌强酸——走过的地面都化为酸洼。别沿着它的脚印追。',
   },
+  shieldbearer: {
+    id: 'shieldbearer', name: '持盾卫兵', role: '正面铁壁',
+    hp: 260, speed: 1.4, damage: 20, reward: 90, cost: 3.2, minWave: 6, weight: 2.2,
+    scale: 1.05, skin: 0x5a6a52, cloth: 0x2e3a30, pants: 0x242e26, frontArmor: 0.6,
+    attackRange: 1.8, attackRate: 1.3,
+    desc: '拖着防暴盾牌的生前狱警——正面 60% 减伤，子弹如同挠痒。绕到侧面或爆头，否则换近战把它掀开。',
+  },
+  frostwalker: {
+    id: 'frostwalker', name: '寒霜行者', role: '迟滞单位',
+    hp: 210, speed: 1.9, damage: 14, reward: 78, cost: 2.8, minWave: 5, weight: 2.5,
+    scale: 1.02, skin: 0x9ac0d8, cloth: 0x3a5a72, pants: 0x2a4254, frostatk: true,
+    attackRange: 1.8, attackRate: 1.1,
+    desc: '体温低到空气结霜——被它抓中会严重冻僵减速。蓝白色的它提醒你：跑不过就先解决它。',
+  },
   burrower: {
     id: 'burrower', name: '掘地者', role: '潜地突进单位',
     hp: 210, speed: 1.5, damage: 20, reward: 75, cost: 3, minWave: 6, weight: 2.5,

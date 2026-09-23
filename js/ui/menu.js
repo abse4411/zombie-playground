@@ -184,7 +184,17 @@ const MENU = {
       });
     }
     // 帧率上限
-/* 左上角性能监控开关（v21.0） */
+    // 调试作弊模式开关（v25.4）
+    const refreshCheat = () => {
+      const on = SAVE.data.settings.cheat === true;
+      document.querySelectorAll('.cheat-btn').forEach(b => b.classList.toggle('active', (b.dataset.ch === '1') === on));
+    };
+    document.querySelectorAll('.cheat-btn').forEach(b => b.addEventListener('click', () => {
+      SAVE.data.settings.cheat = b.dataset.ch === '1';
+      SAVE.commit(); AUDIO.uiClick(); refreshCheat();
+    }));
+    refreshCheat();
+    /* 左上角性能监控开关（v21.0） */
     const refreshPerf = () => {
       const on = SAVE.data.settings.showPerf !== false;
       document.querySelectorAll('.perf-btn').forEach(b => b.classList.toggle('active', (b.dataset.pf === '1') === on));

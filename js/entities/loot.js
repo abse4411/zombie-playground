@@ -426,14 +426,29 @@ class LootDrop {
     this.dead = true;
     disposeObject3D(this.group);
     ENGINE.scene.remove(this.group);
-    if (!picked) return 'collected';
-    // 首次拾取引导：告诉玩家背包入口（战利品/武器架/消耗品都在背包里）
-    if (!game._lootTipShown) {
-      game._lootTipShown = true;
-      HUD.toast(INPUT.touch ? '🎒 战利品已入背包，点右下角🎒查看' : '🎒 战利品已入背包，按 Tab 查看（医疗包按 H 使用）');
+    // v25.9：超限回收/过期结算也发放奖励（兑现 v25.6"奖励照发"）——武器除外：
+    // 按 v18.2 设计武器需 E 亲手拾取（触发替换规则），结算路径直接回收
+    if (!picked && this.weaponInst) return 'collected';
+    const settle = !picked;
+    if (!settle) {
+      // 首次拾取引导：告诉玩家背包入口（战利品/武器架/消耗品都在背包里）
+      if (!game._lootTipShown) {
+        game._lootTipShown = true;
+        HUD.toast(INPUT.touch ? '🎒 战利品已入背包，点右下角🎒查看' : '🎒 战利品已入背包，按 Tab 查看（医疗包按 H 使用）');
+      }
+      if (typeof SAVE !== 'undefined' && SAVE.data) SAVE.data.totalLoots = (SAVE.data.totalLoots || 0) + 1;
     }
     const p = game.player;
-    if (typeof SAVE !== 'undefined' && SAVE.data) SAVE.data.totalLoots = (SAVE.data.totalLoots || 0) + 1;
+    this._grant(game, settle);
+    return 'collected';
+  }
+
+  /* 发放主体（v25.9 从 collect 抽出）：quiet=超限/过期静默结算（无拾取提示/无音效） */
+  _grant(game, quiet) {
+    const p = game.player;
+    const realPickup = HUD.pickup, realPurchase = AUDIO.purchase;
+    if (quiet) { HUD.pickup = () => {}; AUDIO.purchase = () => {}; }
+    try {
     switch (this.kind) {
       case 'cash':
         p.addMoney(this.value);
@@ -541,7 +556,9 @@ class LootDrop {
       }
     }
     AUDIO.purchase();
-    return 'collected';
+    } finally {
+      HUD.pickup = realPickup; AUDIO.purchase = realPurchase;
+    }
   }
 
   // 弹药袋拾取即用（v19.6）：立即补满对应槽位全部武器的备弹与弹匣（含升级弹匣）

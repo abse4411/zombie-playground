@@ -284,8 +284,10 @@ const BLOODPOOLS = {
     let pool = this.list.find(p => p.dead);
     if (!pool) {
       if (this.list.length >= this.MAX) {
-        pool = this.list[0];   // 复用最老的
-        this.list.shift();
+        // v25.9 根因修复：旧代码 shift 后忘了 push 回队尾——队列永久缩短，
+        // 下次判定"未达上限"又新建网格，每2杀泄漏1个可见网格直到场景爆炸卡死
+        pool = this.list.shift();
+        this.list.push(pool);
       } else {
         pool = { mesh: new THREE.Mesh(this._geo, this._mats[randi(0, 2)]), dead: true };
         pool.mesh.rotation.x = -Math.PI / 2;
@@ -314,5 +316,6 @@ const BLOODPOOLS = {
     }
   },
 
-  clear() { for (const p of this.list) { p.mesh.visible = false; p.mesh.material.opacity = 0.75; } this.list = []; },
+  // v25.9：清局只做隐藏+复位，槽位保留复用（旧代码清空 list——旧网格隐形滞留场景，每局再新建25个）
+  clear() { for (const p of this.list) { p.dead = true; p.mesh.visible = false; p.mesh.material.opacity = 0.75; } },
 };

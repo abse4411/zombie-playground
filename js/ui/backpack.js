@@ -71,6 +71,33 @@ const BACKPACK = {
           btn.textContent = '装备';
           btn.addEventListener('click', () => { g.weapons._equip(slot, inst); this.render(); });
         }
+        // v25.1：排序按钮（▲▼ 调整该槽内的切换顺序）+ 出售
+        if (p.rack[slot].length > 1) {
+          const mkMove = (label, delta, dis) => {
+            const mb = document.createElement('button');
+            mb.className = 'bp-sort';
+            mb.textContent = label;
+            mb.disabled = dis;
+            mb.title = '调整切换顺序';
+            mb.addEventListener('click', () => {
+              const j = i + delta;
+              if (j < 0 || j >= p.rack[slot].length) return;
+              const tmp = p.rack[slot][i]; p.rack[slot][i] = p.rack[slot][j]; p.rack[slot][j] = tmp;
+              AUDIO.uiClick(); this.render();
+            });
+            row.appendChild(mb);
+          };
+          mkMove('▲', -1, i === 0);
+          mkMove('▼', +1, i >= p.rack[slot].length - 1);
+          const sellB = document.createElement('button');
+          sellB.className = 'bp-sell';
+          sellB.textContent = '出售';
+          sellB.title = '出售回收（上限原价50%）';
+          sellB.addEventListener('click', () => {
+            if (SHOP.sell(g, 'weapon', inst.def.id)) { AUDIO.uiClick(); if (g.weapons) g.weapons._buildViewmodel(); this.render(); }
+          });
+          row.appendChild(sellB);
+        }
         row.appendChild(btn);
         this.els.equip.appendChild(row);
       }

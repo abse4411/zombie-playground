@@ -216,7 +216,19 @@ const SHOP = {
         const found = p.rack[sl].find(r => r.def.id === id);
         if (found) { inst = found; slot = sl; break; }
       }
-      if (!inst) return false;
+      if (!inst) {
+        // v25.1：背包仓库中的武器也可出售
+        const sIdx = (p.storage || []).findIndex(it => it && it.kind === 'weapon' && it.inst && it.inst.def.id === id);
+        if (sIdx >= 0) {
+          const price2 = this.sellPriceForWeapon(p.storage[sIdx].inst);
+          p.storage.splice(sIdx, 1);
+          p.addMoney(price2);
+          HUD.pickup(`💵 出售仓库武器 +$${price2}`, 1);
+          AUDIO.purchase();
+          return true;
+        }
+        return false;
+      }
       if (p.rack[slot].length <= 1) { AUDIO.denied(); HUD.toast('该栏位只剩这一把武器，不能出售'); return false; }
       const price = this.sellPriceForWeapon(inst);
       p.rack[slot] = p.rack[slot].filter(r => r !== inst);

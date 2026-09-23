@@ -1047,7 +1047,11 @@ class WeaponSystem {
   // 记录当前武器为"上一把"（Q键用）
   _rememberLast() {
     const w = this.w;
-    if (w) this.p.lastWeapon = { slot: this.p.current, defId: w.def.id };
+    if (!w) return;
+    this.p.lastWeapon = { slot: this.p.current, defId: w.def.id };
+    // v25.1：记录每个槽位最近使用的武器——再次按同槽位数字键优先切回它
+    if (!this.p.lastSlotWeapon) this.p.lastSlotWeapon = {};
+    this.p.lastSlotWeapon[this.p.current] = w.def.id;
   }
 
   // 槽位键：多件武器时循环装备该槽位的武器架
@@ -1058,6 +1062,19 @@ class WeaponSystem {
     if (rack.length === 1) { this._equip(slot); return; }
     this._rememberLast();
     const cur = this.p.weapons[slot];
+    // v25.1：再次按下当前槽位键 → 优先切回该槽上一把使用的武器（两把互切）
+    if (this.p.current === slot && this.p.lastSlotWeapon && this.p.lastSlotWeapon[slot]) {
+      const prev = rack.find(r => r.def.id === this.p.lastSlotWeapon[slot] && r !== cur);
+      if (prev) {
+        this.p.weapons[slot] = prev;
+        this.switchT = 0.38; this.reloadT = 0; this.adsT = 0;
+        this.swingT = -1; this._fireKick = 0;
+        this._buildViewmodel();
+        AUDIO.weaponSwitch();
+        HUD.pickup(`🔸 ${prev.def.name}${prev.lvl ? ' Lv.' + prev.lvl : ''}`, 1);
+        return;
+      }
+    }
     let idx = cur ? rack.findIndex(r => r.def.id === cur.def.id) : -1;
     const next = rack[(idx + 1) % rack.length];
     if (next === cur) return;

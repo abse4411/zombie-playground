@@ -183,7 +183,7 @@ const WEAPONS = {
     weight: 1.15,
     damage: 55, rpm: 30, mag: 1, reserve: 10, reserveMax: 20,
     reloadTime: 2.8, spread: 0.01, adsSpread: 0.006, auto: false,
-    pellets: 1, headMult: 1.0, range: 140, falloff: null, launcher: true,
+    pellets: 1, headMult: 1.0, range: 140, falloff: null, launcher: true, rocket: true,   // v25.7 火箭弹模型+尾焰
     glDmg: 300, glRad: 8, glSpeed: 24,
     recoil: 0.06, color: 0x4a5238, len: 1.05,
     sound: { freq: 200, dur: 0.3, boom: 1.5 },
@@ -331,7 +331,7 @@ const WEAPONS = {
     weight: 0.84,
     damage: 90, rpm: 60, mag: 3, reserve: 12, reserveMax: 24,
     reloadTime: 3.6, spread: 0.03, adsSpread: 0.02, auto: false, launcher: true, volley: 3,
-    pellets: 1, headMult: 1.0, range: 100, falloff: null,
+    pellets: 1, headMult: 1.0, range: 100, falloff: null, rocket: true,   // v25.7 三联小火箭
     recoil: 0.06, color: 0x4a3a2a, len: 0.88,
     sound: { freq: 130, dur: 0.3, boom: 1.5 },
     desc: '【成就专属】击倒10个Boss解锁——三联装微型火箭巢，每次击发齐射三枚自寻的小火箭。砍下十个Boss的头颅，才有资格扛起这门“九头蛇”。',

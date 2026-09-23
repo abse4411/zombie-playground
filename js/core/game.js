@@ -667,9 +667,16 @@ class Game {
     this.fireZones = this.fireZones.filter(f => !f.dead);
     for (const a of this.acidPools) a.update(dt, this);
     this.acidPools = this.acidPools.filter(a => !a.dead);
+    // 毒气雷毒云（v25.7 修复：此前从未 update——不造成伤害、永不消散）
+    for (const g of this.gasClouds) g.update(dt, this);
+    this.gasClouds = this.gasClouds.filter(g => !g.dead);
+    // 声波诱饵计时与视觉（v25.7 修复：此前从未调用——光环永不消失、丧尸无感知）
+    if (typeof updateAttractors === 'function') updateAttractors(dt, this);
 
     // 曳光与头顶血条
     if (typeof TRACERS !== 'undefined') TRACERS.update(dt);
+    if (typeof BEAMS !== 'undefined') BEAMS.update(dt);      // v25.7 光束弹道
+    if (typeof FLASHES !== 'undefined') FLASHES.update(dt);  // v25.7 爆炸闪光
     if (typeof GIBS !== 'undefined') GIBS.update(dt);
     if (typeof HPBARS !== 'undefined') { for (const z of zs) if (z.hpbar && !z.dead) HPBARS.update(z); }
 
@@ -1068,7 +1075,9 @@ class Game {
     this.projectiles = [];
     for (const f of this.fireZones) { disposeObject3D(f.mesh); ENGINE.scene.remove(f.mesh); }
     for (const a of this.acidPools) { disposeObject3D(a.mesh); ENGINE.scene.remove(a.mesh); }
+    for (const g of this.gasClouds) if (!g.dead) g.dispose();   // v25.7：毒云（含雾团）逐局回收
     this.fireZones = []; this.gasClouds = []; this.acidPools = [];
+    if (typeof ATTRACTORS !== 'undefined') ATTRACTORS.clear();   // v25.7：诱饵环/光柱逐局回收
     for (const l of this.loots) l.dispose();
     this.loots = [];
     for (const d of this.deployments) d.dispose();   // 支援实体释放（v16.3）

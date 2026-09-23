@@ -795,6 +795,24 @@ class Zombie {
       mvx = tx; mvz = tz;
     }
 
+    // ---- 声波诱饵吸引（v25.7）：24m内普通感染体朝诱饵寻路（覆盖追击/绕墙方向）----
+    this._decoyDir = null;
+    if (typeof ATTRACTORS !== 'undefined' && ATTRACTORS.list.length && !this.boss && this.type.cost < 3) {
+      let da = null, dad = 24;
+      for (const a of ATTRACTORS.list) {
+        const d2 = dist2d(this.pos.x, this.pos.z, a.x, a.z);
+        if (d2 < dad) { dad = d2; da = a; }
+      }
+      if (da) {
+        const adx = da.x - this.pos.x, adz = da.z - this.pos.z;
+        const al = Math.hypot(adx, adz) || 1;
+        if (dad > 1.4) { mvx = adx / al; mvz = adz / al; }   // 走向诱饵
+        else { mvx = 0; mvz = 0; }                            // 到达：围拢驻留
+        this._decoyDir = { x: adx / al, z: adz / al };
+        this.steer.stuckT = 0; this.steer.lastX = this.pos.x; this.steer.lastZ = this.pos.z;
+      }
+    }
+
     // ---- 人类敌人枪械AI（v15.1）：接近→交战带走位点射→换弹暴露窗口 ----
     // 弹道有真实命中判定；瞄准前摇是 telegraph（狙击手带激光指示）
     if (cfg.human && cfg.gun && !this.dummy) {
@@ -884,8 +902,8 @@ class Zombie {
     // 远距离LOD：仅朝向与位移，跳过骨骼动画细节
     const lodSkip = dist > ENGINE.quality.lod;
 
-    // 朝向玩家
-    const targetYaw = Math.atan2(nx, nz);
+    // 朝向玩家（被诱饵吸引时朝诱饵方向走，v25.7）
+    const targetYaw = Math.atan2(this._decoyDir ? this._decoyDir.x : nx, this._decoyDir ? this._decoyDir.z : nz);
     this.group.rotation.y = angleLerp(this.group.rotation.y, targetYaw, Math.min(1, 7 * dt));
 
     // ---- 行为决策 ----

@@ -507,10 +507,30 @@ class WeaponSystem {
           // 高爆装药（v11.11）：半径+12%/级，自伤+10%/级
           const blkLv = (w.upgrades && w.upgrades.blk) || 0;
           const spd = def.glSpeed || 16;
-          game.projectiles.push(new Projectile('gl',
+          // v25.7：火箭弹（RPG/九头蛇）与榴弹分家——火箭弹带模型尾焰、低重力直飞
+          const pk = def.rocket ? 'rocket' : 'gl';
+          game.projectiles.push(new Projectile(pk,
             origin.x + dir.x * 0.5, origin.y - 0.08, origin.z + dir.z * 0.5,
             dir.x * spd, dir.y * spd + 1.5, dir.z * spd,
             { fuse: 3, radiusMult: 1 + 0.06 * blkLv, selfBonus: 0.05 * blkLv, dmgBase: def.glDmg, radBase: def.glRad }));
+          if (def.rocket) {
+            PARTICLES.spawn('smoke', origin.x + dir.x * 1.2, origin.y - 0.1, origin.z + dir.z * 1.2, 6,
+              { speed: 1.6, vy: 0.8, life: 1.4, color: [0.5, 0.48, 0.45], color2: [0.28, 0.28, 0.26] });
+            if (typeof FLASHES !== 'undefined') FLASHES.spawn(origin.x + dir.x * 0.8, origin.y - 0.1, origin.z + dir.z * 0.8, 0xffb050, 2.2, 6, 0.14);
+          }
+          // 三连齐射（v25.7 修复：九头蛇 volley 逻辑原本在 _fire 命中线路径里，发射器永远走不到——每次只射一发）
+          if (def.volley && def.volley > 1) {
+            const up2 = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion);
+            for (let vi = 1; vi < def.volley; vi++) {
+              const sp2 = (vi - 1) * 0.05 - 0.025;
+              const dirV = dir.clone();
+              dirV.applyAxisAngle(up2, sp2);
+              game.projectiles.push(new Projectile(pk,
+                origin.x + dirV.x * 0.5, origin.y - 0.05, origin.z + dirV.z * 0.5,
+                dirV.x * spd, dirV.y * spd + 1.5, dirV.z * spd,
+                { fuse: 3, radiusMult: 1 + 0.06 * blkLv, selfBonus: 0.05 * blkLv, dmgBase: def.glDmg, radBase: def.glRad }));
+            }
+          }
         }
       }
     } else
@@ -654,19 +674,33 @@ class WeaponSystem {
           .addScaledVector(up, Math.sin(a) * r).normalize();
       }
       const res = this._hitscan(game, origin, dir, def);
-      // 火焰喷射器：沿弹道喷火粒子（替代曳光）
+      // 火焰喷射器：沿弹道喷火粒子（替代曳光）；毒液喷射器喷绿色酸雾（v25.7）
       if (def.flame) {
         const mz = this.muzzleSprite ? this.muzzleSprite.getWorldPosition(new THREE.Vector3()) : origin;
         for (let fi = 1; fi <= 4; fi++) {
           const t2 = (def.range * 0.9 * fi / 4) * rand(0.8, 1.1);
-          PARTICLES.flames(mz.x + dir.x * t2, mz.y + dir.y * t2, mz.z + dir.z * t2, 1);
+          const px2 = mz.x + dir.x * t2, py2 = mz.y + dir.y * t2, pz2 = mz.z + dir.z * t2;
+          if (def.acid) PARTICLES.spawn('blood', px2, py2, pz2, 2, { speed: 1.2, vy: 0.6, life: 0.45, color: [0.5, 0.92, 0.25], color2: [0.2, 0.62, 0.15] });
+          else PARTICLES.flames(px2, py2, pz2, 1);
         }
       } else if (typeof TRACERS !== 'undefined') {
-        // 曳光：枪口 -> 命中/落点
+        // 曳光/光束（v25.7 差异化弹道）：枪口 -> 命中/落点
         const mz = this.muzzleSprite ? this.muzzleSprite.getWorldPosition(new THREE.Vector3())
           : origin.clone().addScaledVector(dir, 0.5);
         const endT = res ? res.pt : origin.clone().addScaledVector(dir, def.range * 0.7);
-        TRACERS.fire(mz, endT);
+        if (def.id === 'railgun' && typeof BEAMS !== 'undefined') {
+          BEAMS.fire(mz, endT, { color: 0x9fd8ff, width: 0.07, life: 0.16, opacity: 0.95 });   // 轨道炮：粗蓝白光束
+        } else if (def.id === 'laser' && typeof BEAMS !== 'undefined') {
+          BEAMS.fire(mz, endT, { color: 0xff4050, width: 0.035, life: 0.07, opacity: 0.9 });   // 激光：红色切割束
+        } else if (def.id === 'taser' && typeof BEAMS !== 'undefined') {
+          BEAMS.fire(mz, endT, { color: 0x7fc4ff, width: 0.03, life: 0.09, opacity: 0.95 });   // 泰瑟：蓝色电弧
+        } else if ((def.scope || def.id === 'awm' || def.id === 'm107' || def.id === 'vss') && typeof BEAMS !== 'undefined') {
+          BEAMS.fire(mz, endT, { color: 0xfff0c0, width: 0.016, life: 0.1, opacity: 0.85 });   // 狙击：亮黄长程弹道
+        } else if (def.id === 'crossbow' && typeof BEAMS !== 'undefined') {
+          BEAMS.fire(mz, endT, { color: 0xd8c090, width: 0.02, life: 0.12, opacity: 0.8 });    // 十字弩：短木色箭痕
+        } else {
+          TRACERS.fire(mz, endT, { color: (def.pellets || 1) > 1 ? 0xffb060 : 0xffe6a0 });     // 霰弹橙 / 步枪黄
+        }
       }
       // 命中点燃（v7.9 火焰DoT：3秒×25/s 固定值，可刷新；稠化燃料+25%/级 v11.11）
       if (res && def.flame) {
@@ -727,17 +761,17 @@ class WeaponSystem {
           { speed: 0.5, vy: 0.4, life: 0.6, color: [0.7, 0.9, 1], color2: [0.3, 0.5, 0.8] });
       }
     }
-    // 三连齐射（九头蛇）：额外发射2枚小火箭（高爆装药同步生效 v11.11）
+    // 三连齐射（九头蛇）：额外发射2枚小火箭（高爆装药同步生效 v11.11；v25.7 火箭弹+伤害基准）
     if (def.volley && !isNetClient) {
       const blkLv = (w.upgrades && w.upgrades.blk) || 0;
       for (let vi = 1; vi < def.volley; vi++) {
         const sp = (vi - 1) * 0.05 - 0.025;
         const dirV = fwd.clone();
         dirV.applyAxisAngle(up, sp);
-        game.projectiles.push(new Projectile('gl',
+        game.projectiles.push(new Projectile(def.rocket ? 'rocket' : 'gl',
           origin.x + dirV.x * 0.5, origin.y - 0.05, origin.z + dirV.z * 0.5,
           dirV.x * 14, dirV.y * 14 + 2.2, dirV.z * 14,
-          { fuse: 4, radiusMult: 1 + 0.06 * blkLv, selfBonus: 0.05 * blkLv }));
+          { fuse: 4, radiusMult: 1 + 0.06 * blkLv, selfBonus: 0.05 * blkLv, dmgBase: def.glDmg, radBase: def.glRad }));
       }
     }
 
@@ -1344,8 +1378,24 @@ class WeaponSystem {
     HUD.pickup(`🗑 已丢弃 ${w.def.name}`, 0);
     AUDIO.uiClick();
     // 切到下一把可用武器；全空 → 赤手空拳（v18.2）
+    // v25.7 修复：丢弃同槽武器后 _equip 会因 current===slot 提前返回、枪模不重建，
+    // 手上仍显示被丢弃那把的外观——同槽时强制重建视图模型
     const nextSlot = ['primary', 'secondary', 'melee'].find(s => p.weapons[s]);
-    if (nextSlot) this._equip(nextSlot);
+    if (nextSlot && nextSlot !== p.current) this._equip(nextSlot);
+    else if (nextSlot) {
+      this._flushClickEdge();
+      this.switchT = 0.38; this.reloadT = 0; this.adsT = 0;
+      this.swingT = -1; this._fireKick = 0; this._heavyPending = 0;
+      if (this.w.def.spinup) this.switchT = this.w.def.spinup;
+      this._buildViewmodel();
+      AUDIO.weaponSwitch();
+      // 切枪记忆同步：被丢弃的那把不再作为"上一把"回切目标
+      if (p.lastWeapon && p.lastWeapon.slot === slot && p.lastWeapon.defId === w.def.id) {
+        const nw = this.w;
+        p.lastWeapon = { slot, defId: nw.def.id };
+      }
+      if (p.lastSlotWeapon && p.lastSlotWeapon[slot] === w.def.id) p.lastSlotWeapon[slot] = this.w.def.id;
+    }
     else this._enterFist();
   }
 

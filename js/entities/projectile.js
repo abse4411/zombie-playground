@@ -18,7 +18,38 @@ const PROJ_CFG = {
   concussion: { r: 0.13, c: 0x3a4a5a, e: 0x14202a, g: 13 },
   acid:    { r: 0.15, c: 0x66cc33, e: 0x2a6600, g: 9 },
   gl:      { r: 0.13, c: 0x334422, e: 0x223311, g: 11 },  // 榴弹
+  rocket:  { r: 0.16, c: 0x66705a, e: 0x222018, g: 2.2 }, // 火箭弹（低重力直飞，v25.7）
 };
+
+/* 火箭弹模型（v25.7）：弹体+战斗部+尾翼+喷焰锥——沿 +Z 轴构建，飞行时 lookAt 速度方向 */
+function buildRocketMesh() {
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x6a705c });
+  const darkMat = new THREE.MeshLambertMaterial({ color: 0x3a3f34 });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.42, 8), bodyMat);
+  body.rotation.x = Math.PI / 2;
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.056, 0.17, 8), darkMat);
+  nose.rotation.x = Math.PI / 2;
+  nose.position.z = 0.29;
+  const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.058, 0.1, 8), darkMat);
+  exhaust.rotation.x = Math.PI / 2;
+  exhaust.position.z = -0.26;
+  g.add(body, nose, exhaust);
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * TAU;
+    const fin = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.09, 0.11), darkMat);
+    fin.position.set(Math.cos(a) * 0.062, Math.sin(a) * 0.062, -0.19);
+    fin.rotation.z = a;
+    g.add(fin);
+  }
+  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.24, 6),
+    new THREE.MeshBasicMaterial({ color: 0xffa030, transparent: true, opacity: 0.85 }));
+  flame.rotation.x = -Math.PI / 2;
+  flame.position.z = -0.41;
+  g.add(flame);
+  g.userData.flame = flame;
+  return g;
+}
 
 function pointBlocked(x, y, z) {
   for (const c of ENGINE.colliders) {
@@ -47,12 +78,20 @@ class Projectile {
     this.armT = opts.armT || 0;   // 冲击引信保险期（极爆手雷 v20.4，RGN式）
     this.opts = opts;
     this.dead = false; this.landed = false;
-    this.mesh = new THREE.Mesh(
+    this.mesh = kind === 'rocket' ? buildRocketMesh() : new THREE.Mesh(
       new THREE.SphereGeometry(c.r, 10, 8),
       new THREE.MeshLambertMaterial({ color: c.c, emissive: c.e })
     );
     this.mesh.position.set(x, y, z);
     ENGINE.scene.add(this.mesh);
+    // 粘性炸药：粘住后闪烁的红色信标（v25.7）
+    if (kind === 'sticky') {
+      this.beacon = new THREE.Mesh(new THREE.SphereGeometry(c.r * 0.5, 6, 6),
+        new THREE.MeshBasicMaterial({ color: 0xff3524 }));
+      this.beacon.position.y = c.r * 1.05;
+      this.beacon.visible = false;
+      this.mesh.add(this.beacon);
+    }
   }
 
   get pos() { return this.mesh.position; }
@@ -60,6 +99,30 @@ class Projectile {
   update(dt, game) {
     if (this.dead) return;   // v24.x 防御：已终结的投射物不再重复引爆
     const p = this.pos;
+    // 粘性炸药已粘住（v25.7 重做）：冻结一切物理——粘墙钉在墙面不滑落，粘尸跟着丧尸走
+    if (this.kind === 'sticky' && this.stuck) {
+      this.stuckT -= dt;
+      if (this.stuckZ) {
+        if (this.stuckZ.dead || this.stuckZ.remove) {   // 目标死亡：脱粘坠落，剩余时间继续倒计
+          this.stuckZ = null; this.stuck = false; this.vy = -0.5;
+        } else {
+          const s = this.stuckZ.group.scale.x;
+          this.pos.set(this.stuckZ.pos.x + this.stickOff.x, this.stuckZ.pos.y + this.stickOff.y * s, this.stuckZ.pos.z + this.stickOff.z);
+        }
+      }
+      if (this.stuck) {
+        this.beepT = (this.beepT || 0) - dt;
+        if (this.beepT <= 0) { this.beepT = 0.4; AUDIO.tone(1300, 0.05, 'square', 0.12); if (this.beacon) this.beacon.visible = !this.beacon.visible; }
+      }
+      if (this.stuckT <= 0) {
+        const M = throwMult(game);
+        const fx = p.x, fy = p.y, fz = p.z;
+        this._finish(game);
+        explodeGrenade(game, fx, fy, fz, { damage: THROWABLES.sticky.damage * M.dmg, radius: THROWABLES.sticky.radius * M.rad, selfMult: THROWABLES.sticky.selfMult });
+        return;
+      }
+      if (this.stuck) return;   // 脱粘坠落时不 return，走正常物理
+    }
     this.fuse -= dt;
     if (this.armT > 0) this.armT -= dt;
     this.wallHit = false;   // 每帧重置：movement 段置位、同帧消费（防保险期旧命中残留）
@@ -70,6 +133,7 @@ class Projectile {
     if (pointBlocked(p.x, p.y, p.z)) {
       p.x = px;
       const imp = Math.abs(this.vx);
+      this._hitN = { x: -(Math.sign(this.vx) || 1), y: 0, z: 0 };   // v25.7 记录墙面法线
       this.vx *= -0.4;
       if (imp < 0.8) this.vx = 0;   // v21.6：微速清零——台阶缝隙不再无限抖动
       this.wallHit = true;
@@ -79,6 +143,7 @@ class Projectile {
     if (pointBlocked(p.x, p.y, p.z)) {
       p.z = pz;
       const imp2 = Math.abs(this.vz);
+      this._hitN = { x: 0, y: 0, z: -(Math.sign(this.vz) || 1) };   // v25.7
       this.vz *= -0.4;
       if (imp2 < 0.8) this.vz = 0;
       this.wallHit = true;
@@ -88,15 +153,25 @@ class Projectile {
 
     if (p.y <= this.r) {
       p.y = this.r;
-      if (Math.abs(this.vy) > 2.2) { this.vy *= -0.35; this.vx *= 0.65; this.vz *= 0.65; }
-      else { this.vy = 0; this.vx *= 0.9; this.vz *= 0.9; this.landed = true; }
+      if (Math.abs(this.vy) > 2.2 && !(this.kind === 'sticky' && !this.stuck)) { this.vy *= -0.35; this.vx *= 0.65; this.vz *= 0.65; }   // 粘雷不弹跳：触地即粘（v25.7）
+      else { this.vy = 0; this.vx *= 0.9; this.vz *= 0.9; this.landed = true; this._hitN = { x: 0, y: 1, z: 0 }; }
     }
 
     if (this.kind === 'molotov') PARTICLES.flames(p.x, p.y, p.z, 1);
     if (this.kind === 'acid' && Math.random() < 0.4) PARTICLES.acidSplash(p.x, p.y, p.z);
-    // M79榴弹：碰到丧尸立即引爆（高速碰炸引信）
+    // 火箭弹（v25.7）：弹头指向速度方向，尾焰+烟迹
+    if (this.kind === 'rocket') {
+      this.mesh.lookAt(p.x + this.vx, p.y + this.vy, p.z + this.vz);
+      const vl = Math.hypot(this.vx, this.vy, this.vz) || 1;
+      const tx = p.x - this.vx / vl * 0.34, ty = p.y - this.vy / vl * 0.34, tz = p.z - this.vz / vl * 0.34;
+      PARTICLES.spawn('spark', tx, ty, tz, 2, { speed: 0.8, vy: 1.2, life: 0.3, color: [1, 0.62, 0.12], color2: [0.9, 0.2, 0.02] });
+      if (Math.random() < 0.65) PARTICLES.spawn('smoke', tx, ty, tz, 1, { speed: 0.5, vy: 0.8, life: 1.2, color: [0.45, 0.44, 0.42], color2: [0.24, 0.24, 0.23] });
+    }
+    // 榴弹（v25.7）：飞行中拖淡淡硝烟
+    if (this.kind === 'gl' && Math.random() < 0.3) PARTICLES.spawn('smoke', p.x, p.y, p.z, 1, { speed: 0.3, vy: 0.5, life: 0.5, color: [0.55, 0.55, 0.5], color2: [0.3, 0.3, 0.3] });
+    // M79榴弹/火箭弹：碰到丧尸立即引爆（高速碰炸引信，v25.7 火箭弹共用）
     // 敌方手雷（v15.3）：opts.R 提供独立伤害/半径（军阀小Boss），且不做碰炸（避免炸到周围尸群/自己）
-    if (this.kind === 'gl' && !this.opts.R) {
+    if ((this.kind === 'gl' || this.kind === 'rocket') && !this.opts.R) {
       for (const zb of game.zombies) {
         if (zb.dead || zb.state === 'rise') continue;
         const dx2 = zb.pos.x - p.x, dz2 = zb.pos.z - p.z;
@@ -124,8 +199,8 @@ class Projectile {
         }
       }
     }
-    // M79榴弹：碰炸（墙/地/碰到即炸）
-    if (this.kind === 'gl' && (this.wallHit || p.y <= this.r + 0.01 || this.fuse <= 0)) {
+    // M79榴弹/火箭弹：碰炸（墙/地/碰到即炸）
+    if ((this.kind === 'gl' || this.kind === 'rocket') && (this.wallHit || p.y <= this.r + 0.01 || this.fuse <= 0)) {
       this._finish(game);
       const M = throwMult(game);
       explodeGrenade(game, p.x, p.y, p.z, { damage: (this.opts.dmgBase || 120) * M.dmg, radius: (this.opts.radBase || 6) * M.rad * (this.opts.radiusMult || 1), selfMult: 0.4 * (1 + (this.opts.selfBonus || 0)) });
@@ -158,23 +233,29 @@ class Projectile {
       }
       return;
     }
-    // 粘性炸药（v22.2）：触尸/触墙即粘住，短引信后重爆
-    if (this.kind === 'sticky' && !this.stuck && (this.wallHit || this._touchZombie(game))) {
-      this.stuck = true; this.stuckT = 1.8;
+    // 粘性炸药（v22.2→v25.7 重做）：触尸/触墙/落地即粘住——粘尸跟随目标，粘墙钉在墙面
+    if (this.kind === 'sticky' && !this.stuck && (this.wallHit || this.landed || this._touchZombie(game))) {
+      const zbHit = this._touchZombie(game);
+      this.stuck = true; this.stuckT = THROWABLES.sticky.fuse;
       this.vx = this.vy = this.vz = 0;
+      if (zbHit) {
+        this.stuckZ = zbHit;
+        const s = zbHit.group.scale.x;
+        this.stickOff = { x: p.x - zbHit.pos.x, y: (p.y - zbHit.pos.y) / s, z: p.z - zbHit.pos.z };
+      } else if (this._hitN) {
+        // 朝墙面步进贴紧（回退位可能离面一帧步距），再沿法线外推半个半径——visible 钉在表面上
+        for (let s2 = 0; s2 < 12; s2++) {
+          const nx2 = p.x - this._hitN.x * 0.025, ny2 = p.y - this._hitN.y * 0.025, nz2 = p.z - this._hitN.z * 0.025;
+          if (pointBlocked(nx2, ny2, nz2)) break;
+          p.x = nx2; p.y = ny2; p.z = nz2;
+        }
+        p.x += this._hitN.x * this.r * 0.5; p.y += this._hitN.y * this.r * 0.5; p.z += this._hitN.z * this.r * 0.5;
+      }
+      if (this.beacon) this.beacon.visible = true;
       AUDIO.tone(900, 0.06, 'square', 0.12);
     }
-    if (this.kind === 'sticky' && this.stuck) {
-      this.stuckT -= dt;
-      if (this.stuckT <= 0) {
-        const M = throwMult(game);
-        this._finish(game);
-        explodeGrenade(game, p.x, p.y, p.z, { damage: THROWABLES.sticky.damage * M.dmg, radius: THROWABLES.sticky.radius * M.rad, selfMult: THROWABLES.sticky.selfMult });
-      }
-      return;
-    }
     // 粘性炸药：始终未粘住也按引信引爆（v22.2 兜底）
-    if (this.kind === 'sticky' && this.fuse <= 0) {
+    if (this.kind === 'sticky' && !this.stuck && this.fuse <= 0) {
       const M = throwMult(game);
       this._finish(game);
       explodeGrenade(game, p.x, p.y, p.z, { damage: THROWABLES.sticky.damage * M.dmg, radius: THROWABLES.sticky.radius * M.rad, selfMult: THROWABLES.sticky.selfMult });
@@ -338,25 +419,35 @@ class Projectile {
   _finish(game) {
     this.dead = true;
     ENGINE.scene.remove(this.mesh);
-    this.mesh.geometry.dispose(); this.mesh.material.dispose();
+    disposeObject3D(this.mesh);   // v25.7：火箭弹/粘雷信标等多部件统一释放
   }
 }
 
-/* 粘性炸药触尸检测（v22.2） */
+/* 粘性炸药触尸检测（v22.2）：返回被触的丧尸本体（v25.7 粘附跟随需要引用），未触返回 null */
 Projectile.prototype._touchZombie = function (game) {
   const p = this.pos;
   for (const zb of game.zombies) {
     if (zb.dead || zb.state === 'rise') continue;
     const dx = zb.pos.x - p.x, dz = zb.pos.z - p.z;
-    if (dx * dx + dz * dz < 0.42 && p.y < zb.pos.y + 1.9 * zb.group.scale.x) return true;
+    if (dx * dx + dz * dz < 0.42 && p.y < zb.pos.y + 1.9 * zb.group.scale.x) return zb;
   }
-  return false;
+  return null;
 };
 
-/* ---------- 声波诱饵场（v10.4 Days Gone） ---------- */
-const ATTRACTORS = { list: [] };
+/* ---------- 声波诱饵场（v10.4 Days Gone → v25.7 重做） ----------
+ * 视觉：地面脉冲环 + 竖直信标光柱；吸引逻辑移入丧尸AI（zombie.js 覆盖追击方向），
+ * 此处只负责计时与视觉（旧版瞬移拉扯不自然且 update 从未被调用——光环永不消失的根因） */
+const ATTRACTORS = { list: [],
+  clear() {
+    for (const a of this.list) this._disposeFx(a);
+    this.list = [];
+  },
+  _disposeFx(a) {
+    if (a.ring) { a.ring.geometry.dispose(); a.ring.material.dispose(); ENGINE.scene.remove(a.ring); }
+    if (a.beam) { a.beam.geometry.dispose(); a.beam.material.dispose(); ENGINE.scene.remove(a.beam); }
+  },
+};
 function spawnAttractor(game, x, z, duration) {
-  // 视觉：蓝色脉冲环
   const ring = new THREE.Mesh(
     new THREE.RingGeometry(0.5, 0.65, 24),
     new THREE.MeshBasicMaterial({ color: 0x5aa0ff, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false })
@@ -364,27 +455,24 @@ function spawnAttractor(game, x, z, duration) {
   ring.rotation.x = -Math.PI / 2;
   ring.position.set(x, 0.06, z);
   ENGINE.scene.add(ring);
-  ATTRACTORS.list.push({ x, z, t: duration, ring });
+  // 信标光柱（v25.7）：远处可见
+  const beam = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.09, 0.14, 7, 8, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0x5aa0ff, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false })
+  );
+  beam.position.set(x, 3.5, z);
+  ENGINE.scene.add(beam);
+  ATTRACTORS.list.push({ x, z, t: duration, ring, beam });
   AUDIO.waveHorn();
   HUD.toast('📣 声波诱饵启动——感染体正在聚拢');
 }
 function updateAttractors(dt, game) {
   for (const a of ATTRACTORS.list) {
     a.t -= dt;
+    if (a.t <= 0) { ATTRACTORS._disposeFx(a); a.dead = true; continue; }
     a.ring.scale.setScalar(1 + Math.sin(ENGINE.time * 6) * 0.15);
-    if (a.t <= 0) { a.ring.geometry.dispose(); a.ring.material.dispose(); ENGINE.scene.remove(a.ring); a.dead = true; continue; }
-    // 吸引：24m内普通尸朝诱饵移动（覆盖追击目标）
-    for (const z of game.zombies) {
-      if (z.dead || z.boss || z.type.cost >= 3 || z.state === 'rise') continue;
-      if (dist2d(z.pos.x, z.pos.z, a.x, a.z) < 24) {
-        const dx = a.x - z.pos.x, dz = a.z - z.pos.z;
-        const d = Math.hypot(dx, dz) || 1;
-        if (d > 1.2) {
-          z.pos.x += (dx / d) * z.speed * 1.3 * dt;
-          z.pos.z += (dz / d) * z.speed * 1.3 * dt;
-        }
-      }
-    }
+    a.ring.material.opacity = 0.5 + Math.sin(ENGINE.time * 6) * 0.25;
+    a.beam.material.opacity = 0.14 + Math.sin(ENGINE.time * 6) * 0.1;
   }
   ATTRACTORS.list = ATTRACTORS.list.filter(a => !a.dead);
 }
@@ -420,6 +508,12 @@ function explodeGrenade(game, x, y, z, cfg, selfMult) {
   const exMult = (game.player && game.player.explodeMult) || 1;
   if (exMult !== 1) cfg = Object.assign({}, cfg, { damage: cfg.damage * exMult });
   PARTICLES.explosion(x, y, z);
+  const R = cfg.radius || 4;
+  if (typeof FLASHES !== 'undefined') FLASHES.spawn(x, (y || 0) + 0.5, z, 0xffa040, R >= 6.5 ? 3.4 : 2.0, R * 3.2, R >= 6.5 ? 0.3 : 0.18);
+  if (R >= 6.5) {   // 大口径爆炸（火箭弹/巨爆）：二次火球 + 翻滚浓烟（v25.7）
+    PARTICLES.spawn('spark', x, (y || 0) + 0.5, z, 34, { speed: 7.5, vy: 3.5, life: 0.8, color: [1, 0.6, 0.14], color2: [0.85, 0.12, 0.02] });
+    PARTICLES.spawn('smoke', x, (y || 0) + 1.4, z, 16, { speed: 2.6, vy: 2.6, life: 2.2, color: [0.22, 0.2, 0.18], color2: [0.1, 0.1, 0.1] });
+  }
   const pd = dist2d(x, z, game.player.pos.x, game.player.pos.z);
   AUDIO.explode(pd);
   ENGINE.shake(clamp(0.5 - pd * 0.02, 0.08, 0.5));
@@ -464,11 +558,14 @@ function explodeBloater(game, z) {
 class Zone {
   constructor(x, z, kind, cfg) {
     this.x = x; this.z = z; this.kind = kind;
-    this.r = kind === 'fire' ? cfg.radius : cfg.poolRadius;
-    this.dps = kind === 'fire' ? cfg.dps : cfg.poolDps;
-    this.ttl = kind === 'fire' ? cfg.duration : cfg.poolTime;
+    // v25.7 关键修复：此前只有 fire 走 radius/dps/duration，gas 被当 acid 读 pool* 键——
+    // 毒云 r/dps/ttl 全为 undefined（不伤人、不可见、永不消散）的根因
+    const acidKeys = kind === 'acid';
+    this.r = acidKeys ? cfg.poolRadius : cfg.radius;
+    this.dps = acidKeys ? cfg.poolDps : cfg.dps;
+    this.ttl = acidKeys ? cfg.poolTime : cfg.duration;
     this.dead = false; this.tick = 0;
-    const color = kind === 'fire' ? 0xff6a1a : 0x55cc22;
+    const color = kind === 'fire' ? 0xff6a1a : kind === 'gas' ? 0x86c93a : 0x55cc22;   // v25.7 毒气黄绿区分酸液
     this.mesh = new THREE.Mesh(
       new THREE.CircleGeometry(this.r, 26),
       new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.3, side: THREE.DoubleSide })
@@ -476,18 +573,50 @@ class Zone {
     this.mesh.rotation.x = -Math.PI / 2;
     this.mesh.position.set(x, 0.05, z);
     ENGINE.scene.add(this.mesh);
+    // 毒云立体雾团（v25.7）：数个半透明绿球起伏翻滚——"表现效果不明显"修复的主体
+    this.puffs = null;
+    if (kind === 'gas') {
+      this.puffs = [];
+      for (let i = 0; i < 5; i++) {
+        const s = this.r * rand(0.4, 0.62);
+        const puff = new THREE.Mesh(new THREE.SphereGeometry(s, 10, 8),
+          new THREE.MeshBasicMaterial({ color: 0x7ab824, transparent: true, opacity: 0.13, depthWrite: false }));
+        puff.position.set(x + rand(-this.r, this.r) * 0.5, rand(0.5, 1.6), z + rand(-this.r, this.r) * 0.5);
+        puff.userData.ph = rand(0, TAU);
+        ENGINE.scene.add(puff);
+        this.puffs.push(puff);
+      }
+    }
+  }
+
+  dispose() {
+    this.dead = true;
+    disposeObject3D(this.mesh); ENGINE.scene.remove(this.mesh);
+    if (this.puffs) for (const pf of this.puffs) { disposeObject3D(pf); ENGINE.scene.remove(pf); }
   }
 
   update(dt, game) {
     this.ttl -= dt;
-    if (this.ttl <= 0) { this.dead = true; ENGINE.scene.remove(this.mesh); this.mesh.geometry.dispose(); this.mesh.material.dispose(); return; }
+    if (this.ttl <= 0) { this.dispose(); return; }
     this.mesh.material.opacity = 0.22 + Math.sin(ENGINE.time * 9) * 0.08;
+    if (this.puffs) {
+      for (const pf of this.puffs) {
+        pf.position.y += Math.sin(ENGINE.time * 1.7 + pf.userData.ph) * dt * 0.35;
+        const k = 1 + Math.sin(ENGINE.time * 2.2 + pf.userData.ph) * 0.08;
+        pf.scale.setScalar(k);
+        pf.material.opacity = Math.min(0.22, this.ttl) * (0.55 + Math.sin(ENGINE.time * 2.8 + pf.userData.ph) * 0.3);
+      }
+    }
+    this._fxT = (this._fxT || 0) - dt;
     if (this.kind === 'fire') {
       const a = Math.random() * TAU, rr = Math.random() * this.r;
       PARTICLES.flames(this.x + Math.cos(a) * rr, 0.2, this.z + Math.sin(a) * rr, 2);
     } else if (this.kind === 'gas') {
-      const a = Math.random() * TAU, rr = Math.random() * this.r;
-      PARTICLES.acidSplash(this.x + Math.cos(a) * rr, 0.4 + Math.random() * 0.8, this.z + Math.sin(a) * rr);
+      if (this._fxT <= 0) {   // 毒雾粒子节流（12粒/0.12s，防刷爆共享粒子池）
+        this._fxT = 0.12;
+        const a = Math.random() * TAU, rr = Math.random() * this.r;
+        PARTICLES.acidSplash(this.x + Math.cos(a) * rr, 0.4 + Math.random() * 0.8, this.z + Math.sin(a) * rr);
+      }
     } else if (Math.random() < 0.3) {
       PARTICLES.acidSplash(this.x + rand(-this.r, this.r) * 0.7, 0.2, this.z + rand(-this.r, this.r) * 0.7);
     }
@@ -517,8 +646,7 @@ class Zone {
 function capZones(arr, max) {
   while (arr.length >= max) {
     const old = arr.shift();
-    old.dead = true;
-    if (old.mesh) { old.mesh.geometry.dispose(); old.mesh.material.dispose(); ENGINE.scene.remove(old.mesh); }
+    if (!old.dead) old.dispose();
   }
 }
 function spawnFireZone(game, x, z, cfg) { capZones(game.fireZones, 14); game.fireZones.push(new Zone(x, z, 'fire', cfg)); }

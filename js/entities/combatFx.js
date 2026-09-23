@@ -63,13 +63,14 @@ const TRACERS = {
     }
   },
 
-  fire(from, to) {
+  fire(from, to, opts = {}) {
     const t = this.pool.find(x => x.life <= 0) || this.pool[0];
     const pos = t.line.geometry.attributes.position;
     pos.setXYZ(0, from.x, from.y, from.z);
     pos.setXYZ(1, to.x, to.y, to.z);
     pos.needsUpdate = true;
     t.life = 0.05;
+    t.line.material.color.setHex(opts.color !== undefined ? opts.color : 0xffe6a0);
     t.line.material.opacity = 0.85;
   },
 
@@ -86,6 +87,76 @@ const TRACERS = {
  * 共享单位立方体 + 缩放表示尺寸；抛体物理 + 落地弹跳 + 末段缩小消失。
  * 材质直接引用丧尸共享材质（不淡出透明度，避免污染共享材质）。
  */
+/* ---------- 光束弹道池（v25.7）：狙击/激光/轨道炮/泰瑟等"粗弹道"武器替代细线 ----------
+ * 单位Box沿Z拉伸，lookAt目标方向；加色混合+快速淡出。共用几何体，池上限10 */
+const BEAMS = {
+  pool: [], _geo: null,
+
+  fire(from, to, opts = {}) {
+    if (!this._geo) this._geo = new THREE.BoxGeometry(1, 1, 1);
+    let b = this.pool.find(x => x.life <= 0);
+    if (!b) {
+      if (this.pool.length >= 10) return;
+      b = { mesh: new THREE.Mesh(this._geo,
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })),
+        life: 0, max: 1, op0: 1 };
+      b.mesh.frustumCulled = false;
+      b.mesh.visible = false;
+      ENGINE.scene.add(b.mesh);
+      this.pool.push(b);
+    }
+    const m = b.mesh;
+    const dx = to.x - from.x, dy = to.y - from.y, dz = to.z - from.z;
+    const len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 0.001;
+    m.visible = true;
+    m.position.set((from.x + to.x) / 2, (from.y + to.y) / 2, (from.z + to.z) / 2);
+    m.lookAt(to.x, to.y, to.z);   // 非相机对象：+Z 指向目标
+    const w2 = opts.width || 0.03;
+    m.scale.set(w2, w2, len);
+    m.material.color.setHex(opts.color !== undefined ? opts.color : 0xffe6a0);
+    b.op0 = opts.opacity !== undefined ? opts.opacity : 0.9;
+    m.material.opacity = b.op0;
+    b.life = b.max = opts.life || 0.08;
+  },
+
+  update(dt) {
+    for (const b of this.pool) {
+      if (b.life <= 0) { b.mesh.visible = false; continue; }
+      b.life -= dt;
+      b.mesh.material.opacity = b.op0 * Math.max(0, b.life / b.max);
+    }
+  },
+};
+
+/* ---------- 爆炸闪光灯池（v25.7）：手雷/火箭弹命中的动态点光源 ---------- */
+const FLASHES = {
+  pool: [],
+
+  spawn(x, y, z, color, intensity, dist, life) {
+    let f = this.pool.find(x2 => x2.life <= 0);
+    if (!f) {
+      if (this.pool.length >= 4) return;
+      f = { light: new THREE.PointLight(color, 0, dist), life: 0, max: 1, i0: 1 };
+      ENGINE.scene.add(f.light);
+      this.pool.push(f);
+    }
+    f.light.color.setHex(color);
+    f.light.distance = dist;
+    f.i0 = intensity;
+    f.light.intensity = intensity;
+    f.light.position.set(x, y, z);
+    f.life = f.max = life;
+  },
+
+  update(dt) {
+    for (const f of this.pool) {
+      if (f.life <= 0) continue;
+      f.life -= dt;
+      f.light.intensity = f.i0 * Math.max(0, f.life / f.max);
+    }
+  },
+};
+
 const GIBS = {
   _geo: null, pool: [],
 

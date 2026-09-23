@@ -465,6 +465,10 @@ class LootDrop {
         p.throwables.frag.count = Math.min(THROWABLES.frag.max, p.throwables.frag.count + this.amount);
         HUD.pickup(`💣 手雷 ×${this.amount}`, this.rarity);
         break;
+      case 'emp':
+        p.throwables.emp.count = Math.min(THROWABLES.emp.max, p.throwables.emp.count + this.amount);
+        HUD.pickup(`📡 电磁脉冲雷 ×${this.amount}`, this.rarity);
+        break;
       case 'cluster':
         p.throwables.cluster.count = Math.min(THROWABLES.cluster.max, p.throwables.cluster.count + this.amount);
         HUD.pickup(`💥 集束手雷 ×${this.amount}`, this.rarity);

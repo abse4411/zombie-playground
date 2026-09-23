@@ -153,6 +153,10 @@ const GAMECONFIG = {
                   desc: '8秒内移速+45%、换弹速度+35%、体力回复翻倍' },
     armorkit:   { name: '护甲修理包', icon: '🧰', max: 4, price: 450, use: 'armor',
                   desc: '将护甲修复至上限（比护甲板便宜，需已装备装甲）' },
+    megamed:    { name: '军规医疗包', icon: '🎛', max: 2, price: 1200, use: 'megamed',
+                  desc: '战地外科合剂：瞬间回满全部生命，无需施法（H键医疗包的豪华替代）' },
+    heavyplate: { name: '重型插板', icon: '🏋', max: 3, price: 950, use: 'heavyplate',
+                  desc: '加装陶瓷复合板：护甲上限 +30 并立即装满——可叠加突破上限' },
     ammobox:    { name: '弹药箱', icon: '📦', max: 4, price: 550, use: 'ammo',
                   desc: '立即为所有武器补充大量备用弹药' },
   },
@@ -274,6 +278,9 @@ const GAMECONFIG = {
     { id: 'hardened', icon: '⚒', name: '甲壳几丁质', desc: '感染体表皮几丁化：承受伤害 -15%，但移速 -10% —— 赏金 +30%', bone: true, speed: 0.9, reward: 1.3 },
     { id: 'nestboom', icon: '🥚', name: '爆破孢囊', desc: '尸巢孵化加速、感染体尸体爆出孢雾（小额酸伤）—— 赏金 +40%', volatile: true, reward: 1.4 },
     { id: 'jamscreen', icon: '📡', name: '电子干扰', desc: 'EMP 风暴干扰瞄具：所有枪械散布 +30% —— 赏金 +40%，高手向', jam: true, reward: 1.4 },
+    { id: 'plague', icon: '🧫', name: '瘟疫之风', desc: '全体感染体行走滴酸、身后留下一路酸洼 —— 赏金 +45%', plagueTrail: true, reward: 1.45 },
+    { id: 'glass', icon: '🔮', name: '玻璃大炮', desc: '你造成的伤害 +25%，但受到的伤害也 +50% —— 赏金 +60%', glass: true, reward: 1.6 },
+    { id: 'swarmfeast', icon: '🐦', name: '群尸盛宴', desc: '同屏上限 +80%、刷怪近乎连续 —— 赏金 +55%', cap: 1.8, interval: 0.55, reward: 1.55 },
   ],
 
   /* ---------- 尸潮爆发（v16.2）：一次性大规模合围 ---------- */
@@ -310,6 +317,16 @@ const GAMECONFIG = {
       id: 'meddrone', icon: '🚁', name: '医疗无人机', max: 2, pack: 1, price: 2600,
       desc: '白十字无人机伴飞24秒：6米范围内每秒为玩家回复3点生命——且行且奶，移动作战核心。',
       stats: [['持续', '24s'], ['治疗范围', '6m'], ['回复', '3 HP/s']],
+    },
+    mortar: {
+      id: 'mortar', icon: '🎯', name: '迫击炮小队', max: 2, pack: 1, price: 3400,
+      desc: '后方迫击炮班支援20秒：每4秒自动向视野内随机感染体落下一发150伤炮弹——挂机收割者福音。',
+      stats: [['持续', '20s'], ['间隔', '4s'], ['单发', '150伤 / 3.5m']],
+    },
+    mines: {
+      id: 'mines', icon: '💣', name: '地雷空投', max: 2, pack: 1, price: 2400,
+      desc: '环绕玩家空投6枚感应地雷：感染体踩上即引爆（120伤/3米）。守楼梯、封通道的黄金选择。',
+      stats: [['数量', '6枚'], ['单雷', '120伤 / 3m'], ['持续', '30s']],
     },
     tesla: {
       id: 'tesla', icon: '⚡', name: '电弧塔', max: 2, pack: 1, price: 3200,

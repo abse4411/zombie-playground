@@ -59,7 +59,7 @@ function rarityForPrice(price) {
 const LOOT_RARITY_COLORS = [0xb8c0cc, 0x52d273, 0x3aa0ff, 0xb05cff];
 const LOOT_RARITY_NAMES = ['普通', '优秀', '稀有', '史诗'];
 /* 需要容量判定的道具类掉落（v18.2）：计数满→溢出背包→背包满则拒拾 */
-const LOOT_ITEM_KINDS = ['medkit', 'armorplate', 'ammobag', 'adrenaline', 'armorkit', 'ammobox'];   // v22.2
+const LOOT_ITEM_KINDS = ['medkit', 'armorplate', 'ammobag', 'adrenaline', 'armorkit', 'ammobox', 'megamed', 'heavyplate'];   // v22.2
 /* 掉落物专属模型构建器 + 名称（v8.9）：不再是无差别方块 */
 const LOOT_MODELS = {
   cash: () => {
@@ -100,6 +100,23 @@ const LOOT_MODELS = {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.012, 6, 12), new THREE.MeshStandardMaterial({ color: 0x8a8f96, metalness: 0.8 }));
     ring.position.set(0.06, 0.17, 0);
     g.add(body, neck, ring);
+    return g;
+  },
+  incendiary: () => {
+    const g = new THREE.Group();
+    const shell = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), new THREE.MeshStandardMaterial({ color: 0xa8482a, roughness: 0.5 }));
+    shell.scale.y = 1.2;
+    const lever = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.08, 0.02), new THREE.MeshStandardMaterial({ color: 0x8a8f96, metalness: 0.7 }));
+    lever.position.set(0.05, 0.14, 0);
+    g.add(shell, lever);
+    return g;
+  },
+  cryo: () => {
+    const g = new THREE.Group();
+    const shell = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), new THREE.MeshStandardMaterial({ color: 0x7ac0e8, roughness: 0.3, emissive: 0x1a4a6a, emissiveIntensity: 0.6 }));
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.07, 8), new THREE.MeshStandardMaterial({ color: 0x2a3a4a }));
+    cap.position.y = 0.13;
+    g.add(shell, cap);
     return g;
   },
   sticky: () => {
@@ -197,7 +214,7 @@ const LOOT_MODELS = {
 };
 const LOOT_LABELS = {
   cash: '💵 现金', ammo: '🔸 弹药盒', medkit: '🧪 医疗包',
-  frag: '💣 手雷', impact: '💣 极爆手雷', sticky: '🧨 粘性炸药', emp: '📡 电磁脉冲雷', gas: '☠ 毒气雷', molo: '🔥 燃烧瓶', attractor: '🧲 声波诱饵',
+  frag: '💣 手雷', impact: '💣 极爆手雷', sticky: '🧨 粘性炸药', emp: '📡 电磁脉冲雷', gas: '☠ 毒气雷', incendiary: '🔥 燃烧手雷', cryo: '❄ 冰霜雷', molo: '🔥 燃烧瓶', attractor: '🧲 声波诱饵',
   armorplate: '🛡 护甲板', ammop: '🟢 主武器弹药', ammos: '🔵 副武器弹药', adrenaline: '⚡ 肾上腺素',
   big: '⭐ 大奖奖金',
 };
@@ -289,7 +306,7 @@ class LootDrop {
   name() {
     if (this.weaponInst) return `${['◆', '◆◆', '◆◆◆', '◆◆◆◆'][this.rarity]} ${this.weaponInst.def.name}${this.weaponInst.lvl ? ' Lv.' + this.weaponInst.lvl : ''}`;
     const base = LOOT_LABELS[this.kind] || '📦 物资';
-    if (['frag', 'molo', 'impact', 'sticky', 'emp', 'gas'].includes(this.kind)) return `${base}×${this.amount}`;
+    if (['frag', 'molo', 'impact', 'sticky', 'emp', 'gas', 'incendiary', 'cryo'].includes(this.kind)) return `${base}×${this.amount}`;
     return base;
   }
 
@@ -307,7 +324,7 @@ class LootDrop {
     }
     // v18.6 修复：掉落种类 'molo' 需映射到投掷物键 'molotov'，查表也用映射后的键
     // （旧代码 THROWABLES['molo'] 为 undefined → '.max' 抛错 → 整帧更新中断）
-    const tb = { frag: 'frag', impact: 'impact', sticky: 'sticky', emp: 'emp', gas: 'gas', molo: 'molotov', attractor: 'attractor' }[this.kind];
+    const tb = { frag: 'frag', impact: 'impact', sticky: 'sticky', emp: 'emp', gas: 'gas', incendiary: 'incendiary', cryo: 'cryo', molo: 'molotov', attractor: 'attractor' }[this.kind];
     if (tb) {
       const tDef = THROWABLES[tb];
       const tCur = p.throwables[tb];
@@ -432,6 +449,14 @@ class LootDrop {
       case 'frag':
         p.throwables.frag.count = Math.min(THROWABLES.frag.max, p.throwables.frag.count + this.amount);
         HUD.pickup(`💣 手雷 ×${this.amount}`, this.rarity);
+        break;
+      case 'incendiary':
+        p.throwables.incendiary.count = Math.min(THROWABLES.incendiary.max, p.throwables.incendiary.count + this.amount);
+        HUD.pickup(`🔥 燃烧手雷 ×${this.amount}`, this.rarity);
+        break;
+      case 'cryo':
+        p.throwables.cryo.count = Math.min(THROWABLES.cryo.max, p.throwables.cryo.count + this.amount);
+        HUD.pickup(`❄ 冰霜雷 ×${this.amount}`, this.rarity);
         break;
       case 'sticky':
         p.throwables.sticky.count = Math.min(THROWABLES.sticky.max, p.throwables.sticky.count + this.amount);

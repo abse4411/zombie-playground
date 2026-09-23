@@ -26,6 +26,8 @@ const SUPPORTFX = {
       case 'sentry': game.deployments.push(new SentryGun(game)); break;
       case 'meddrone': game.deployments.push(new HealDrone(game)); break;
       case 'tesla': game.deployments.push(new TeslaPylon(game)); break;
+      case 'mortar': game.deployments.push(new MortarTeam(game)); break;
+      case 'mines': game.deployments.push(new MineField(game)); break;
     }
     return true;
   },
@@ -619,5 +621,89 @@ class TeslaPylon {
       if (this.charges <= 0) HUD.toast('⚡ 电弧塔充能耗尽——线圈烧毁');
     }
     if (this.charges <= 0) { this.dead = true; disposeObject3D(this.group); ENGINE.scene.remove(this.group); }
+  }
+}
+
+
+/* ---------- 迫击炮小队（v23.3）：20s，每4s轰击随机感染体 ---------- */
+class MortarTeam {
+  constructor(game) {
+    this.life = 20 * supportMult(game).dur;
+    this.fireT = 1.2;
+    this.dead = false;
+    HUD.toast('🎯 迫击炮小队上线——自动覆盖火力');
+  }
+  update(dt, game) {
+    this.life -= dt;
+    this.fireT -= dt;
+    if (this.life <= 0) { this.dead = true; return; }
+    if (this.fireT > 0) return;
+    const alive = game.zombies.filter(z => !z.dead && z.state !== 'rise');
+    if (!alive.length) { this.fireT = 1; return; }
+    this.fireT = 4;
+    const target = alive[randi(0, alive.length - 1)];
+    const SM = supportMult(game);
+    // 落点预警圈 + 延迟0.9s引爆
+    const tx = target.pos.x, tz = target.pos.z;
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.62, 20),
+      new THREE.MeshBasicMaterial({ color: 0xff6a3a, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(tx, 0.06, tz);
+    ENGINE.scene.add(ring);
+    setTimeout(() => {
+      try {
+        disposeObject3D(ring); ENGINE.scene.remove(ring);
+        if (!window.GAME || window.GAME.state === 'menu') return;
+        explodeGrenade(GAME, tx, 0.2, tz, { damage: 150 * SM.dmg, radius: 3.5 * SM.rad, selfMult: 0.35 });
+        AUDIO.explode(dist2d(tx, tz, GAME.player.pos.x, GAME.player.pos.z));
+      } catch (e) {}
+    }, 900);
+  }
+}
+
+/* ---------- 地雷空投（v23.3）：环绕6枚感应雷 ---------- */
+class MineField {
+  constructor(game) {
+    const p = game.player;
+    this.mines = [];
+    this.life = 30;
+    this.dead = false;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * TAU;
+      const mx = clamp(p.pos.x + Math.cos(a) * 3.5, -ENGINE.mapDef.size + 1, ENGINE.mapDef.size - 1);
+      const mz = clamp(p.pos.z + Math.sin(a) * 3.5, -ENGINE.mapDef.size + 1, ENGINE.mapDef.size - 1);
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.1, 10), new THREE.MeshLambertMaterial({ color: 0x3a4034 }));
+      const led = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 5), new THREE.MeshBasicMaterial({ color: 0xff4030 }));
+      led.position.y = 0.08;
+      g.add(body, led);
+      g.position.set(mx, 0.05, mz);
+      ENGINE.scene.add(g);
+      this.mines.push({ g, led, x: mx, z: mz, dead: false });
+    }
+    HUD.toast('💣 地雷空投完毕——6枚感应雷就位');
+  }
+  update(dt, game) {
+    this.life -= dt;
+    let anyAlive = false;
+    for (const m of this.mines) {
+      if (m.dead) continue;
+      anyAlive = true;
+      m.led.material.color.setHex(Math.sin(ENGINE.time * 8) > 0 ? 0xff4030 : 0x551512);
+      for (const z of game.zombies) {
+        if (z.dead || z.state === 'rise') continue;
+        if (dist2d(z.pos.x, z.pos.z, m.x, m.z) < 1.3) {
+          m.dead = true;
+          m.g.visible = false;
+          disposeObject3D(m.g); ENGINE.scene.remove(m.g);
+          explodeGrenade(game, m.x, 0.2, m.z, { damage: 120 * supportMult(game).dmg, radius: 3 * supportMult(game).rad, selfMult: 0.4 });
+          break;
+        }
+      }
+    }
+    if (this.life <= 0 || !anyAlive) {
+      for (const m of this.mines) if (!m.dead) { m.g.visible = false; disposeObject3D(m.g); ENGINE.scene.remove(m.g); }
+      this.dead = true;
+    }
   }
 }

@@ -12,6 +12,8 @@ const PROJ_CFG = {
   sticky:  { r: 0.12, c: 0x6a5a2a, e: 0x2a220a, g: 13 },
   emp:     { r: 0.13, c: 0x3a6a9a, e: 0x1a4a8a, g: 13 },
   gas:     { r: 0.13, c: 0x5a7a2a, e: 0x2a4a0a, g: 13 },
+  incendiary: { r: 0.12, c: 0xa8482a, e: 0x58200a, g: 13 },
+  cryo:    { r: 0.13, c: 0x7ac0e8, e: 0x2a6a9a, g: 13 },
   acid:    { r: 0.15, c: 0x66cc33, e: 0x2a6600, g: 9 },
   gl:      { r: 0.13, c: 0x334422, e: 0x223311, g: 11 },  // 榴弹
 };
@@ -185,6 +187,29 @@ class Projectile {
         if (dist2d(p.x, p.z, zb.pos.x, zb.pos.z) > THROWABLES.emp.radius) continue;
         if (zb.type.human && zb.type.gun) { zb.aimT = -1; zb.stagger = Math.max(zb.stagger || 0, 2.5); }
         else zb.slowT = Math.max(zb.slowT || 0, 2);
+      }
+      return;
+    }
+    // 燃烧手雷（v23.2）：炸开成三簇火点
+    if (this.kind === 'incendiary' && (this.landed || this.wallHit || this.fuse <= 0)) {
+      const M = throwMult(game);
+      this._finish(game);
+      AUDIO.fireIgnite();
+      for (const [ox2, oz2] of [[0, 0], [1.6, 0.8], [-1.4, -1.2]]) {
+        spawnFireZone(game, p.x + ox2, p.z + oz2, { dps: THROWABLES.incendiary.dps * M.dmg, radius: THROWABLES.incendiary.radius * M.rad, duration: THROWABLES.incendiary.duration * M.dur });
+      }
+      return;
+    }
+    // 冰霜雷（v23.2）：7米冻结迟滞4秒
+    if (this.kind === 'cryo' && (this.landed || this.wallHit || this.fuse <= 0)) {
+      this._finish(game);
+      AUDIO.shot(700, 0.3, 0.4);
+      PARTICLES.spawn('spark', p.x, 0.6, p.z, 36, { speed: 8, vy: 2, life: 0.7, color: [0.6, 0.9, 1], color2: [0.2, 0.5, 0.9] });
+      for (const zb of game.zombies) {
+        if (zb.dead || zb.state === 'rise') continue;
+        if (dist2d(p.x, p.z, zb.pos.x, zb.pos.z) > THROWABLES.cryo.radius) continue;
+        zb.slowT = Math.max(zb.slowT || 0, 4);
+        zb.takeDamage(20, false, { x: zb.pos.x, y: 1.1 * zb.group.scale.x, z: zb.pos.z }, game, null);
       }
       return;
     }

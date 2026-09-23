@@ -198,6 +198,15 @@ function buildZombieModel(cfg, outlines) {
         P(new THREE.BoxGeometry(0.05, 0.6, 0.05), ART.mat(0x2e5228), 0.34, 1.15, 0.06, 0.4);        // 藤臂右
         P(new THREE.BoxGeometry(0.05, 0.55, 0.05), ART.mat(0x2e5228), -0.34, 1.2, 0.06, -0.4);      // 藤臂左
         break;
+      case 'broodmother': // 卵腹 + 尾刺 + 产道口（v23.4）
+        P(new THREE.BoxGeometry(0.52, 0.44, 0.4), ART.mat(0x9a5a7a, 0x301a28), 0, 0.92, 0.02);
+        P(new THREE.ConeGeometry(0.09, 0.34, 6), ART.mat(0x6a3a52, 0x200e18), 0, 1.05, -0.26).rotation.x = 2.4;
+        P(new THREE.BoxGeometry(0.14, 0.1, 0.05), ART.mat(0xc88aaa, 0x301a28), 0, 1.15, 0.2);
+        break;
+      case 'sludgewalker': // 滴酸躯体 + 酸渍腿部（v23.4）
+        P(new THREE.BoxGeometry(0.12, 0.34, 0.1), ART.mat(0x9cc45a, 0x2a3a14), 0, 1.08, 0.14);
+        for (let i = 0; i < 4; i++) P(new THREE.BoxGeometry(0.05, 0.06, 0.02), ART.mat(0x9cc45a, 0x2a3a14), rand(-0.18, 0.18), 0.5 + rand(-0.1, 0.1), 0.1);
+        break;
       case 'burrower': // 铲状巨爪双手 + 泥壳背甲（v22.4）
         P(new THREE.BoxGeometry(0.3, 0.16, 0.2), ART.mat(0x8a7a5a, 0x2a2214), 0.38, 1.15, 0.05);
         P(new THREE.BoxGeometry(0.3, 0.16, 0.2), ART.mat(0x8a7a5a, 0x2a2214), -0.38, 1.15, 0.05);
@@ -1393,6 +1402,31 @@ class Zombie {
       for (const m of this.cloakMats) if (m.opacity !== target) m.opacity = target;
       this.whisperT = (this.whisperT || 3) - dt;
       if (this.whisperT <= 0) { this.whisperT = rand(3.5, 6.5); AUDIO.whisper(dist); }
+    }
+
+    // 孵卵蜂后（v23.4）：周期吐出感染体
+    if (cfg.brood) {
+      this.broodT = (this.broodT === undefined ? 5 : this.broodT) - dt;
+      this.broodCount = this.broodCount || 0;
+      if (this.broodT <= 0 && this.broodCount < 4 && game.zombies.length < 60) {
+        this.broodT = 8;
+        this.broodCount++;
+        const mz = GAME.spawner ? GAME.spawner.mults : {};
+        const baby = new Zombie('walker', this.pos.x + rand(-1.5, 1.5), this.pos.z + rand(-1.5, 1.5), mz, {});
+        baby.riseT = 0; baby.state = 'chase'; baby.pos.y = 0;
+        game.zombies.push(baby);
+        PARTICLES.blood(this.pos.x, 1.3, this.pos.z, 8);
+        HUD.toast('🥚 孵卵蜂后吐出了感染体！');
+      }
+    }
+    // 酸行者（v23.4）：移动时滴酸成洼；瘟疫之风情景（v23.5）全体感染体生效
+    const trailOn = cfg.acidTrail || (game.mode && game.mode.scenario && game.mode.scenario.plagueTrail);
+    if (trailOn && !this.dummy) {
+      this.trailT = (this.trailT === undefined ? rand(0.5, 1) : this.trailT) - dt;
+      if (this.trailT <= 0 && (Math.abs(this.kvx) > 0.1 || mvx !== 0)) {
+        this.trailT = 1.1;
+        if (typeof spawnAcidPool === 'function') spawnAcidPool(game, this.pos.x, this.pos.z, { poolDps: 5, poolRadius: 0.9, poolTime: 2.5 });
+      }
     }
 
     // 掘地者（v22.4）：周期潜地——无敌+高速逼近，破土时扬尘

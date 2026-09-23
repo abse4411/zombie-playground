@@ -10,7 +10,7 @@
  * 3. 术语区分：弹匣容量=单个弹匣装弹数；备用弹药=弹匣之外携带的子弹总量
  */
 /* 投掷物种类顺序（v20.4 加入极爆手雷）：4键循环/选中顺延共用 */
-const THROW_KINDS = ['frag', 'impact', 'sticky', 'emp', 'gas', 'molotov', 'attractor'];
+const THROW_KINDS = ['frag', 'impact', 'sticky', 'emp', 'gas', 'incendiary', 'cryo', 'molotov', 'attractor'];
 
 const W_UPGRADES = {
   dmg:  { name: '威力强化',  max: 10, gain: '伤害 +3%/级', drawback: '', desc: '重装药弹头，单发威力更高。',
@@ -149,7 +149,7 @@ function weaponPreviewRows(inst, upId) {
 }
 
 /* 道具槽种类顺序（v18.1）：数字键5循环切换 */
-const ITEM_KINDS = ['medkit', 'armorplate', 'adrenaline', 'armorkit', 'ammobox'];   // v22.2：+护甲修理包/弹药箱
+const ITEM_KINDS = ['medkit', 'armorplate', 'adrenaline', 'armorkit', 'ammobox', 'megamed', 'heavyplate'];   // v22.2：+护甲修理包/弹药箱
 
 /* 赤手空拳（v18.2）：全部武器丢光后的徒手状态——左键轻击/右键重击，消耗体力 */
 const FIST_DEF = {
@@ -753,6 +753,7 @@ class WeaponSystem {
         continue;
       }
       z.takeDamage(h.dmg, h.head, h.pt, game, kbPow ? { x: h.dir.x * kbPow, z: h.dir.z * kbPow } : null);
+      if (def.stun && !z.dead) z.stagger = Math.max(z.stagger || 0, 1.5);   // v23.1 泰瑟枪：命中麻痹
       PARTICLES.blood(h.pt.x, h.pt.y, h.pt.z, h.head ? 5 : 2, h.head);   // v21.7：中弹血液喷溅
       DMGNUM.spawn(h.pt.x, h.pt.y, h.pt.z, Math.round(h.dmg), h.head);
       HUD.hitmarker(h.head);

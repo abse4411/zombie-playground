@@ -232,7 +232,7 @@ class Game {
     p.medkits = sv.player.medkits;
     if (sv.player.medkitHeal) p.medkitHeal = sv.player.medkitHeal;
     // 道具与栏位（v18.1）
-    p.items = Object.assign({ armorplate: 0, adrenaline: 0 }, sv.player.items || {});
+    p.items = Object.assign({ armorplate: 0, adrenaline: 0, armorkit: 0, ammobox: 0, megamed: 0, heavyplate: 0 }, sv.player.items || {});
     p.slotMax = Object.assign({ primary: 2, secondary: 1, melee: 1 }, sv.player.slotMax || {});
     p.adrenalineT = 0;
     p.throwables.frag.count = sv.player.throwables.frag;
@@ -398,8 +398,8 @@ class Game {
     this.player.medkitHeal = ch.medkitHeal || GAMECONFIG.inventory.medkitHeal;
     // 武器栏位容量（v18.1）：按角色 slots 配置（商城扩容为局内升级，重开会重置为角色基准）
     this.player.slotMax = Object.assign({ primary: 2, secondary: 1, melee: 1 }, ch.slots || {});
-    if (!this.player.items) this.player.items = { armorplate: 0, adrenaline: 0 };
-    else this.player.items = Object.assign({ armorplate: 0, adrenaline: 0 }, this.player.items);
+    if (!this.player.items) this.player.items = { armorplate: 0, adrenaline: 0, armorkit: 0, ammobox: 0, megamed: 0, heavyplate: 0 };
+    else this.player.items = Object.assign({ armorplate: 0, adrenaline: 0, armorkit: 0, ammobox: 0, megamed: 0, heavyplate: 0 }, this.player.items);
     this.player.itemSel = 'medkit';
     this.player.adrenalineT = 0;
     // 角色差异化体力（v13.2）：recomputePerks 已按 charStats 计算，出生回满

@@ -24,6 +24,20 @@ const ZOMBIE_TYPES = {
     attackRange: 1.7, attackRate: 1.0, lungeRange: 8, lungeSpeed: 9.5, grabSlow: 1.2,
     desc: '四肢着地匍匐前进，轮廓极低难以瞄准。进入8米后会猛扑——听脚步声，别回头。',
   },
+  broodmother: {
+    id: 'broodmother', name: '孵卵蜂后', role: '召唤单位',
+    hp: 320, speed: 1.3, damage: 18, reward: 110, cost: 4, minWave: 7, weight: 2,
+    scale: 1.15, skin: 0x8a5a7a, cloth: 0x4a2a3e, pants: 0x38202e, brood: true,
+    attackRange: 1.8, attackRate: 1.3,
+    desc: '腹腔是活体孵化器——周期吐出感染体包围你。优先击杀，否则它会源源不断地填满战场。',
+  },
+  sludgewalker: {
+    id: 'sludgewalker', name: '酸行者', role: '区域污染单位',
+    hp: 190, speed: 1.8, damage: 10, reward: 65, cost: 2.6, minWave: 5, weight: 3,
+    scale: 1.0, skin: 0x769a3a, cloth: 0x42522a, pants: 0x334020, acidTrail: true,
+    attackRange: 1.7, attackRate: 1.2,
+    desc: '腐烂的躯体一路滴淌强酸——走过的地面都化为酸洼。别沿着它的脚印追。',
+  },
   burrower: {
     id: 'burrower', name: '掘地者', role: '潜地突进单位',
     hp: 210, speed: 1.5, damage: 20, reward: 75, cost: 3, minWave: 6, weight: 2.5,

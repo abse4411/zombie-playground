@@ -44,7 +44,7 @@ class Player {
     this.storageMax = 6;
     this.current = 'secondary';
     this.lastWeapon = null;   // Q键切换上一把武器 {slot, defId}
-    this.throwables = { frag: { count: 2 }, molotov: { count: 1 }, attractor: { count: 0 }, impact: { count: 0 } };
+    this.throwables = { frag: { count: 2 }, molotov: { count: 1 }, attractor: { count: 0 }, impact: { count: 0 }, sticky: { count: 0 }, emp: { count: 0 }, gas: { count: 0 }, incendiary: { count: 0 }, cryo: { count: 0 } };
     // 道具栏（v18.1）：5键槽位字段道具（医疗包计数沿用 medkits，其余在此）
     this.items = { armorplate: 0, adrenaline: 0 };   // v19.6：弹药袋改为拾取即用
     this.itemSel = 'medkit';     // 道具槽当前选中
@@ -260,6 +260,7 @@ class Player {
     // 钢铁之躯减伤
     if (this.perks.tough > 0) dmg *= (1 - PERKS.tough.tiers[this.perks.tough - 1].val);
     if (this.dmgTakenMult !== undefined) dmg *= this.dmgTakenMult;   // 铁肩硬背减伤（v20.6）
+    if (game.mode && game.mode.scenario && game.mode.scenario.glass) dmg *= 1.5;   // v23.5 玻璃大炮：受伤+50%
     const P = GAMECONFIG.player;
     if (this.armor > 0) {
       const ab = Math.min(this.armor, dmg * P.armorAbsorb);
@@ -371,6 +372,20 @@ class Player {
       this.itemConsume(kind);
       this.armor = this.maxArmor;
       AUDIO.purchase(); HUD.pickup('🛡 护甲板已装贴——装甲修复完毕', 1);
+      return true;
+    }
+    if (kind === 'megamed') {
+      if (this.hp >= this.maxHp) { HUD.toast('❤ 生命完好，无需使用'); AUDIO.emptyClick(); return false; }
+      this.itemConsume(kind);
+      this.hp = this.maxHp;
+      AUDIO.streak(); HUD.pickup('🎛 军规医疗包——生命全满', 2);
+      return true;
+    }
+    if (kind === 'heavyplate') {
+      this.itemConsume(kind);
+      this.maxArmor += 30;
+      this.armor = this.maxArmor;
+      AUDIO.purchase(); HUD.pickup('🏋 重型插板已加装——护甲上限 +30', 1);
       return true;
     }
     if (kind === 'armorkit') {

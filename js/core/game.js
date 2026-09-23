@@ -710,8 +710,9 @@ class Game {
     this._updatePickupList(dt);
 
     // 支援道具实体（v16.3）：轰炸引导/空投箱/无人机/哨戒塔
+    // v25.8：死亡时统一 dispose——此前 filter 从不调用 dispose，轰炸机/空投箱/无人机/哨戒枪全永驻战场
     for (const d of this.deployments) d.update(dt, this);
-    this.deployments = this.deployments.filter(d => !d.dead);
+    this.deployments = this.deployments.filter(d => { if (d.dead && typeof d.dispose === 'function') d.dispose(); return !d.dead; });
 
     // 补给箱靠近提示与开启（自动开启式探索）
     this.interactText = null;
@@ -1080,7 +1081,7 @@ class Game {
     if (typeof ATTRACTORS !== 'undefined') ATTRACTORS.clear();   // v25.7：诱饵环/光柱逐局回收
     for (const l of this.loots) l.dispose();
     this.loots = [];
-    for (const d of this.deployments) d.dispose();   // 支援实体释放（v16.3）
+    for (const d of this.deployments) if (typeof d.dispose === 'function') d.dispose();   // 支援实体释放（v16.3；v25.8 防御式）
     this.deployments = [];
     for (const d of this.destructibles) if (!d.dead) d.dispose();
     this.destructibles = [];

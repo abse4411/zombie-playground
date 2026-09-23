@@ -185,6 +185,9 @@ class AirstrikeRun {
       }
       if (b.y <= 0.4) {
         b.dead = true;
+        // v25.8：弹体网格随爆摘除（此前只出数组，模型永驻爆点）
+        ENGINE.scene.remove(b.mesh);
+        b.mesh.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
         const SM = supportMult(game);
         explodeGrenade(game, b.x, 0.4, b.z, { damage: 180 * SM.dmg, radius: 6.2 * SM.rad, selfMult: 1 });
         PARTICLES.explosion(b.x, 1.2, b.z);
@@ -193,8 +196,12 @@ class AirstrikeRun {
       }
     }
     this.bombs = this.bombs.filter(b => !b.dead);
-    // 阶段3：投弹完毕、航弹清空、飞机飞远 → 结束
-    if (this.dropped >= this.drops && this.bombs.length === 0 && this.planeSpawnT > 4.6) {
+    // 阶段3：投弹完毕→爬升脱离；航弹清空、飞离战场后结束（死亡时统一 dispose 摘除机身+警示带）
+    if (this.dropped >= this.drops) {
+      this.alt += 6 * dt;   // 爬升脱离
+      this.plane.position.set(this.px, this.alt, this.pz);
+    }
+    if (this.dropped >= this.drops && this.bombs.length === 0 && this.planeSpawnT > 6.5) {
       this.dead = true;
       this.warnMat.opacity = 0;
     }
@@ -545,7 +552,7 @@ class HealDrone {
   }
   update(dt, game) {
     this.life -= dt;
-    if (this.life <= 0 || game.player.dead) { this.dead = true; disposeObject3D(this.group); ENGINE.scene.remove(this.group); return; }
+    if (this.life <= 0 || game.player.dead) { this.dead = true; this.dispose(); return; }   // v25.8 统一契约
     const p = game.player;
     this.phase += dt;
     const tx = p.pos.x + Math.sin(this.phase * 0.8) * 1.6;
@@ -561,6 +568,11 @@ class HealDrone {
       if (Math.random() < dt * 6) PARTICLES.spawn('spark', p.pos.x, p.pos.y + 1.2, p.pos.z, 1,
         { speed: 0.8, vy: 1.4, life: 0.5, color: [0.4, 1, 0.6], color2: [0.1, 0.5, 0.3] });
     }
+  }
+
+  dispose() {
+    ENGINE.scene.remove(this.group);
+    disposeObject3D(this.group);
   }
 }
 
@@ -622,7 +634,12 @@ class TeslaPylon {
       AUDIO.shot(900, 0.06, 0.3);
       if (this.charges <= 0) HUD.toast('⚡ 电弧塔充能耗尽——线圈烧毁');
     }
-    if (this.charges <= 0) { this.dead = true; disposeObject3D(this.group); ENGINE.scene.remove(this.group); }
+    if (this.charges <= 0) { this.dead = true; this.dispose(); }   // v25.8 统一契约
+  }
+
+  dispose() {
+    ENGINE.scene.remove(this.group);
+    disposeObject3D(this.group);
   }
 }
 
@@ -660,6 +677,9 @@ class MortarTeam {
         AUDIO.explode(dist2d(tx, tz, GAME.player.pos.x, GAME.player.pos.z));
       } catch (e) {}
     }, 900);
+  }
+
+  dispose() {   // v25.8 契约：无持久网格（预警圈由延迟回调自清理）
   }
 }
 
@@ -704,9 +724,13 @@ class MineField {
       }
     }
     if (this.life <= 0 || !anyAlive) {
-      for (const m of this.mines) if (!m.dead) { m.g.visible = false; disposeObject3D(m.g); ENGINE.scene.remove(m.g); }
+      this.dispose();   // v25.8 统一契约
       this.dead = true;
     }
+  }
+
+  dispose() {
+    for (const m of this.mines) if (!m.dead) { m.g.visible = false; disposeObject3D(m.g); ENGINE.scene.remove(m.g); }
   }
 }
 
@@ -737,6 +761,8 @@ class NapalmStrike {
     setTimeout(() => { this.dead = true; }, 3100);
   }
   update(dt, game) {}
+  dispose() {   // v25.8 契约：火区归 Zone 系统管理，自身无网格
+  }
 }
 
 /* ---------- 轨道激光（v24.3）：8s 扇面扫掠光束 ---------- */
@@ -765,8 +791,7 @@ class OrbitalLaser {
     this.life -= dt;
     if (this.life <= 0) {
       this.dead = true;
-      disposeObject3D(this.beam); ENGINE.scene.remove(this.beam);
-      disposeObject3D(this.glow); ENGINE.scene.remove(this.glow);
+      this.dispose();   // v25.8 统一契约
       return;
     }
     this.ang += dt * 0.26;   // 扫掠速度
@@ -791,5 +816,10 @@ class OrbitalLaser {
           { speed: 3, vy: 2, life: 0.4, color: [1, 0.6, 0.3], color2: [1, 0.2, 0.1] });
       }
     }
+  }
+
+  dispose() {
+    disposeObject3D(this.beam); ENGINE.scene.remove(this.beam);
+    disposeObject3D(this.glow); ENGINE.scene.remove(this.glow);
   }
 }

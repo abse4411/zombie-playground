@@ -1062,6 +1062,20 @@ class WeaponSystem {
     if (rack.length === 1) { this._equip(slot); return; }
     this._rememberLast();
     const cur = this.p.weapons[slot];
+    // v25.2：切到别的槽位后再按数字键 → 装备该槽位离开时手持的那一把（例如离开主武器槽时是M4A1，按1回来还是M4A1）
+    if (this.p.current !== slot && this.p.lastSlotWeapon && this.p.lastSlotWeapon[slot]) {
+      const last = rack.find(r => r.def.id === this.p.lastSlotWeapon[slot]);
+      if (last) {
+        this.p.weapons[slot] = last;
+        this.p.current = slot;
+        this.switchT = 0.38; this.reloadT = 0; this.adsT = 0;
+        this.swingT = -1; this._fireKick = 0;
+        this._buildViewmodel();
+        AUDIO.weaponSwitch();
+        HUD.pickup(`🔸 ${last.def.name}${last.lvl ? ' Lv.' + last.lvl : ''}`, 1);
+        return;
+      }
+    }
     // v25.1：再次按下当前槽位键 → 优先切回该槽上一把使用的武器（两把互切）
     if (this.p.current === slot && this.p.lastSlotWeapon && this.p.lastSlotWeapon[slot]) {
       const prev = rack.find(r => r.def.id === this.p.lastSlotWeapon[slot] && r !== cur);
